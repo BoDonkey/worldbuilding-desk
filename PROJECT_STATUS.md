@@ -1091,6 +1091,20 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 4.73 alternative replies: the latest Character Lab reply (Talk and
+  Reaction test) and the latest assistant reply have **Another version**,
+  which sends the same request again (same question, grounding or context,
+  story point, and model). The author steps between versions with ‹ ›
+  ("Version 2 of 3", at most five). Each version is a full model run: the
+  provider checks, the disclosure, and the consultation budget apply to each
+  (with a 1-a-day budget the second version is refused and the first reply
+  stays). Only the version shown is used: Preview scene revision and Save as
+  Source Note take it, Save to Scratchpad saves it, and sending the next
+  message keeps it and discards the others. Unkept versions are never
+  written anywhere: the assistant's session history saves only the version
+  shown. A failed version is dropped and the previous one is shown again. In
+  the Character Lab, another version needs the same story point as the
+  original reply.
 - Slice 4.72 prompt breakdown with token counts: each line under Grounded in
   (Character Lab, character scenes, scene drafts) and under Sources used (the
   assistant) shows its estimated tokens as sent, after the 4.71 budget, and a

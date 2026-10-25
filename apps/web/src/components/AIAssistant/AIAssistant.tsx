@@ -9,7 +9,8 @@ import type {
 } from '../../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../../services/shodh/getShodhService';
 import {SHODH_MEMORIES_EVENT} from '../../services/shodh/shodhEvents';
-import type {LLMContextChunk, LLMMessage} from '../../services/llm/types';
+import type {LLMContextChunk, LLMMessage, LLMRequest} from '../../services/llm/types';
+import type {AssistantChatMessage} from '../../hooks/useAssistantConversation';
 import {useAssistantConversation} from '../../hooks/useAssistantConversation';
 import {
   appendContextTrustInstructions,
@@ -50,6 +51,16 @@ import {ModelRunProgress} from '../common/ModelRunProgress';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {buildPromptBreakdown, fitContextChunks, sectionTokenLabel} from '../../services/llm/contextBudget';
 import {PromptTokenSummary} from '../common/PromptTokenSummary';
+import {ReplyVersionControls} from '../common/ReplyVersionControls';
+import {
+  dropShownReply,
+  keepShownReply,
+  MAX_ASSISTANT_REPLY_VERSIONS,
+  replyVersionCount,
+  showReplyVersion,
+  startReplyVersion,
+  updateShownReply
+} from '../../services/assistant/replyVersions';
 import {resolveModelContextSize} from '../../services/llm/modelContextSize';
 import {getCraftLibraryService} from '../../services/craft/getCraftLibraryService';
 import {
@@ -152,6 +163,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [messages, setMessages] = useAssistantConversation(projectId, conversationScope);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  // The request behind the latest model reply, so the author can ask for another version (4.73).
+  const [versionRequest, setVersionRequest] = useState<Omit<LLMRequest, 'signal'> | null>(null);
+  const [versionError, setVersionError] = useState<string | null>(null);
   const [readingIndex, setReadingIndex] = useState<number | null>(null);
   const aiProvider = aiConfig?.provider;
   const requestPolicy = useAssistantRequestPolicy({
@@ -373,7 +387,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         ? `${selectedTextInstruction}\n\n${contextLabel}:\n"""\n${promptContext}\n"""\n\nAuthor request: ${promptText}`
         : promptText
     };
-    setMessages((prev) => [...prev, displayedUserMessage]);
+    // Moving on keeps the reply version shown and discards the others.
+    setMessages((prev) => [...prev.map(keepShownReply), displayedUserMessage]);
+    setVersionRequest(null);
+    setVersionError(null);
     setInput('');
     setIsStreaming(true);
     announceStatus('Assistant is responding.');
@@ -533,15 +550,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       ]);
       scrollMessagesToBottom();
 
+      const modelRequest = {
+        messages: [requestUserMessage],
+        context: budgeted.kept,
+        systemPrompt: composedPrompt,
+        model: consultationModel?.trim() || undefined,
+        maxTokens: replyTokens
+      };
       const outcome = await runModelRequest({
         feature: 'assistant',
-        request: {
-          messages: [requestUserMessage],
-          context: budgeted.kept,
-          systemPrompt: composedPrompt,
-          model: consultationModel?.trim() || undefined,
-          maxTokens: replyTokens
-        },
+        request: modelRequest,
         failureMessage: 'The assistant could not generate a response.',
         onUpdate: ({answer}) => {
           const assistantMessage = stripAssistantThinking(answer);
@@ -567,6 +585,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             content: outcome.message
           }
         ]);
+      } else {
+        setVersionRequest(modelRequest);
       }
     } catch (error) {
       console.error('AI request failed:', error);
@@ -646,8 +666,38 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const inspectorSettings = aiConfig?.inspectorSettings;
   const coachConsultationEnabled = inspectorSettings?.enableAIConsultation !== false;
 
+  const handleAnotherVersion = async () => {
+    const request = versionRequest;
+    const last = messages[messages.length - 1];
+    if (!request || isStreaming || last?.role !== 'assistant') return;
+    setVersionError(null);
+    setIsStreaming(true);
+    announceStatus('Assistant is writing another version.');
+    // The same request again: same question, context, and model; budgets and disclosure apply.
+    const provenance = modelReplyProvenance(request.model);
+    const replaceLast = (update: (message: AssistantChatMessage) => AssistantChatMessage) =>
+      setMessages((prev) => (prev.length > 0 ? [...prev.slice(0, -1), update(prev[prev.length - 1]!)] : prev));
+    replaceLast((message) => startReplyVersion(message, provenance));
+    const outcome = await runModelRequest({
+      feature: 'assistant',
+      request,
+      failureMessage: 'The assistant could not write another version.',
+      onUpdate: ({answer}) => replaceLast((message) => updateShownReply(message, stripAssistantThinking(answer)))
+    });
+    if (!outcome.ok) {
+      replaceLast(dropShownReply);
+      setVersionError(outcome.message);
+    }
+    setIsStreaming(false);
+    announceStatus('Assistant reply finished.');
+  };
+
+  const showVersion = (index: number) =>
+    setMessages((prev) => (prev.length > 0 ? [...prev.slice(0, -1), showReplyVersion(prev[prev.length - 1]!, index)] : prev));
+
   const handleAskCoach = useCallback(async () => {
     if (!coachEvidence) return;
+    setVersionRequest(null);
     if (!coachConsultationEnabled) {
       setMessages((prev) => [
         ...prev,
@@ -846,6 +896,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                 <CraftCitationList citations={msg.craftCitations} />
               </details>
             ) : null}
+            {i === messages.length - 1 && msg.role === 'assistant' && msg.provenance && versionRequest && (
+              <ReplyVersionControls
+                count={replyVersionCount(msg)}
+                index={msg.versionIndex ?? 0}
+                busy={isStreaming}
+                disabledReason={
+                  replyVersionCount(msg) >= MAX_ASSISTANT_REPLY_VERSIONS
+                    ? `At most ${MAX_ASSISTANT_REPLY_VERSIONS} versions of one reply.`
+                    : sendBlockedReason
+                }
+                onShow={showVersion}
+                onAnother={() => void handleAnotherVersion()}
+              />
+            )}
+            {i === messages.length - 1 && versionError && <p role='alert'>{versionError}</p>}
             {msg.role === 'assistant' && msg.content.trim() ? (
               <button
                 type='button'

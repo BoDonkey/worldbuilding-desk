@@ -1,7 +1,13 @@
 import {describe, expect, it} from 'vitest';
 import {
   buildCharacterTalkTranscript,
+  dropShownVersion,
+  exchangeVersionCount,
   formatCharacterLabScratchpadHtml,
+  keepShownVersion,
+  showExchangeVersion,
+  startExchangeVersion,
+  updateShownVersion,
   type CharacterLabExchange
 } from './characterLabTranscript';
 
@@ -58,5 +64,47 @@ describe('formatCharacterLabScratchpadHtml', () => {
         '<p><strong>Mira &lt;Hawk&gt;:</strong> Because</p>' +
         '<p><em>(Stopped before the reply finished.)</em></p>'
     );
+  });
+});
+
+describe('reply versions (4.73)', () => {
+  const base: CharacterLabExchange = {
+    id: 'e1',
+    mode: 'talk',
+    prompt: 'Who do you serve?',
+    reply: 'The Ember Court.',
+    positionLabel: 'the latest point in the manuscript',
+    stopped: false
+  };
+
+  it('adds versions, keeps reply in step with the version shown, and steps between them', () => {
+    let exchange = startExchangeVersion(base);
+    expect(exchange).toMatchObject({reply: '', versionIndex: 1, versions: [{reply: 'The Ember Court.'}, {reply: ''}]});
+    exchange = updateShownVersion(exchange, {reply: 'No one.', stopped: true});
+    expect(exchange).toMatchObject({reply: 'No one.', stopped: true});
+    expect(exchange.versions?.[1]).toEqual({reply: 'No one.', stopped: true});
+    expect(exchangeVersionCount(exchange)).toBe(2);
+
+    exchange = showExchangeVersion(exchange, 0);
+    expect(exchange).toMatchObject({reply: 'The Ember Court.', stopped: false, versionIndex: 0});
+    expect(showExchangeVersion(exchange, 7)).toBe(exchange);
+    // Without versions, updating just sets the reply.
+    expect(updateShownVersion(base, {reply: 'x'}).reply).toBe('x');
+  });
+
+  it('keeps only the version shown, and only it reaches the transcript and the Scratchpad', () => {
+    const chosen = showExchangeVersion(updateShownVersion(startExchangeVersion(base), {reply: 'UNKEPT'}), 0);
+    const kept = keepShownVersion(chosen);
+    expect(kept).toEqual(base);
+    expect(JSON.stringify(buildCharacterTalkTranscript([chosen]))).not.toContain('UNKEPT');
+    expect(formatCharacterLabScratchpadHtml({characterName: 'Aria', exchanges: [chosen]})).not.toContain('UNKEPT');
+  });
+
+  it('drops a failed version and goes back to the one before', () => {
+    const failed = startExchangeVersion(base);
+    expect(dropShownVersion(failed)).toEqual(base);
+    const three = startExchangeVersion(updateShownVersion(startExchangeVersion(base), {reply: 'Second.'}));
+    expect(dropShownVersion(three)).toMatchObject({reply: 'Second.', versionIndex: 1, versions: [{reply: 'The Ember Court.'}, {reply: 'Second.'}]});
+    expect(dropShownVersion(base)).toBe(base);
   });
 });

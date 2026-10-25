@@ -9,6 +9,13 @@ import {
   buildCharacterTalkTranscript,
   buildCharacterVoicePrompt,
   formatCharacterLabScratchpadHtml,
+  dropShownVersion,
+  exchangeVersionCount,
+  keepShownVersion,
+  MAX_REPLY_VERSIONS,
+  showExchangeVersion,
+  startExchangeVersion,
+  updateShownVersion,
   type CharacterLabExchange,
   type CharacterLabMode,
   type CharacterVoiceContext,
@@ -16,6 +23,8 @@ import {
 } from '../../services/characterLab';
 import {useModelContextSize} from '../../hooks/useModelContextSize';
 import {ContextLeftOutNotice} from '../common/ContextLeftOutNotice';
+import {ReplyVersionControls} from '../common/ReplyVersionControls';
+import type {LLMMessage} from '../../services/llm/types';
 import {PromptTokenSummary} from '../common/PromptTokenSummary';
 import {sectionTokenLabel} from '../../services/llm/contextBudget';
 import {LLMService} from '../../services/llm/LLMService';
@@ -100,18 +109,22 @@ export function CharacterLabDialog({
 
   const maxTokens = lab.aiConfig ? resolveResponseTokenLimit(lab.aiConfig.provider, inspector?.maxResponseTokens) : undefined;
   // The grounding is fitted to the model's context for every send, and the same fit is shown below.
-  const planPrompt = (character: CharacterVoiceContext, text: string) =>
+  const planPrompt = (
+    character: CharacterVoiceContext,
+    text: string,
+    request: {mode: CharacterLabMode; history: CharacterLabExchange[]} = {mode, history: exchanges}
+  ) =>
     buildBudgetedVoicePrompt({
       contexts: [character],
       contextTokens: contextSize?.tokens ?? null,
       replyTokens: maxTokens,
       build: ([fitted]) =>
         buildCharacterVoicePrompt(
-          mode === 'talk'
+          request.mode === 'talk'
             ? {
                 mode: 'talk',
                 character: fitted!,
-                transcript: buildCharacterTalkTranscript(exchanges),
+                transcript: buildCharacterTalkTranscript(request.history),
                 message: text,
                 authorInstructions
               }
@@ -129,23 +142,49 @@ export function CharacterLabDialog({
     budget.route,
     `${name}’s World Bible record${lab.aiConfig?.includeLinkedRecords ? ' (with linked records)' : ''}, accepted facts, dialogue style, story state, and this conversation`
   );
+  // Every generation, first or another version, passes the same checks and is charged once.
+  const blockedReason = (): string | null => {
+    if (providerIssue) return providerIssue;
+    if (!consultationEnabled) return 'AI consultation is disabled in Settings.';
+    if (budget.blocked) return budget.blockedMessage ?? 'AI consultation budget reached for today.';
+    return null;
+  };
+
+  const generate = async (
+    exchangeId: string,
+    prompt: {systemPrompt: string; messages: LLMMessage[]},
+    onFailure: (runError: unknown) => void
+  ) => {
+    const updateShown = (changes: Partial<Pick<CharacterLabExchange, 'reply' | 'stopped'>>) =>
+      updateExchanges((current) =>
+        current.map((entry) => (entry.id === exchangeId ? updateShownVersion(entry, changes) : entry))
+      );
+    try {
+      const service = new LLMService(lab.aiConfig!);
+      budget.spend('character-lab');
+      const result = await modelRun.run(
+        service,
+        {systemPrompt: prompt.systemPrompt, messages: prompt.messages, maxTokens, cache: false},
+        ({answer}) => updateShown({reply: answer})
+      );
+      updateShown({reply: result.answer, stopped: result.stopped});
+    } catch (runError) {
+      onFailure(runError);
+    }
+  };
+
   const send = async () => {
     const text = input.trim();
     if (!text || !context || !lab.aiConfig || modelRun.isRunning) return;
-    if (providerIssue) {
-      setError(providerIssue);
-      return;
-    }
-    if (!consultationEnabled) {
-      setError('AI consultation is disabled in Settings.');
-      return;
-    }
-    if (budget.blocked) {
-      setError(budget.blockedMessage ?? 'AI consultation budget reached for today.');
+    const blocked = blockedReason();
+    if (blocked) {
+      setError(blocked);
       return;
     }
 
-    const {prompt} = planPrompt(context, text);
+    // Sending moves on: earlier replies keep the version shown, and the others are discarded.
+    const history = exchanges.map(keepShownVersion);
+    const {prompt} = planPrompt(context, text, {mode, history});
     const exchange: CharacterLabExchange = {
       id: crypto.randomUUID(),
       mode,
@@ -154,35 +193,50 @@ export function CharacterLabDialog({
       positionLabel: context.positionLabel,
       stopped: false
     };
-    const updateExchange = (changes: Partial<CharacterLabExchange>) =>
-      updateExchanges((current) =>
-        current.map((entry) => (entry.id === exchange.id ? {...entry, ...changes} : entry))
-      );
 
     setError(null);
     setSavedMessage(null);
     setInput('');
-    updateExchanges((current) => [...current, exchange]);
-    try {
-      const service = new LLMService(lab.aiConfig);
-      budget.spend('character-lab');
-      const result = await modelRun.run(
-        service,
-        {
-          systemPrompt: prompt.systemPrompt,
-          messages: prompt.messages,
-          maxTokens,
-          cache: false
-        },
-        ({answer}) => updateExchange({reply: answer})
-      );
-      updateExchange({reply: result.answer, stopped: result.stopped});
-    } catch (runError) {
+    updateExchanges(() => [...history, exchange]);
+    await generate(exchange.id, prompt, (runError) => {
       updateExchanges((current) => current.filter((entry) => entry.id !== exchange.id));
       setInput(text);
       setError(describeError(runError, 'The character lab could not reach the model.'));
-    }
+    });
   };
+
+  const latestExchange = exchanges[exchanges.length - 1] ?? null;
+  // Another version repeats the same request: same mode, story point, and earlier conversation.
+  const anotherVersionIssue = !latestExchange
+    ? null
+    : !context || context.positionLabel !== latestExchange.positionLabel
+      ? `Return to ${latestExchange.positionLabel} to ask for another version.`
+      : exchangeVersionCount(latestExchange) >= MAX_REPLY_VERSIONS
+        ? `At most ${MAX_REPLY_VERSIONS} versions of one reply.`
+        : null;
+
+  const anotherVersion = async () => {
+    const exchange = latestExchange;
+    if (!exchange || !context || !lab.aiConfig || modelRun.isRunning || anotherVersionIssue) return;
+    const blocked = blockedReason();
+    if (blocked) {
+      setError(blocked);
+      return;
+    }
+    const {prompt} = planPrompt(context, exchange.prompt, {mode: exchange.mode, history: exchanges.slice(0, -1)});
+    setError(null);
+    setSavedMessage(null);
+    updateExchanges((current) => current.map((entry) => (entry.id === exchange.id ? startExchangeVersion(entry) : entry)));
+    await generate(exchange.id, prompt, (runError) => {
+      updateExchanges((current) => current.map((entry) => (entry.id === exchange.id ? dropShownVersion(entry) : entry)));
+      setError(describeError(runError, 'The character lab could not reach the model.'));
+    });
+  };
+
+  const showVersion = (index: number) =>
+    updateExchanges((current) =>
+      current.map((entry) => (entry.id === latestExchange?.id ? showExchangeVersion(entry, index) : entry))
+    );
 
   const saveToScratchpad = async () => {
     if (!context || exchanges.length === 0) return;
@@ -200,8 +254,8 @@ export function CharacterLabDialog({
     }
   };
 
-  const canSend =
-    Boolean(context) && Boolean(input.trim()) && !modelRun.isRunning && !providerIssue && consultationEnabled;
+  const canGenerate = Boolean(context) && !modelRun.isRunning && !providerIssue && consultationEnabled;
+  const canSend = canGenerate && Boolean(input.trim());
 
   return (
     <div
@@ -278,6 +332,16 @@ export function CharacterLabDialog({
                         <p>{exchange.reply || (modelRun.isRunning && index === exchanges.length - 1 ? '…' : '')}</p>
                         {exchange.stopped && (
                           <span className={styles.stoppedNote}>Stopped before the reply finished.</span>
+                        )}
+                        {index === exchanges.length - 1 && (
+                          <ReplyVersionControls
+                            count={exchangeVersionCount(exchange)}
+                            index={exchange.versionIndex ?? 0}
+                            busy={modelRun.isRunning}
+                            disabledReason={anotherVersionIssue ?? (canGenerate ? null : 'Not available right now.')}
+                            onShow={showVersion}
+                            onAnother={() => void anotherVersion()}
+                          />
                         )}
                       </div>
                     </li>
