@@ -1091,6 +1091,23 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 4.74 rolling Character Lab summaries: when a Talk conversation
+  takes about a third of the model's context (35%, from the 4.72 estimate)
+  and there are complete Talk turns older than the two most recent, the lab
+  offers **Summarize earlier turns**. The summary request sends only those
+  turns (no World Bible records or grounding) and asks for at most 200
+  words; it is a full model run, so provider checks and the consultation
+  budget apply. The summary appears in an editable box labeled "Summary of
+  the earlier conversation · N turns · not canon" (plus "edited" once
+  changed); the turns it covers stay on screen marked Summarized. From then
+  on the model gets the summary, under a heading that calls it a working
+  summary and not canon, in place of those turns; the two most recent turns
+  always go word for word. **Add earlier turns to the summary** extends it,
+  **Remove summary** sends every turn again, and Clear conversation clears
+  it. The summary lives only for the app session, like the transcript: it
+  is never saved, never written to the World Bible, and Save to Scratchpad
+  still saves the turns themselves. The prompt total counts it as
+  conversation.
 - Slice 4.73 alternative replies: the latest Character Lab reply (Talk and
   Reaction test) and the latest assistant reply have **Another version**,
   which sends the same request again (same question, grounding or context,
