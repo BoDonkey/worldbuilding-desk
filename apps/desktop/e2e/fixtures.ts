@@ -1,4 +1,4 @@
-import {test as base, _electron, type ElectronApplication, type Page} from '@playwright/test';
+import {test as base, _electron, expect, type ElectronApplication, type Page} from '@playwright/test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -95,7 +95,7 @@ export const test = base.extend<{desktop: Desktop}>({
   }
 });
 
-export {expect} from '@playwright/test';
+export {expect};
 
 /** Loads the bundled sample project from a fresh profile and waits for the Workspace. */
 export async function openSampleProject(page: Page): Promise<void> {
@@ -112,6 +112,11 @@ export async function openFromRail(page: Page, name: string): Promise<void> {
     await link.click();
     return;
   }
-  await rail.getByRole('button', {name: 'More'}).click();
-  await page.getByRole('menuitem', {name, exact: true}).click();
+  // First-run setup can re-render the shell and close the menu on a slow
+  // machine, so open it again until the click lands.
+  const item = page.getByRole('menuitem', {name, exact: true});
+  await expect(async () => {
+    if (!(await item.isVisible())) await rail.getByRole('button', {name: 'More'}).click();
+    await item.click({timeout: 2_000});
+  }).toPass({timeout: 20_000});
 }
