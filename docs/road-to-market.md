@@ -228,7 +228,7 @@ run when a result was reused or coverage was focused.
    4.57 → 4.58 → 4.59;
    3.18 after 4.66; 3.22 → 3.23a → 3.23b; 3.23a → 3.23c;
    3.23a–3.23c before 5.15; 3.24a → 3.24b, both high priority; 4.67 → 4.68; 4.69 → 4.70;
-   5.14 before 5.15; 5.15 before 6.1;
+   5.14 before 5.15; 5.15a → 5.15b → 5.15c; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -413,7 +413,9 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 5.10 | Author-facing vocabulary sweep | 5 | XS | Done `69e6559` — string-layer only, behavior-preserving; retires `Shodh`/`RAG`/`Rubber-Duck` from rendered UI including the review's named "Inherit RAG data"/"Inherit memories" inconsistency; source-scanning test guards against regression; lint with 1 baseline warning; 500 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 72/73 ([review](archive/ux-ai-review-2026-08-29.md) §A3) |
 | 5.12 | App-shell toast viewport + status live region | 5 | S | Done `7f303f7` — one app-shell toast viewport (polite, auto-dismiss, repeats replaced) fed by a `RouteFeedback` bridge in all nine routes plus Workspace (errors-as-toast, resolver notice as an action toast); errors elsewhere stay inline as `InlineAlert`; one shared status live region via `useStatusAnnouncement` wired to autosave, review, extraction, migration, and AI streaming; `aria-invalid` on three more validated fields; split recorded in the blueprint; lint with 1 baseline warning; 529 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 75/77 full run (one assertion updated to `role="alert"`, one pre-existing hydration race in `post-merge-smoke`), 18/18 + 2/2 in isolation ([review](archive/ux-ai-review-2026-08-29.md) §A5, §A6) |
 | 5.14 | Optional encrypted backups | 5 | S | Done `7669198` — author-approved exception to the Phase 5 gate (2026-10-25), as for 5.3. Export Backup offers a plain `.zip` (default) or an encrypted `.sagabackup`: versioned JSON envelope around the backup zip, PBKDF2-SHA256 600k → AES-256-GCM with the header authenticated, NFC passphrase of 8+ characters typed twice, never stored. Import/Validate detect it by content and read nothing until the passphrase opens it; wrong passphrase keeps the dialog open; newer envelope asks for an update; plain backups unchanged. Smoke 1 step 7. Lint baseline; 1284 web + 47 engine + 12 UI + 37 desktop tests; builds; Cypress 164/164; Electron E2E 14/14 including an encrypted round trip on disk; Web CI [run 40186887061](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40186887061) green on macOS and Windows |
-| 5.15 | Password-protected project vaults | 5 | L | — |
+| 5.15a | Project vaults: vault core | 5 | M | Done `f4bd848` — author-approved exception to the Phase 5 gate (2026-10-25), extended from 5.3/5.14; 5.15 split into 5.15a–5.15c, plan `docs/project-vault-plan.md`. `openDb()` and the rulesets database return a wrapped connection that seals protected projects' records on write and opens them on read (per-project 256-bit data key wrapped by PBKDF2-SHA256 600k; synchronous AES-256-GCM from `@noble/ciphers` 2.4.0 so sealing works inside transactions; bound to database, store, project, and id); cursors refused; locked projects read back sealed with a **Locked project** placeholder and refuse writes; every vault locks on reload. Enable/disable rewrite each database in one transaction verified before and after writing, with compensation for the rulesets database and no plaintext backup; passphrase change re-wraps only the key. Not reachable from the UI. Found: zone-affinity ids embed the zone-name slug (moved to 5.15b). 14 new tests; two planted regressions caught; lint baseline; 1298 web + 47 engine + 12 UI + 37 desktop tests; builds; Cypress 164/164; Web CI [run 40194139403](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40194139403) green including Desktop E2E on macOS and Windows |
+| 5.15b | Project vaults: UX + derived data | 5 | L | WIP |
+| 5.15c | Project vaults: verification + copy | 5 | M | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -2337,6 +2339,8 @@ KoboldCPP.
   isolation, encrypted backup round trip, a scan proving planted manuscript
   phrases do not remain in app-owned persistence, and packaged macOS/Windows
   smoke coverage. Update the privacy/help copy only after these checks pass.
+  Split on 2026-10-25 into 5.15a (vault core), 5.15b (UX and derived data),
+  and 5.15c (verification and copy). Plan: `docs/project-vault-plan.md`.
 ## Phase 6 — Beta, RC, Launch
 
 - **6.1 Beta.** Signed, auto-updating build to a 10–30 author cohort

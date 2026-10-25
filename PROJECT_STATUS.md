@@ -21,7 +21,9 @@ SagaSpine is a desktop writing environment for fiction authors. The current prod
 
 - Project data is stored locally but working projects are not currently
   encrypted by SagaSpine; optional password-protected working project vaults
-  are planned as Slice 5.15 before beta. Backups can be encrypted (Slice
+  are planned as Slice 5.15 before beta. The vault storage layer exists
+  (5.15a) but no screen can turn it on yet; the Projects controls arrive in
+  5.15b. Backups can be encrypted (Slice
   5.14): **Export Backup** offers a plain `.zip` or an encrypted
   `.sagabackup` file. The passphrase is never stored and cannot be recovered.
 - Local AI stays on the computer only on a verified route: Ollama at a
@@ -726,6 +728,19 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Current Architecture Status
 
 ### Stabilized
+- Project vault storage layer (slice 5.15a; nothing in the UI uses it yet).
+  - `openDb()` and the rulesets database return a wrapped connection.
+    Records of a protected project are sealed on write and opened on read:
+    AES-256-GCM with a per-project data key, bound to the database, store,
+    project, and record id. Repositories are unchanged.
+  - The passphrase is used through PBKDF2-SHA256 600k and wraps the data key.
+    Only the stable id, the KDF settings, the wrapped key, and a label stay
+    readable.
+  - A locked project reads back as sealed records and a **Locked project**
+    placeholder, and writes to it are refused. Every vault locks on reload.
+  - Enable and disable rewrite the project in one verified transaction per
+    database, with compensation for the separate rulesets database. Changing
+    the passphrase re-wraps only the key.
 - Editor toolbar, canvas, and stat-block chips now use existing theme tokens
   for their surfaces, shadows, and normal/warning/error colors in both themes.
   AI Settings and consultation notices use the defined secondary-text token
@@ -1001,6 +1016,15 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.15a project vault core passed full remote Web CI, including
+  `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
+  [run 40194139403](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40194139403)
+  for [PR #80](https://github.com/BoDonkey/worldbuilding-desk/pull/80).
+  Coverage: 16 CI-policy tests, file-size gate, lint with the existing
+  warning, 1298 web (14 new vault tests) + 47 engine + 12 UI + 37 desktop
+  unit tests, both builds, and Cypress 164/164 with retries disabled. The
+  packaged Electron suite passing on both platforms confirms the synchronous
+  cipher and the wrapped database work in the installed app.
 - Slice 5.14 optional encrypted backups passed full remote Web CI, including
   `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
   [run 40186887061](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40186887061)

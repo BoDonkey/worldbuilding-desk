@@ -316,6 +316,19 @@ normal pre-migration backup rule below does not authorize a plaintext backup
 while enabling a vault. There is no application or hosted passphrase-recovery
 path.
 
+The vault seam (5.15a, `services/storage/vault/`) is the connection that
+`openDb()` returns, plus the rulesets database. It seals records on `put`
+and opens them on `get`/`getAll`/`index().getAll`, and it refuses cursors,
+because `cursor.update` would skip sealing. A new persistence path is
+covered as long as it goes through `openDb()`. Opening the database with
+`indexedDB.open` directly (only `openRawDb` and the vault service may do
+this) or adding a separate database bypasses the vault. The seam uses
+synchronous AES-GCM (`@noble/ciphers`), so a sealed write can sit inside a
+`runProjectWriteTransaction`. The data key lives only in the in-memory
+registry, so a reload locks every vault. The retrieval and memory databases
+and project-derived browser-storage keys are not yet covered; 5.15b closes
+that.
+
 IndexedDB's structural `DB_VERSION`, per-project `storageSchemaVersion`, and
 portable project-snapshot `schemaVersion` are separate contracts. Opening a
 project runs the deterministic per-project migration chain before consumers
