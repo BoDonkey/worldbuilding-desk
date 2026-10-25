@@ -1,6 +1,6 @@
 # Manual Smoke Procedures
 
-Last updated: 2026-10-24
+Last updated: 2026-10-25
 
 Reusable manual smoke procedures targeting trust and data-loss boundaries.
 Consolidates the former `project-backup-smoke-test.md`,
@@ -30,8 +30,8 @@ Procedure:
    from one lens to different destinations, add explicit Source Note/World
    Bible links, collapse one populated lens, and add three Open Threads with
    mixed Open/Settled/Set aside statuses.
-2. `Projects` → `Export Backup (.zip)` → confirm
-   `<project>-backup-YYYY-MM-DD.zip` downloads → `Validate Backup (.zip)`
+2. `Projects` → `Export Backup` → keep `Plain backup (.zip)` → confirm
+   `<project>-backup-YYYY-MM-DD.zip` downloads → `Validate Backup`
    passes integrity and supported-version checks. A fixture whose
    `schemaVersion` is newer than the app supports must fail before preview or
    import with an instruction to update the app.
@@ -61,13 +61,24 @@ Procedure:
    form comes back with both values. Export and import as a new project, open
    the same character there, and confirm the form returns with the same
    values. Cancel it, reload, and confirm it stays closed.
+7. Encrypted backup (slice 5.14). `Export Backup` → `Encrypted backup
+   (.sagabackup)`: a short or mismatched passphrase is refused inline, and the
+   recovery warning is visible. Export, and confirm
+   `<project>-backup-YYYY-MM-DD.sagabackup` downloads and that opening it in a
+   text editor shows no project text. `Validate Backup` with it asks for the
+   passphrase; a wrong one shows `That passphrase does not open this backup`
+   and keeps the dialog open; the right one passes. `Import Backup` → Cancel
+   at the passphrase reads nothing; import again with the passphrase, apply
+   as `Create New Project`, and repeat the step 5 spot-checks on the copy.
+   Repeat on a second computer if one is available.
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated
 Scratchpad, Corkboard cards missing plot points, order, or scene links, changed/missing
 World Canvas content, any Canvas-only idea appearing as canon or indexed
 context, or an unfinished mechanics draft missing after reload or import, or
-returning after Cancel.
+returning after Cancel, or an encrypted backup that opens with a wrong
+passphrase, shows readable project text, or reads anything before unlocking.
 
 ## 1a. World Canvas Planning IA and Guided Focus
 

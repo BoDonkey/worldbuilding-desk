@@ -45,6 +45,7 @@ export * from './jsonTransfer';
 export * from './projectWriteTransaction';
 export * from './projectBackupExport';
 export * from './projectBackupImport';
+export * from './backupEncryption';
 export * from './projectBackupCollisions';
 export * from './projectBackupIdRemap';
 export * from './projectSnapshotService';

@@ -818,7 +818,12 @@ describe('Post-merge smoke checklist', () => {
       .filter(':contains("Cypress Smoke Project")')
       .first()
       .within(() => {
-      cy.contains('button', 'Export Backup (.zip)').click();
+      cy.contains('button', 'Export Backup').click();
+    });
+    // 5.14: plain is the default choice.
+    cy.get('[role="dialog"][aria-labelledby="export-backup-title"]').within(() => {
+      cy.contains('label', 'Plain backup (.zip)').find('input').should('be.checked');
+      cy.contains('button', 'Export Backup').click();
     });
 
     cy.contains('[role="status"]', 'Backup exported for "Cypress Smoke Project".').should(
@@ -836,12 +841,12 @@ describe('Post-merge smoke checklist', () => {
         lastModified: Date.now()
       };
 
-      cy.contains('button', 'Validate Backup (.zip)')
+      cy.contains('button', 'Validate Backup')
         .next('input[type="file"]')
         .selectFile(backupFile, {force: true});
       cy.contains('[role="status"]', 'passed integrity checks').should('be.visible');
 
-      cy.contains('button', 'Import Backup (.zip)')
+      cy.contains('button', 'Import Backup')
         .next('input[type="file"]')
         .selectFile(backupFile, {force: true});
 

@@ -20,6 +20,7 @@ import type {ConsistencyAlias} from './repositories/aliasStorage';
 import {mechanicsDraftId} from './repositories/mechanicsDraftStorage';
 import {assertNoProjectBackupCollisions, findProjectBackupCollisions} from './projectBackupCollisions';
 import {collectImportRecordIds, remapImportedSnapshot, stableImportId} from './projectBackupIdRemap';
+import {decryptBackup, isEncryptedBackup} from './backupEncryption';
 import type {
   ActorResolution,
   CharacterIdentityMigrationReport
@@ -158,8 +159,20 @@ export function normalizeProjectSnapshot(value: unknown): ProjectSnapshot {
   return snapshot as ProjectSnapshot;
 }
 
-async function readZipJson(file: File): Promise<unknown> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
+/** An encrypted backup was chosen and no passphrase was given yet. */
+export class BackupPassphraseRequiredError extends Error {
+  constructor() {
+    super('This backup is encrypted. Enter its passphrase to open it.');
+    this.name = 'BackupPassphraseRequiredError';
+  }
+}
+
+async function readZipJson(file: File, passphrase?: string): Promise<unknown> {
+  let bytes: Uint8Array = new Uint8Array(await file.arrayBuffer());
+  if (isEncryptedBackup(bytes)) {
+    if (passphrase === undefined) throw new BackupPassphraseRequiredError();
+    bytes = await decryptBackup(bytes, passphrase);
+  }
   const {fileName, fileData} = extractSingleFileZip({zipBytes: bytes});
   if (!fileName.endsWith('.json')) {
     throw new Error('Backup zip does not contain a JSON snapshot file.');
@@ -467,11 +480,16 @@ async function saveProjectScopedRecords(params: {
   });
 }
 
-export async function parseProjectBackupZip(file: File): Promise<{
+/**
+ * Reads a backup file: a plain zip, or an encrypted backup when `passphrase`
+ * is given. An encrypted file without one throws `BackupPassphraseRequiredError`;
+ * a wrong passphrase throws `BackupPassphraseError` before anything is read.
+ */
+export async function parseProjectBackupZip(file: File, passphrase?: string): Promise<{
   snapshot: ProjectSnapshot;
   preview: ProjectSnapshotImportPreview;
 }> {
-  const json = await readZipJson(file);
+  const json = await readZipJson(file, passphrase);
   const snapshot = normalizeProjectSnapshot(json);
   return {
     snapshot,
