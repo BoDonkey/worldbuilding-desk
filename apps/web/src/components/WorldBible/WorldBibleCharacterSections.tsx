@@ -29,6 +29,8 @@ interface WorldBibleCharacterSectionsProps {
   mechanicsContent: ReactNode;
   /** Character lab entry, shown once the character is saved. */
   labAction?: ReactNode;
+  /** The character card export (4.70), shown under Writing aids. */
+  cardExportAction?: ReactNode;
 }
 
 interface SectionDefinition {
@@ -178,6 +180,7 @@ export const WorldBibleCharacterSections = (
                 {props.isExporting ? 'Exporting...' : 'Export character'}
               </button>
             </div>
+            {props.cardExportAction}
           </div>
         )}
       </section>

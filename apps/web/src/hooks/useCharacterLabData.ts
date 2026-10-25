@@ -54,6 +54,7 @@ import type {CharacterFromDescriptionRecords} from '../services/characterLab/cha
 import {getRAGService} from '../services/rag/getRAGService';
 import {saveCharacterCardImport} from '../services/characterCards/characterCardStorage';
 import type {CharacterCardImportRecords} from '../services/characterCards/characterCardImport';
+import {buildCharacterCardV2, type CharacterCardV2} from '../services/characterCards/characterCardExport';
 
 interface CharacterLabProjectData {
   projectId: string;
@@ -277,6 +278,28 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
     [projectId]
   );
 
+  /** The character as a V2 card: its record, aliases, and the accepted facts the lab grounds it with. */
+  const buildCardExport = useCallback(
+    (entityId: string): CharacterCardV2 => {
+      const result = buildContext(entityId, {kind: 'latest'});
+      if (!current || !result?.context) throw new Error(result?.error ?? 'This character could not be read.');
+      const entity = current.entities.find((candidate) => candidate.id === entityId);
+      if (!entity) throw new Error('This World Bible record is not a character.');
+      const ids = (type: string) =>
+        new Set(result.context!.sections.flatMap((section) => section.provenance).filter((item) => item.type === type).map((item) => item.id));
+      const aliasIds = ids('alias');
+      const factIds = ids('canonical-fact');
+      return buildCharacterCardV2({
+        entity,
+        category: current.categories.find((category) => category.id === entity.categoryId) ?? null,
+        aliases: current.aliases.filter((alias) => aliasIds.has(alias.id)).map((alias) => alias.alias),
+        facts: current.canonicalFacts.filter((fact) => factIds.has(fact.id)),
+        exportedAt: Date.now()
+      });
+    },
+    [buildContext, current]
+  );
+
   const saveCardImport = useCallback(
     async (records: CharacterCardImportRecords, categorySlug?: string) => {
       if (!projectId) throw new Error('No project is open.');
@@ -299,6 +322,7 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
     findNameCollisions,
     saveToScratchpad,
     saveFromDescription,
-    saveCardImport
+    saveCardImport,
+    buildCardExport
   };
 }
