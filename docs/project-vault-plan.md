@@ -140,9 +140,13 @@ Built (5.15b):
 
 ### 5.15c — Verification and copy (M)
 
-- Planted-phrase scan across every app-owned store and browser-storage key.
-- On-disk scan of the packaged desktop profile.
-- Cypress vault journeys.
+- Planted-phrase scan across every app-owned store and browser-storage key
+  (in jsdom already: `vault/projectVaultDerived.test.ts`; 5.15c adds a zone
+  record and runs it against the packaged app).
+- On-disk scan of the packaged desktop profile, including plaintext left in
+  old IndexedDB pages after enable.
+- Cypress vault journeys (protect, unlock, lock, restart, passphrase change,
+  encrypted export, and removal already in `project-vault.cy.ts`).
 - Electron packaged smoke on macOS and Windows.
 - A `docs/smoke-tests.md` procedure.
 - Privacy and help copy, written only after these checks pass.
