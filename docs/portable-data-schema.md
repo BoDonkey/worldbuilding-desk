@@ -4,7 +4,7 @@
 
 SagaSpine's portable export is a human-readable ZIP intended for
 moving material between writing tools and keeping an inspectable copy outside
-the app. It is not a full-fidelity backup. Use **Export Backup (.zip)** on the
+the app. It is not a full-fidelity backup. Use **Export Backup** on the
 Projects screen when you need an exact, restorable project snapshot.
 
 ## ZIP layout

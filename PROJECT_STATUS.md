@@ -20,9 +20,10 @@ SagaSpine is a desktop writing environment for fiction authors. The current prod
 ### Current Privacy Boundary
 
 - Project data is stored locally but working projects are not currently
-  encrypted by SagaSpine. Optional encrypted backup files remain planned as
-  roadmap Slice 5.14; optional password-protected working project vaults are
-  planned separately as Slice 5.15 before beta.
+  encrypted by SagaSpine; optional password-protected working project vaults
+  are planned as Slice 5.15 before beta. Backups can be encrypted (Slice
+  5.14): **Export Backup** offers a plain `.zip` or an encrypted
+  `.sagabackup` file. The passphrase is never stored and cannot be recovered.
 - Local AI stays on the computer only on a verified route: Ollama at a
   loopback address with a model `/api/tags` lists as installed and not cloud,
   or a local OpenAI-compatible server (KoboldCPP, LM Studio, llama.cpp) at a
@@ -538,6 +539,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   longer copy untracked text into World Bible Notes.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
+- Optional encrypted backups (slice 5.14). Export asks for a plain backup
+  (default) or an encrypted `.sagabackup`: a versioned JSON envelope around
+  the same backup zip, using PBKDF2-SHA256 (600,000 iterations) and
+  AES-256-GCM, with the header authenticated. Import and Validate recognize
+  the envelope by content, ask for the passphrase, and read nothing until it
+  opens; a wrong passphrase keeps the dialog open with a plain error, a newer
+  envelope asks for an app update, and plain backups work as before.
 - Project deletion commits its manifest, project-owned main-database records,
   and migration backups in one transaction. A failed primary deletion rolls
   back those records and restores the ruleset from its separate database.

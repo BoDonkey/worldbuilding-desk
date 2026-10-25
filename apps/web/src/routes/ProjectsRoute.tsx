@@ -40,12 +40,14 @@ import {isDogfoodToolsEnabled} from '../services/onboarding/dogfoodTools';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/ProjectsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
+import {useBackupPassphraseFlow} from '../hooks/useBackupPassphraseFlow';
 import {describeError} from '../services/errors';
 import {RouteFeedback} from '../components/common';
 import {SAMPLE_PROJECT_NAME} from '../fixtures/sampleProjectContent';
 
 function ProjectsRoute() {
   const {requestConfirm, confirmDialog} = useConfirmDialog();
+  const {chooseExport, openBackup, backupDialogs} = useBackupPassphraseFlow();
   const activeProject = useAppStore((s) => s.activeProject);
   const onSelectProject = useAppStore((s) => s.setActiveProject);
   const persistProjectSettings = useAppStore((s) => s.saveProjectSettings);
@@ -359,16 +361,21 @@ function ProjectsRoute() {
   };
 
   const handleExportProjectBackup = async (project: Project) => {
+    const choice = await chooseExport(project.name);
+    if (!choice) return;
     setExportingProjectId(project.id);
     setFeedback(null);
     try {
-      await exportProjectBackupZip({
+      const result = await exportProjectBackupZip({
         projectId: project.id,
-        projectName: project.name
+        projectName: project.name,
+        passphrase: choice.passphrase
       });
       setFeedback({
         tone: 'success',
-        message: `Backup exported for "${project.name}".`
+        message: result.encrypted
+          ? `Encrypted backup exported for "${project.name}". Keep its passphrase somewhere safe; it cannot be recovered.`
+          : `Backup exported for "${project.name}".`
       });
     } catch (error) {
       const message =
@@ -450,7 +457,8 @@ function ProjectsRoute() {
     setIsParsingImport(true);
     setFeedback(null);
     try {
-      const parsed = await parseProjectBackupZip(file);
+      const parsed = await openBackup(file.name, (passphrase) => parseProjectBackupZip(file, passphrase));
+      if (!parsed) return;
       setImportSnapshot(parsed.snapshot);
       setImportPreview(parsed.preview);
       setImportMode('new');
@@ -544,7 +552,8 @@ function ProjectsRoute() {
     setIsValidatingBackup(true);
     setFeedback(null);
     try {
-      const parsed = await parseProjectBackupZip(file);
+      const parsed = await openBackup(file.name, (passphrase) => parseProjectBackupZip(file, passphrase));
+      if (!parsed) return;
       const result = validateSnapshotCounts(parsed.snapshot);
       setFeedback({
         tone: result.ok ? 'success' : 'error',
@@ -634,12 +643,12 @@ function ProjectsRoute() {
               onClick={handleSelectBackupFile}
               disabled={isParsingImport}
             >
-              {isParsingImport ? 'Loading Backup...' : 'Import Backup (.zip)'}
+              {isParsingImport ? 'Loading Backup...' : 'Import Backup'}
             </button>
             <input
               ref={importFileInputRef}
               type='file'
-              accept='.zip,application/zip'
+              accept='.zip,application/zip,.sagabackup'
               onChange={(e) => void handleBackupFileChange(e)}
               className={styles.hiddenFileInput}
               tabIndex={-1}
@@ -650,12 +659,12 @@ function ProjectsRoute() {
               onClick={handleSelectValidateFile}
               disabled={isValidatingBackup}
             >
-              {isValidatingBackup ? 'Validating...' : 'Validate Backup (.zip)'}
+              {isValidatingBackup ? 'Validating...' : 'Validate Backup'}
             </button>
             <input
               ref={validateFileInputRef}
               type='file'
-              accept='.zip,application/zip'
+              accept='.zip,application/zip,.sagabackup'
               onChange={(e) => void handleValidateBackupFile(e)}
               className={styles.hiddenFileInput}
               tabIndex={-1}
@@ -932,7 +941,7 @@ function ProjectsRoute() {
                 >
                   {exportingProjectId === project.id
                     ? 'Exporting...'
-                    : 'Export Backup (.zip)'}
+                    : 'Export Backup'}
                 </button>
 
                 <button
@@ -952,6 +961,7 @@ function ProjectsRoute() {
       </div>
 
       {confirmDialog}
+      {backupDialogs}
     </section>
   );
 }

@@ -1,0 +1,98 @@
+.overlay {
+  composes: overlay from './common/ConfirmDialog.module.css';
+}
+
+.card {
+  composes: card from './common/ConfirmDialog.module.css';
+  width: min(480px, 92vw);
+}
+
+.title {
+  composes: title from './common/ConfirmDialog.module.css';
+}
+
+.message {
+  composes: message from './common/ConfirmDialog.module.css';
+}
+
+.actions {
+  composes: actions from './common/ConfirmDialog.module.css';
+}
+
+.cancelButton {
+  composes: cancelButton from './common/ConfirmDialog.module.css';
+}
+
+.primaryButton {
+  composes: confirmButton confirmButtonDefault from './common/ConfirmDialog.module.css';
+}
+
+.primaryButton:disabled,
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.choices {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.choice {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.choiceHelp {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  font-size: var(--font-size-base);
+}
+
+.input:focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+  border-color: var(--input-border-focus);
+}
+
+.warning {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-warning-soft-border);
+  border-radius: 8px;
+  background: var(--color-warning-soft-bg);
+  color: var(--color-warning-soft-text);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+.error {
+  margin: 0;
+  color: var(--color-error-soft-text);
+  font-size: var(--font-size-sm);
+}
