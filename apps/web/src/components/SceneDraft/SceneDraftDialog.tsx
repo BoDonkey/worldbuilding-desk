@@ -1,10 +1,12 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {Link} from 'react-router';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
+import {useModelContextSize} from '../../hooks/useModelContextSize';
+import {ContextLeftOutNotice} from '../common/ContextLeftOutNotice';
 import {useModelRun} from '../../hooks/useModelRun';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
-import type {CharacterVoiceContext, CharacterVoicePosition} from '../../services/characterLab';
+import {buildBudgetedVoicePrompt, type CharacterVoiceContext, type CharacterVoicePosition} from '../../services/characterLab';
 import {
   SCENE_DRAFT_DEFAULT_WORDS,
   SCENE_DRAFT_MIN_WORDS,
@@ -118,6 +120,7 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
     return {contexts, errors};
   }, [buildContext, inputs.presentEntityIds, isOpen, position]);
   const providerIssue = useMemo(() => getCharacterLabProviderIssue(lab.aiConfig), [lab.aiConfig]);
+  const contextSize = useModelContextSize(lab.aiConfig, isOpen);
 
   if (!isOpen) return null;
 
@@ -140,7 +143,7 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
   const disclosure = (() => {
     const sentence = describeRouteDataFlow(
       budget.route,
-      'the fields above and the present characters’ World Bible records, accepted facts, dialogue styles, and story state'
+      `the fields above and the present characters’ World Bible records${lab.aiConfig?.includeLinkedRecords ? ' (with linked records)' : ''}, accepted facts, dialogue styles, and story state`
     );
     return budget.route.kind === 'hosted' && sentence
       ? `${sentence} Other scenes and Source Notes are not sent.`
@@ -153,6 +156,26 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
     !modelRun.isRunning &&
     !providerIssue;
   const draftText = draft?.text ?? '';
+  const maxTokens = lab.aiConfig ? resolveResponseTokenLimit(lab.aiConfig.provider, inspector?.maxResponseTokens) : undefined;
+  // The point-of-view character is fitted first; the same fit is shown below.
+  const castByPriority = [
+    ...grounding.contexts.filter((context) => context.entityId === inputs.povEntityId),
+    ...grounding.contexts.filter((context) => context.entityId !== inputs.povEntityId)
+  ];
+  const planPrompt = (planned: SceneDraftInputs) =>
+    buildBudgetedVoicePrompt({
+      contexts: castByPriority,
+      contextTokens: contextSize?.tokens ?? null,
+      replyTokens: maxTokens,
+      build: (characters) => buildSceneDraftPrompt({inputs: planned, characters})
+    });
+  let plannedFit = null;
+  try {
+    // Before the goal is written, plan with a stand-in so the fit is shown from the start.
+    plannedFit = castByPriority.length > 0 ? planPrompt(inputs.goal.trim() ? inputs : {...inputs, goal: '…'}).fit : null;
+  } catch {
+    // Not ready to draft yet; the Draft button explains why.
+  }
 
   const write = async () => {
     if (!canDraft || !lab.aiConfig) return;
@@ -162,7 +185,7 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
     }
     let prompt;
     try {
-      prompt = buildSceneDraftPrompt({inputs, characters: grounding.contexts});
+      prompt = planPrompt(inputs).prompt;
     } catch (promptError) {
       setError(describeError(promptError, 'This scene cannot be drafted yet.'));
       return;
@@ -189,7 +212,7 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
         {
           systemPrompt: prompt.systemPrompt,
           messages: prompt.messages,
-          maxTokens: resolveResponseTokenLimit(lab.aiConfig.provider, inspector?.maxResponseTokens),
+          maxTokens,
           cache: false
         },
         ({answer}) => {
@@ -431,17 +454,23 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
               {grounding.contexts.length === 0 ? (
                 <p className={styles.hint}>Only the fields on the left. Choose characters to add their records.</p>
               ) : (
-                grounding.contexts.map((context) => (
+                (plannedFit?.contexts ?? grounding.contexts).map((context) => (
                   <div key={context.entityId}>
                     <strong>{context.name}</strong>
                     <ul>
                       {context.sections.map((section) => (
-                        <li key={section.kind}>{section.source}</li>
+                        <li key={section.source}>{section.source}</li>
                       ))}
                     </ul>
                   </div>
                 ))
               )}
+              <ContextLeftOutNotice
+                className={styles.hint}
+                omitted={plannedFit?.omitted ?? []}
+                budgetTokens={plannedFit?.budgetTokens ?? 0}
+                size={contextSize}
+              />
               <p className={styles.hint}>
                 Story state is as of the start of this scene. Inserted text is marked as AI text and
                 reaches canon only through the usual review, like anything you write.

@@ -48,6 +48,8 @@ import {
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
+import {fitContextChunks} from '../../services/llm/contextBudget';
+import {resolveModelContextSize} from '../../services/llm/modelContextSize';
 import {getCraftLibraryService} from '../../services/craft/getCraftLibraryService';
 import {
   buildCraftContextChunks,
@@ -475,14 +477,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const contextChunks = [...shodhChunks, ...ragChunks, ...pendingChunks];
 
       // Add selected text context if available
-      if (selectedText) {
-        contextChunks.unshift({
-          content: promptContext,
-          source: contextLabel,
-          relevance: 1.0
-        });
-      }
-      const contextSources = getContextSourceSummaries(contextChunks);
+      const selectionChunk = selectedText ? {content: promptContext, source: contextLabel, relevance: 1.0} : null;
+      if (selectionChunk) contextChunks.unshift(selectionChunk);
 
       const promptType = context?.type === 'rule' ? 'rules' : context?.type || 'document';
       const basePrompt = await promptManager.current.getPrompt(promptType);
@@ -500,6 +496,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const composedPrompt = appendContextTrustInstructions(
         `${basePrompt}${toolPrompt}${pendingChunks.length > 0 ? `\n\n${PENDING_PROPOSAL_INSTRUCTION}` : ''}`
       );
+      const replyTokens = resolveResponseTokenLimit(aiProvider, consultationMaxTokens);
+      // Fit the context to the model (Slice 4.71); the author's selection goes first.
+      const budgeted = fitContextChunks({
+        chunks: contextChunks,
+        contextTokens: (await resolveModelContextSize(aiConfig)).tokens,
+        fixedText: [composedPrompt, requestUserMessage.content],
+        replyTokens,
+        sectionOf: (chunk) => (chunk === selectionChunk ? 'author-selection' : undefined)
+      });
+      const contextSources = getContextSourceSummaries(budgeted.kept);
+      const leftOutSources = getContextSourceSummaries(budgeted.dropped);
 
 
       // Stream response
@@ -507,7 +514,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const replyProvenance = modelReplyProvenance(consultationModel);
       setMessages((prev) => [
         ...prev,
-        {role: 'assistant', content: '', contextSources, provenance: replyProvenance}
+        {
+          role: 'assistant',
+          content: '',
+          contextSources,
+          ...(leftOutSources.length > 0 ? {leftOutSources} : {}),
+          provenance: replyProvenance
+        }
       ]);
       scrollMessagesToBottom();
 
@@ -515,10 +528,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         feature: 'assistant',
         request: {
           messages: [requestUserMessage],
-          context: contextChunks,
+          context: budgeted.kept,
           systemPrompt: composedPrompt,
           model: consultationModel?.trim() || undefined,
-          maxTokens: resolveResponseTokenLimit(aiProvider, consultationMaxTokens)
+          maxTokens: replyTokens
         },
         failureMessage: 'The assistant could not generate a response.',
         onUpdate: ({answer}) => {
@@ -577,7 +590,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setMessages,
     selectedToolIds,
     selectedText,
-    aiConfig?.promptTools,
+    aiConfig,
     pendingProposals,
     sendBlockedReason,
     runModelRequest
@@ -798,6 +811,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                 <summary>Sources used</summary>
                 <ul>
                   {msg.contextSources.map((source) => (
+                    <li key={source}>{source}</li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+            {msg.role === 'assistant' && msg.leftOutSources?.length ? (
+              <details className={styles.contextSources}>
+                <summary>Left out to fit the model’s context</summary>
+                <ul>
+                  {msg.leftOutSources.map((source) => (
                     <li key={source}>{source}</li>
                   ))}
                 </ul>

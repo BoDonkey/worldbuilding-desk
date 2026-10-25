@@ -173,6 +173,12 @@ what the Character Lab grounds the character with at the latest point
 (its record, aliases, and fully accepted facts), never pending proposals,
 Source Notes, or other records.
 
+Context budgets (4.71) only remove: what does not fit the model's context is
+left out, lowest priority first, and listed for the author. Linked World
+Bible records, when the project turns them on, are accepted canon one step
+from a grounded character (its links, or records its accepted facts name
+exactly); they add nothing that is not already canon.
+
 The bundled craft library is a separate read-only reference corpus, not project
 context, Source Notes, accepted canon, or factual evidence. It uses a
 coach-scoped provider rather than the ordinary project `CompositeRAGService`.

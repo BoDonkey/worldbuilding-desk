@@ -230,4 +230,32 @@ describe('buildCharacterVoiceContext', () => {
       'no longer in this manuscript'
     );
   });
+
+  it('adds linked World Bible records only when asked, after the character’s own sections', () => {
+    const params = {
+      entityId: 'entity-mira',
+      position: {kind: 'latest'} as CharacterVoicePosition,
+      categories: snapshotCategories,
+      entities: [{...mira, links: ['entity-oren']}, oren, snapshotEntities[1]],
+      characters,
+      sheets: [snapshotSheet],
+      aliases,
+      canonicalFacts,
+      factProposals,
+      characterStyles: [style],
+      documents: snapshotScenes,
+      state
+    };
+    expect(buildCharacterVoiceContext(params).sections.some((entry) => entry.kind === 'linked-record')).toBe(false);
+    const withLinks = buildCharacterVoiceContext({...params, includeLinkedRecords: true});
+    const linked = withLinks.sections.filter((entry) => entry.kind === 'linked-record');
+    expect(linked.map((entry) => entry.source)).toEqual([`Accepted canon: linked World Bible record - Oren (linked to ${mira.name})`]);
+    expect(linked[0]?.content).toContain('A quiet guide.');
+    expect(linked[0]?.provenance).toEqual([{type: 'world-entity', id: 'entity-oren'}]);
+    expect(withLinks.sections.at(-1)?.kind).toBe('linked-record');
+    // Facts carry one item each for the context budget.
+    expect(section(withLinks, 'accepted-facts')?.items?.map((item) => item.provenance.id)).toEqual(
+      section(withLinks, 'accepted-facts')?.provenance.map((entry) => entry.id)
+    );
+  });
 });

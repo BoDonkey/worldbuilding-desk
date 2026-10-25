@@ -5,13 +5,17 @@ import {useModelRun} from '../../hooks/useModelRun';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
 import {
+  buildBudgetedVoicePrompt,
   buildCharacterTalkTranscript,
   buildCharacterVoicePrompt,
   formatCharacterLabScratchpadHtml,
   type CharacterLabExchange,
   type CharacterLabMode,
+  type CharacterVoiceContext,
   type CharacterVoicePosition
 } from '../../services/characterLab';
+import {useModelContextSize} from '../../hooks/useModelContextSize';
+import {ContextLeftOutNotice} from '../common/ContextLeftOutNotice';
 import {LLMService} from '../../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {describeError} from '../../services/errors';
@@ -90,13 +94,37 @@ export function CharacterLabDialog({
   const context = grounding?.context ?? null;
 
   const providerIssue = useMemo(() => getCharacterLabProviderIssue(lab.aiConfig), [lab.aiConfig]);
+  const contextSize = useModelContextSize(lab.aiConfig, isOpen);
+
+  const maxTokens = lab.aiConfig ? resolveResponseTokenLimit(lab.aiConfig.provider, inspector?.maxResponseTokens) : undefined;
+  // The grounding is fitted to the model's context for every send, and the same fit is shown below.
+  const planPrompt = (character: CharacterVoiceContext, text: string) =>
+    buildBudgetedVoicePrompt({
+      contexts: [character],
+      contextTokens: contextSize?.tokens ?? null,
+      replyTokens: maxTokens,
+      build: ([fitted]) =>
+        buildCharacterVoicePrompt(
+          mode === 'talk'
+            ? {
+                mode: 'talk',
+                character: fitted!,
+                transcript: buildCharacterTalkTranscript(exchanges),
+                message: text,
+                authorInstructions
+              }
+            : {mode: 'reaction', character: fitted!, situation: text, authorInstructions}
+        )
+    });
 
   if (!isOpen) return null;
+  // Before anything is typed, plan with a stand-in message so the fit is shown from the start.
+  const plannedFit = context ? planPrompt(context, input.trim() ? input : '…').fit : null;
 
   const name = context?.name ?? 'this character';
   const disclosure = describeCharacterLabDataFlow(
     budget.route,
-    `${name}’s World Bible record, accepted facts, dialogue style, story state, and this conversation`
+    `${name}’s World Bible record${lab.aiConfig?.includeLinkedRecords ? ' (with linked records)' : ''}, accepted facts, dialogue style, story state, and this conversation`
   );
   const send = async () => {
     const text = input.trim();
@@ -114,17 +142,7 @@ export function CharacterLabDialog({
       return;
     }
 
-    const prompt = buildCharacterVoicePrompt(
-      mode === 'talk'
-        ? {
-            mode: 'talk',
-            character: context,
-            transcript: buildCharacterTalkTranscript(exchanges),
-            message: text,
-            authorInstructions
-          }
-        : {mode: 'reaction', character: context, situation: text, authorInstructions}
-    );
+    const {prompt} = planPrompt(context, text);
     const exchange: CharacterLabExchange = {
       id: crypto.randomUUID(),
       mode,
@@ -150,7 +168,7 @@ export function CharacterLabDialog({
         {
           systemPrompt: prompt.systemPrompt,
           messages: prompt.messages,
-          maxTokens: resolveResponseTokenLimit(lab.aiConfig.provider, inspector?.maxResponseTokens),
+          maxTokens,
           cache: false
         },
         ({answer}) => updateExchange({reply: answer})
@@ -344,10 +362,16 @@ export function CharacterLabDialog({
                 )}
                 <h3>Grounded in</h3>
                 <ul>
-                  {context.sections.map((section) => (
-                    <li key={section.kind}>{section.source}</li>
+                  {(plannedFit?.contexts[0] ?? context).sections.map((section) => (
+                    <li key={section.source}>{section.source}</li>
                   ))}
                 </ul>
+                <ContextLeftOutNotice
+                  className={styles.hint}
+                  omitted={plannedFit?.omitted ?? []}
+                  budgetTokens={plannedFit?.budgetTokens ?? 0}
+                  size={contextSize}
+                />
                 <p className={styles.hint}>
                   Story state is what is true in the story at this point, not what {context.name} knows.
                   Pending and rejected facts are left out. Nothing here changes canon, facts, or state.

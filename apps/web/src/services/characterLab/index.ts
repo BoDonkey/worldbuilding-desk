@@ -3,3 +3,4 @@ export * from './characterVoicePrompt';
 export * from './characterLabTranscript';
 export * from './characterSceneDraft';
 export * from './characterFromDescription';
+export * from './characterVoiceBudget';

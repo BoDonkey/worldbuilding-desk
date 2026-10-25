@@ -6,6 +6,8 @@ import type {AITextProvenance} from '../services/editor/aiTextProvenance';
 
 export type AssistantChatMessage = LLMMessage & {
   contextSources?: string[];
+  /** Context left out to fit the model's context (Slice 4.71). */
+  leftOutSources?: string[];
   /** Present only on a writing-coach response: craft reference sources, kept
    * visually distinct from contextSources because they are never the
    * author's canon or manuscript evidence. */
@@ -45,6 +47,9 @@ const isAssistantChatMessage = (value: unknown): value is AssistantChatMessage =
     (message.contextSources === undefined ||
       (Array.isArray(message.contextSources) &&
         message.contextSources.every((source) => typeof source === 'string'))) &&
+    (message.leftOutSources === undefined ||
+      (Array.isArray(message.leftOutSources) &&
+        message.leftOutSources.every((source) => typeof source === 'string'))) &&
     (message.craftCitations === undefined ||
       (Array.isArray(message.craftCitations) && message.craftCitations.every(isCraftCitation))) &&
     (message.provenance === undefined ||
