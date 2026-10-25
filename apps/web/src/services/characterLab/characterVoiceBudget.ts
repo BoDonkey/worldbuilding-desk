@@ -1,7 +1,10 @@
 import {
+  buildPromptBreakdown,
   contextBudgetTokens,
   estimateTextTokens,
   fitContextToBudget,
+  messageTokens,
+  type PromptBreakdown,
   type BudgetItem,
   type ContextSectionKind
 } from '../llm/contextBudget';
@@ -117,16 +120,26 @@ export function buildBudgetedVoicePrompt<P extends {systemPrompt: string; messag
   contextTokens: number | null;
   replyTokens?: number;
   build: (contexts: CharacterVoiceContext[]) => P;
-}): {prompt: P; fit: FittedVoiceContexts | null} {
-  if (params.contextTokens === null) return {prompt: params.build(params.contexts), fit: null};
+}): {prompt: P; fit: FittedVoiceContexts | null; breakdown: PromptBreakdown} {
   const bare = params.build(params.contexts.map((context) => ({...context, sections: []})));
-  const fixedTokens =
-    estimateTextTokens(bare.systemPrompt) +
-    8 +
-    bare.messages.reduce((sum, message) => sum + estimateTextTokens(message.content) + 8, 0);
-  const fit = fitCharacterVoiceContexts(
-    params.contexts,
-    contextBudgetTokens({contextTokens: params.contextTokens, fixedTokens, replyTokens: params.replyTokens})
-  );
-  return {prompt: params.build(fit.contexts), fit};
+  const fit =
+    params.contextTokens === null
+      ? null
+      : fitCharacterVoiceContexts(
+          params.contexts,
+          contextBudgetTokens({
+            contextTokens: params.contextTokens,
+            fixedTokens: estimateTextTokens(bare.systemPrompt) + 8 + messageTokens(bare.messages),
+            replyTokens: params.replyTokens
+          })
+        );
+  const sent = fit?.contexts ?? params.contexts;
+  const prompt = params.build(sent);
+  // Instructions are the prompt without any grounding; the sections are counted as sent.
+  const breakdown = buildPromptBreakdown({
+    instructions: bare.systemPrompt,
+    messages: prompt.messages,
+    sections: sent.flatMap((context) => context.sections)
+  });
+  return {prompt, fit, breakdown};
 }

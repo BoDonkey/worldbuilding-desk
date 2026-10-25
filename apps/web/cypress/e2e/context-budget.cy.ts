@@ -80,7 +80,7 @@ const send = () => {
   return cy.wait('@localServer').then(({request}) => (request.body as {messages: Array<{content: string}>}).messages[0]!.content);
 };
 
-describe('Context budget and linked records (4.71)', () => {
+describe('Context budget, linked records, and prompt size (4.71, 4.72)', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
     cy.visit('/');
@@ -96,6 +96,9 @@ describe('Context budget and linked records (4.71)', () => {
       cy.contains('li', 'Accepted canon: linked World Bible record - Thornwall Keep (linked to Aria)').should('be.visible');
       cy.contains('li', 'Accepted canon: linked World Bible record - Ember Court (linked to Aria)').should('be.visible');
       cy.contains('Left out to fit').should('not.exist');
+      // 4.72: each section carries an estimated token count, and the prompt is totalled against the model.
+      cy.get('[aria-label="Prompt size"]').invoke('text').should('match', /^Prompt: about [\d,]+ tokens of the model’s 32,768 \(/);
+      cy.contains('li', 'Accepted canon facts - Aria').find('small').invoke('text').should('match', /^~[\d,]+ tokens$/);
     });
     send().then((system) => {
       expect(system).to.contain('KEEP-RECORD');
@@ -114,6 +117,11 @@ describe('Context budget and linked records (4.71)', () => {
         .and('contain.text', 'Accepted canon: linked World Bible record - Thornwall Keep (linked to Aria)')
         .and('contain.text', `trait: FACT-${String(FACT_COUNT - 1).padStart(2, '0')}`);
       cy.contains('li', 'Accepted canon: World Bible record - Aria').should('be.visible');
+      cy.get('[aria-label="Prompt size"]').invoke('text').then((text) => {
+        const [, total] = /^Prompt: about ([\d,]+) tokens of the model’s 2,048/.exec(text) ?? [];
+        expect(Number(total?.replace(/,/g, ''))).to.be.within(1, 2048 - 768);
+        expect(text).to.match(/About [\d,]+ left for the reply\.$/);
+      });
     });
     send().then((system) => {
       expect(system).to.contain('A hedge knight who distrusts courts.');

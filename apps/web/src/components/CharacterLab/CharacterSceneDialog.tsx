@@ -3,6 +3,8 @@ import {Link} from 'react-router';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
 import {useModelContextSize} from '../../hooks/useModelContextSize';
 import {ContextLeftOutNotice} from '../common/ContextLeftOutNotice';
+import {PromptTokenSummary} from '../common/PromptTokenSummary';
+import {sectionTokenLabel} from '../../services/llm/contextBudget';
 import {useModelRun} from '../../hooks/useModelRun';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
@@ -132,20 +134,21 @@ export function CharacterSceneDialog({
   const latest = drafts[drafts.length - 1] ?? null;
   const maxTokens = lab.aiConfig ? resolveResponseTokenLimit(lab.aiConfig.provider, inspector?.maxResponseTokens) : undefined;
   // The cast shares one budget, the first-chosen character first; the same fit is shown below.
-  const planPrompt = (planned: CharacterSceneDirection) =>
+  const planPrompt = (sceneDirection: CharacterSceneDirection) =>
     buildBudgetedVoicePrompt({
       contexts: grounding.contexts,
       contextTokens: contextSize?.tokens ?? null,
       replyTokens: maxTokens,
-      build: (characters) => buildCharacterVoicePrompt({mode: 'scene', characters, direction: planned, authorInstructions})
+      build: (characters) => buildCharacterVoicePrompt({mode: 'scene', characters, direction: sceneDirection, authorInstructions})
     });
-  let plannedFit = null;
+  let planned: ReturnType<typeof planPrompt> | null = null;
   try {
     // Before the setup is written, plan with a stand-in so the fit is shown from the start.
-    plannedFit = grounding.contexts.length > 0 ? planPrompt(directionReady ? direction : {kind: 'directed', setup: '…'}).fit : null;
+    planned = grounding.contexts.length > 0 ? planPrompt(directionReady ? direction : {kind: 'directed', setup: '…'}) : null;
   } catch {
     // Not ready to write yet; the Write button explains why.
   }
+  const plannedFit = planned?.fit ?? null;
 
   const toggleCharacter = (entityId: string) =>
     setSelectedIds((current) =>
@@ -401,12 +404,15 @@ export function CharacterSceneDialog({
                     <strong>{context.name}</strong>
                     <ul>
                       {context.sections.map((section) => (
-                        <li key={section.source}>{section.source}</li>
+                        <li key={section.source}>
+                          {section.source} <small>{sectionTokenLabel(planned?.breakdown, section.source)}</small>
+                        </li>
                       ))}
                     </ul>
                   </div>
                 ))
               )}
+              {planned && <PromptTokenSummary className={styles.hint} breakdown={planned.breakdown} size={contextSize} />}
               <ContextLeftOutNotice
                 className={styles.hint}
                 omitted={plannedFit?.omitted ?? []}

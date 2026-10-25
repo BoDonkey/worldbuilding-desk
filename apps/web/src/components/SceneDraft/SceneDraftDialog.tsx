@@ -3,6 +3,8 @@ import {Link} from 'react-router';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
 import {useModelContextSize} from '../../hooks/useModelContextSize';
 import {ContextLeftOutNotice} from '../common/ContextLeftOutNotice';
+import {PromptTokenSummary} from '../common/PromptTokenSummary';
+import {sectionTokenLabel} from '../../services/llm/contextBudget';
 import {useModelRun} from '../../hooks/useModelRun';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
@@ -162,20 +164,21 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
     ...grounding.contexts.filter((context) => context.entityId === inputs.povEntityId),
     ...grounding.contexts.filter((context) => context.entityId !== inputs.povEntityId)
   ];
-  const planPrompt = (planned: SceneDraftInputs) =>
+  const planPrompt = (draftInputs: SceneDraftInputs) =>
     buildBudgetedVoicePrompt({
       contexts: castByPriority,
       contextTokens: contextSize?.tokens ?? null,
       replyTokens: maxTokens,
-      build: (characters) => buildSceneDraftPrompt({inputs: planned, characters})
+      build: (characters) => buildSceneDraftPrompt({inputs: draftInputs, characters})
     });
-  let plannedFit = null;
+  let planned: ReturnType<typeof planPrompt> | null = null;
   try {
     // Before the goal is written, plan with a stand-in so the fit is shown from the start.
-    plannedFit = castByPriority.length > 0 ? planPrompt(inputs.goal.trim() ? inputs : {...inputs, goal: '…'}).fit : null;
+    planned = castByPriority.length > 0 ? planPrompt(inputs.goal.trim() ? inputs : {...inputs, goal: '…'}) : null;
   } catch {
     // Not ready to draft yet; the Draft button explains why.
   }
+  const plannedFit = planned?.fit ?? null;
 
   const write = async () => {
     if (!canDraft || !lab.aiConfig) return;
@@ -459,12 +462,15 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
                     <strong>{context.name}</strong>
                     <ul>
                       {context.sections.map((section) => (
-                        <li key={section.source}>{section.source}</li>
+                        <li key={section.source}>
+                          {section.source} <small>{sectionTokenLabel(planned?.breakdown, section.source)}</small>
+                        </li>
                       ))}
                     </ul>
                   </div>
                 ))
               )}
+              {planned && <PromptTokenSummary className={styles.hint} breakdown={planned.breakdown} size={contextSize} />}
               <ContextLeftOutNotice
                 className={styles.hint}
                 omitted={plannedFit?.omitted ?? []}

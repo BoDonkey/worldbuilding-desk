@@ -532,6 +532,11 @@ describe('AIAssistant factual lookup integration', () => {
       expect(request.context.map((chunk) => chunk.source)).toEqual(['Accepted canon: World Bible record - Sera Kestrel']);
       expect(screen.getByText('Left out to fit the model’s context')).toBeInTheDocument();
       expect(screen.getByText('General Source Note: project reference, not automatically canon - Harbor Notes')).toBeInTheDocument();
+      // 4.72: the sources sent carry token counts, and the prompt is totalled against the model.
+      expect(screen.getByLabelText('Prompt size')).toHaveTextContent(/^Prompt: about [\d,]+ tokens of the model’s 2,048 \(instructions ~[\d,]+, conversation ~[\d,]+, project context ~[\d,]+\)\. About [\d,]+ left for the reply\.$/);
+      // Only what was sent is counted: the one source kept is the whole project context.
+      const sourceTokens = screen.getByText(/^~\d+ tokens$/).textContent!.replace(/\D/g, '');
+      expect(screen.getByLabelText('Prompt size')).toHaveTextContent(`project context ~${sourceTokens})`);
     });
   });
 });

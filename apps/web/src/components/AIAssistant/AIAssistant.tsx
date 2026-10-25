@@ -48,7 +48,8 @@ import {
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
-import {fitContextChunks} from '../../services/llm/contextBudget';
+import {buildPromptBreakdown, fitContextChunks, sectionTokenLabel} from '../../services/llm/contextBudget';
+import {PromptTokenSummary} from '../common/PromptTokenSummary';
 import {resolveModelContextSize} from '../../services/llm/modelContextSize';
 import {getCraftLibraryService} from '../../services/craft/getCraftLibraryService';
 import {
@@ -498,15 +499,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       );
       const replyTokens = resolveResponseTokenLimit(aiProvider, consultationMaxTokens);
       // Fit the context to the model (Slice 4.71); the author's selection goes first.
+      const modelContext = await resolveModelContextSize(aiConfig);
       const budgeted = fitContextChunks({
         chunks: contextChunks,
-        contextTokens: (await resolveModelContextSize(aiConfig)).tokens,
+        contextTokens: modelContext.tokens,
         fixedText: [composedPrompt, requestUserMessage.content],
         replyTokens,
         sectionOf: (chunk) => (chunk === selectionChunk ? 'author-selection' : undefined)
       });
       const contextSources = getContextSourceSummaries(budgeted.kept);
       const leftOutSources = getContextSourceSummaries(budgeted.dropped);
+      const promptBreakdown = buildPromptBreakdown({
+        instructions: composedPrompt,
+        messages: [requestUserMessage],
+        sections: budgeted.kept
+      });
 
 
       // Stream response
@@ -519,6 +526,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           content: '',
           contextSources,
           ...(leftOutSources.length > 0 ? {leftOutSources} : {}),
+          promptBreakdown,
+          modelContext,
           provenance: replyProvenance
         }
       ]);
@@ -811,9 +820,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                 <summary>Sources used</summary>
                 <ul>
                   {msg.contextSources.map((source) => (
-                    <li key={source}>{source}</li>
+                    <li key={source}>
+                      {source} <small>{sectionTokenLabel(msg.promptBreakdown, source)}</small>
+                    </li>
                   ))}
                 </ul>
+                {msg.promptBreakdown && (
+                  <PromptTokenSummary breakdown={msg.promptBreakdown} size={msg.modelContext ?? null} />
+                )}
               </details>
             ) : null}
             {msg.role === 'assistant' && msg.leftOutSources?.length ? (

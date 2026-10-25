@@ -3,11 +3,16 @@ import type {Dispatch, SetStateAction} from 'react';
 import type {LLMMessage} from '../services/llm/types';
 import type {CraftCitation} from '../services/craft/types';
 import type {AITextProvenance} from '../services/editor/aiTextProvenance';
+import type {PromptBreakdown} from '../services/llm/contextBudget';
+import type {ModelContextSize} from '../services/llm/modelContextSize';
 
 export type AssistantChatMessage = LLMMessage & {
   contextSources?: string[];
   /** Context left out to fit the model's context (Slice 4.71). */
   leftOutSources?: string[];
+  /** What filled the prompt, estimated, and the model's context then (Slice 4.72). */
+  promptBreakdown?: PromptBreakdown;
+  modelContext?: ModelContextSize;
   /** Present only on a writing-coach response: craft reference sources, kept
    * visually distinct from contextSources because they are never the
    * author's canon or manuscript evidence. */
@@ -50,6 +55,15 @@ const isAssistantChatMessage = (value: unknown): value is AssistantChatMessage =
     (message.leftOutSources === undefined ||
       (Array.isArray(message.leftOutSources) &&
         message.leftOutSources.every((source) => typeof source === 'string'))) &&
+    (message.promptBreakdown === undefined ||
+      (typeof message.promptBreakdown === 'object' &&
+        message.promptBreakdown !== null &&
+        typeof message.promptBreakdown.totalTokens === 'number' &&
+        Array.isArray(message.promptBreakdown.sections))) &&
+    (message.modelContext === undefined ||
+      (typeof message.modelContext === 'object' &&
+        message.modelContext !== null &&
+        typeof message.modelContext.tokens === 'number')) &&
     (message.craftCitations === undefined ||
       (Array.isArray(message.craftCitations) && message.craftCitations.every(isCraftCitation))) &&
     (message.provenance === undefined ||

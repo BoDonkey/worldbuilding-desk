@@ -1091,6 +1091,20 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 4.72 prompt breakdown with token counts: each line under Grounded in
+  (Character Lab, character scenes, scene drafts) and under Sources used (the
+  assistant) shows its estimated tokens as sent, after the 4.71 budget, and a
+  line totals the prompt against the model's context: instructions,
+  conversation, project context, and what is left for the reply ("No room is
+  left for the reply" when the prompt fills the context; "(assumed)" when the
+  server did not report its size). The dialogs show it before anything is
+  typed; the assistant keeps each reply's breakdown with the reply.
+  Checked against KoboldCPP 1.123.1's own prompt count (a Qwen model): the
+  estimate (about three characters per token) was 1.42× high on prompt
+  rules, 1.60× on English prose, 1.18× on JSON, and even (736 against 739,
+  inside the 256-token margin) on text full of accented names and CJK. Four
+  characters per token would undercount JSON, so the cautious estimate stays;
+  on small English-heavy models the budget leaves some room unused.
 - Slice 4.71 context budget and linked records: what the model is given now
   fits the configured model's context. The size comes from the running
   server where it says (Ollama's `/api/ps` for the loaded model, checked on

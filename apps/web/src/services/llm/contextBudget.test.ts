@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
   MAX_CONTEXT_BUDGET_TOKENS,
+  buildPromptBreakdown,
   contextBudgetTokens,
   estimateTextTokens,
   fitContextChunks,
@@ -119,5 +120,27 @@ describe('fitContextChunks', () => {
     });
     expect(fit.kept).toEqual([chunks[0], chunks[2]]);
     expect(fit.dropped).toEqual([chunks[1]]);
+  });
+});
+
+describe('buildPromptBreakdown', () => {
+  it('counts instructions, messages, and each source once, and totals them', () => {
+    const breakdown = buildPromptBreakdown({
+      instructions: 'a'.repeat(30),
+      messages: [{content: 'b'.repeat(9)}],
+      sections: [
+        {source: 'Accepted canon fact - Aria', content: 'c'.repeat(60)},
+        {source: 'Accepted canon fact - Aria', content: 'c'.repeat(60)},
+        {source: 'Scene draft - One', content: 'd'.repeat(3)}
+      ]
+    });
+    expect(breakdown.instructionsTokens).toBe(10 + 8);
+    expect(breakdown.conversationTokens).toBe(3 + 8);
+    const fact = estimateTextTokens(`[Source: Accepted canon fact - Aria]\n${'c'.repeat(60)}\n\n`);
+    expect(breakdown.sections).toEqual([
+      {source: 'Accepted canon fact - Aria', tokens: fact * 2},
+      {source: 'Scene draft - One', tokens: estimateTextTokens('[Source: Scene draft - One]\nddd\n\n')}
+    ]);
+    expect(breakdown.totalTokens).toBe(18 + 11 + fact * 2 + breakdown.sections[1]!.tokens);
   });
 });
