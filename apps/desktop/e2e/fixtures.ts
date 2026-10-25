@@ -46,6 +46,9 @@ async function launch(userDataDir: string): Promise<{app: ElectronApplication; p
   // runtime normally download on first use, and the app must cope without them.
   await app.context().route(/^https:\/\/([a-z0-9-]+\.)*(huggingface\.co|hf\.co|jsdelivr\.net)\//, (route) => route.abort());
   const page = await app.firstWindow();
+  // The start page renders nothing until first-run setup finishes, then
+  // redirects. Navigating before that redirect would be undone by it.
+  await page.waitForURL(/#\/(workspace|projects)$/, {timeout: 30_000});
   return {app, page};
 }
 
