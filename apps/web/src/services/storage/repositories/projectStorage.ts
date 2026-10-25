@@ -15,6 +15,7 @@ import {runProjectWriteTransaction} from '../projectWriteTransaction';
 import {closeRAGServices} from '../../rag/getRAGService';
 import {closeShodhServices} from '../../shodh/getShodhService';
 import {getRulesetByProjectId, replaceRulesetSnapshot} from './rulesetStorage';
+import {forgetVault} from '../vault/vaultRegistry';
 
 const announceProjectMigration = (project: Project) => (report: ProjectMigrationReport) => {
   announceStatus(
@@ -205,4 +206,5 @@ export async function deleteProject(id: string): Promise<void> {
     throw error;
   }
   deleteProjectLocalStorage(id);
+  forgetVault(id);
 }

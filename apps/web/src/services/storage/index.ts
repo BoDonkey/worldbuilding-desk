@@ -46,6 +46,23 @@ export * from './projectWriteTransaction';
 export * from './projectBackupExport';
 export * from './projectBackupImport';
 export * from './backupEncryption';
+export {
+  changeProjectVaultPassphrase,
+  disableProjectVault,
+  enableProjectVault,
+  getProjectVaultLabel,
+  getProjectVaultState,
+  lockProjectVault,
+  unlockProjectVault
+} from './vault/projectVault';
+export {
+  checkNewVaultPassphrase,
+  DEFAULT_VAULT_LABEL,
+  MIN_VAULT_PASSPHRASE_LENGTH,
+  VaultIntegrityError,
+  VaultPassphraseError
+} from './vault/vaultCrypto';
+export {lockAllVaults, subscribeVaultChanges, VaultLockedError, type VaultState} from './vault/vaultRegistry';
 export * from './projectBackupCollisions';
 export * from './projectBackupIdRemap';
 export * from './projectSnapshotService';

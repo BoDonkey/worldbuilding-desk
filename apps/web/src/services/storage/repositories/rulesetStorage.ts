@@ -1,25 +1,31 @@
 import type {StoredRuleset} from '../../../entityTypes';
+import {ensureVaultRegistry} from '../db';
+import {wrapVaultDatabase} from '../vault/vaultDatabase';
 
 /*
  * Rulesets live in their own IndexedDB database, separate from the main
  * project database in ../db.ts.
  */
-const DB_NAME = 'worldbuilding-desk';
-const RULESET_STORE = 'rulesets';
+export const RULESETS_DATABASE_NAME = 'worldbuilding-desk';
+export const RULESET_STORE_NAME = 'rulesets';
+const DB_NAME = RULESETS_DATABASE_NAME;
+const RULESET_STORE = RULESET_STORE_NAME;
 const DB_VERSION = 2; // Increment if you already have a DB
 
+let rawDb: IDBDatabase | null = null;
 let db: IDBDatabase | null = null;
 
-async function getDB(): Promise<IDBDatabase> {
-  if (db) return db;
+/** The rulesets database without the vault seam; only the vault service uses it. */
+export function openRawRulesetDb(): Promise<IDBDatabase> {
+  if (rawDb) return Promise.resolve(rawDb);
 
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
-      db = request.result;
-      resolve(db);
+      rawDb = request.result;
+      resolve(rawDb);
     };
 
     request.onupgradeneeded = (event) => {
@@ -32,6 +38,14 @@ async function getDB(): Promise<IDBDatabase> {
       }
     };
   });
+}
+
+async function getDB(): Promise<IDBDatabase> {
+  // Protected projects' rulesets are sealed too, so the registry must be loaded first.
+  await ensureVaultRegistry();
+  if (db) return db;
+  db = wrapVaultDatabase(await openRawRulesetDb(), {databaseName: DB_NAME});
+  return db;
 }
 
 /** Stores a ruleset record as given; resolves when the put request succeeds. */

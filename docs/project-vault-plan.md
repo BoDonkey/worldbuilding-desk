@@ -130,5 +130,11 @@ project.
 - A browser tab that misses the registry broadcast (5.15b decides whether to
   block a second tab while a vault is unlocked).
 - Plaintext left in old IndexedDB pages after enable (5.15c measures it).
-- Record ids are readable. Ids are app-generated; 5.15a checks that no store
-  derives an id from author text.
+- Record ids are readable. 5.15a checked how stored ids are built. Most are
+  random or built from other ids. One exception: zone-affinity profiles and
+  progress use `zone-profile:<project>:<biomeKey>` and
+  `zone-progress:<project>:<biomeKey>:…`. `biomeKey` is a slug of the zone
+  name or source entity name, so those names stay readable on a protected
+  project. **5.15b** moves those records to opaque ids, looking them up
+  through the `projectId` index, with a project schema migration. 5.15c's
+  planted-phrase scan includes a zone record.

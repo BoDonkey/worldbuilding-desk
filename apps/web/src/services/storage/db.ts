@@ -1,3 +1,8 @@
+import {requestToPromise} from './idbRequest';
+import type {VaultManifest} from './vault/vaultCrypto';
+import {wrapVaultDatabase} from './vault/vaultDatabase';
+import {isVaultRegistryLoaded, loadVaultRegistry} from './vault/vaultRegistry';
+
 export const DB_NAME = 'worldbuilding-db';
 export const DB_VERSION = 30;
 export const ENTITY_STORE_NAME = 'entities';
@@ -264,7 +269,11 @@ export function upgradeDatabase(db: IDBDatabase, transaction: IDBTransaction): v
   }
 }
 
-export function openDb(): Promise<IDBDatabase> {
+/**
+ * Opens the database without the vault seam. Only the vault service and the
+ * registry loader use this: everything else must go through `openDb()`.
+ */
+export function openRawDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -280,4 +289,39 @@ export function openDb(): Promise<IDBDatabase> {
       reject(request.error);
     };
   });
+}
+
+/** Reads every stored vault manifest into the registry (slice 5.15a). */
+export async function reloadVaultRegistry(db: IDBDatabase): Promise<void> {
+  const projects = await requestToPromise(
+    db.transaction(PROJECT_STORE_NAME, 'readonly').objectStore(PROJECT_STORE_NAME).getAll()
+  ) as Array<{id: string; vaultManifest?: VaultManifest}>;
+  const manifests = new Map<string, VaultManifest>();
+  for (const project of projects) {
+    // Registered even when damaged, so writes stay refused; unlocking reports the damage.
+    if (project.vaultManifest) manifests.set(project.id, project.vaultManifest);
+  }
+  loadVaultRegistry(manifests);
+}
+
+/** Loads the vault registry if this page has not yet, or another tab changed a vault. */
+export async function ensureVaultRegistry(db?: IDBDatabase): Promise<void> {
+  if (isVaultRegistryLoaded()) return;
+  if (db) return reloadVaultRegistry(db);
+  const raw = await openRawDb();
+  try {
+    await reloadVaultRegistry(raw);
+  } finally {
+    raw.close();
+  }
+}
+
+/**
+ * Opens the main database. Records of protected projects are sealed and opened
+ * at this seam, so repositories never handle ciphertext.
+ */
+export async function openDb(): Promise<IDBDatabase> {
+  const db = await openRawDb();
+  await ensureVaultRegistry(db);
+  return wrapVaultDatabase(db, {databaseName: DB_NAME, projectStoreName: PROJECT_STORE_NAME});
 }

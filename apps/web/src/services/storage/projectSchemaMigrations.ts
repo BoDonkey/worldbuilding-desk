@@ -6,6 +6,7 @@ import type {
   StoredRuleset,
   WorldEntity
 } from '../../entityTypes';
+import {getVaultState} from './vault/vaultRegistry';
 import {
   ACTOR_RESOLUTION_STORE_NAME,
   CATEGORY_STORE_NAME,
@@ -412,6 +413,9 @@ export async function ensureProjectStorageCurrent(
   project: Project,
   options: {onMigrated?: (report: ProjectMigrationReport) => void} = {}
 ): Promise<Project> {
+  // A locked project is only a placeholder; it is brought up to date once unlocked.
+  const vaultState = getVaultState(project.id);
+  if (vaultState === 'locked' || vaultState === 'migrating') return project;
   const storedVersion = project.storageSchemaVersion ?? LEGACY_PROJECT_SCHEMA_VERSION;
   let currentProject = project;
 
