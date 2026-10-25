@@ -237,3 +237,13 @@ export const sectionTokenLabel = (breakdown: PromptBreakdown | null | undefined,
   const tokens = breakdown?.sections.find((section) => section.source === source)?.tokens;
   return tokens === undefined ? null : `~${tokens.toLocaleString()} tokens`;
 };
+
+/** Moves text sent inside the instructions (a conversation summary, 4.74) to the conversation count. */
+export function countAsConversation(breakdown: PromptBreakdown, text: string): PromptBreakdown {
+  const tokens = Math.min(breakdown.instructionsTokens, estimateTextTokens(text));
+  return {
+    ...breakdown,
+    instructionsTokens: breakdown.instructionsTokens - tokens,
+    conversationTokens: breakdown.conversationTokens + tokens
+  };
+}

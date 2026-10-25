@@ -6,9 +6,14 @@ import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
 import {
   buildBudgetedVoicePrompt,
-  buildCharacterTalkTranscript,
   buildCharacterVoicePrompt,
   formatCharacterLabScratchpadHtml,
+  buildSummarizedTranscript,
+  buildSummaryRequest,
+  isSummarized,
+  shouldOfferSummary,
+  summarizableExchanges,
+  type CharacterLabSummary,
   dropShownVersion,
   exchangeVersionCount,
   keepShownVersion,
@@ -24,6 +29,8 @@ import {
 import {useModelContextSize} from '../../hooks/useModelContextSize';
 import {ContextLeftOutNotice} from '../common/ContextLeftOutNotice';
 import {ReplyVersionControls} from '../common/ReplyVersionControls';
+import {CharacterLabSummaryPanel} from './CharacterLabSummaryPanel';
+import {countAsConversation} from '../../services/llm/contextBudget';
 import type {LLMMessage} from '../../services/llm/types';
 import {PromptTokenSummary} from '../common/PromptTokenSummary';
 import {sectionTokenLabel} from '../../services/llm/contextBudget';
@@ -48,6 +55,8 @@ interface CharacterLabDialogProps {
 
 // Transcripts live for the app session: closing and reopening the lab keeps them; reloading drops them.
 const sessionTranscripts = new Map<string, CharacterLabExchange[]>();
+// Summaries of earlier turns (4.74) live just as long, and never anywhere else.
+const sessionSummaries = new Map<string, CharacterLabSummary>();
 const transcriptKey = (projectId: string, entityId: string) => `${projectId}:${entityId}`;
 
 const MODE_LABELS: Record<CharacterLabMode, string> = {
@@ -74,6 +83,7 @@ export function CharacterLabDialog({
   const [input, setInput] = useState('');
   const [authorInstructions, setAuthorInstructions] = useState('');
   const [exchanges, setExchanges] = useState<CharacterLabExchange[]>([]);
+  const [summary, setSummary] = useState<CharacterLabSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -86,10 +96,18 @@ export function CharacterLabDialog({
       return next;
     });
 
+  const updateSummary = (next: CharacterLabSummary | null) => {
+    const key = transcriptKey(projectId, entityId);
+    if (next) sessionSummaries.set(key, next);
+    else sessionSummaries.delete(key);
+    setSummary(next);
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     setPosition(defaultPosition);
     setExchanges(sessionTranscripts.get(transcriptKey(projectId, entityId)) ?? []);
+    setSummary(sessionSummaries.get(transcriptKey(projectId, entityId)) ?? null);
     setError(null);
     setSavedMessage(null);
     inputRef.current?.focus();
@@ -109,6 +127,10 @@ export function CharacterLabDialog({
 
   const maxTokens = lab.aiConfig ? resolveResponseTokenLimit(lab.aiConfig.provider, inspector?.maxResponseTokens) : undefined;
   // The grounding is fitted to the model's context for every send, and the same fit is shown below.
+  const talkTranscript = (history: CharacterLabExchange[]) => {
+    const sent = buildSummarizedTranscript(history, summary);
+    return {transcript: sent.turns, summary: sent.summary};
+  };
   const planPrompt = (
     character: CharacterVoiceContext,
     text: string,
@@ -124,7 +146,7 @@ export function CharacterLabDialog({
             ? {
                 mode: 'talk',
                 character: fitted!,
-                transcript: buildCharacterTalkTranscript(request.history),
+                ...talkTranscript(request.history),
                 message: text,
                 authorInstructions
               }
@@ -136,6 +158,22 @@ export function CharacterLabDialog({
   // Before anything is typed, plan with a stand-in message so the fit is shown from the start.
   const planned = context ? planPrompt(context, input.trim() ? input : '…') : null;
   const plannedFit = planned?.fit ?? null;
+  // The summary stands in for earlier turns, so it counts as conversation, not instructions.
+  const plannedBreakdown =
+    planned && summary && mode === 'talk' ? countAsConversation(planned.breakdown, summary.text) : planned?.breakdown ?? null;
+  const summarizable = summarizableExchanges(exchanges, summary);
+  const conversationShare =
+    plannedBreakdown && contextSize ? plannedBreakdown.conversationTokens / contextSize.tokens : null;
+  const summaryOffer =
+    mode === 'talk' &&
+    plannedBreakdown &&
+    shouldOfferSummary({
+      conversationTokens: plannedBreakdown.conversationTokens,
+      contextTokens: contextSize?.tokens ?? null,
+      summarizable: summarizable.length
+    })
+      ? conversationShare
+      : null;
 
   const name = context?.name ?? 'this character';
   const disclosure = describeCharacterLabDataFlow(
@@ -238,6 +276,36 @@ export function CharacterLabDialog({
       current.map((entry) => (entry.id === latestExchange?.id ? showExchangeVersion(entry, index) : entry))
     );
 
+  const summarize = async () => {
+    if (!context || !lab.aiConfig || modelRun.isRunning || summarizable.length === 0) return;
+    const blocked = blockedReason();
+    if (blocked) {
+      setError(blocked);
+      return;
+    }
+    const covered = summarizable;
+    const request = buildSummaryRequest({characterName: context.name, previousSummary: summary?.text ?? null, exchanges: covered});
+    setError(null);
+    try {
+      const service = new LLMService(lab.aiConfig);
+      budget.spend('character-lab');
+      const result = await modelRun.run(service, {...request, maxTokens, cache: false});
+      const text = result.answer.trim();
+      if (!text || result.stopped) {
+        setError(result.stopped ? 'Summary stopped; the earlier turns are still sent in full.' : 'The model returned no summary.');
+        return;
+      }
+      updateSummary({
+        text,
+        coversThroughId: covered[covered.length - 1]!.id,
+        coveredCount: (summary?.coveredCount ?? 0) + covered.length,
+        edited: false
+      });
+    } catch (runError) {
+      setError(describeError(runError, 'The earlier turns could not be summarized.'));
+    }
+  };
+
   const saveToScratchpad = async () => {
     if (!context || exchanges.length === 0) return;
     setIsSaving(true);
@@ -322,7 +390,14 @@ export function CharacterLabDialog({
               ) : (
                 <ol className={styles.transcript} aria-label='Transcript'>
                   {exchanges.map((exchange, index) => (
-                    <li key={exchange.id} className={styles.exchange}>
+                    <li
+                      key={exchange.id}
+                      className={styles.exchange}
+                      data-summarized={isSummarized(exchanges, summary, exchange.id) || undefined}
+                    >
+                      {isSummarized(exchanges, summary, exchange.id) && (
+                        <small className={styles.hint}>Summarized: the model gets the summary below instead.</small>
+                      )}
                       <div className={styles.authorTurn}>
                         <strong>{exchange.mode === 'talk' ? 'You' : 'Reaction test'}</strong>
                         <p>{exchange.prompt}</p>
@@ -349,6 +424,16 @@ export function CharacterLabDialog({
                 </ol>
               )}
 
+              <CharacterLabSummaryPanel
+                summary={summary}
+                offer={summaryOffer}
+                summarizableCount={summarizable.length}
+                busy={modelRun.isRunning}
+                disabledReason={canGenerate ? null : 'Not available right now.'}
+                onSummarize={() => void summarize()}
+                onEdit={(text) => summary && updateSummary({...summary, text, edited: true})}
+                onRemove={() => updateSummary(null)}
+              />
               <ModelRunProgress run={modelRun} />
               {(error || grounding?.error) && (
                 <p className={styles.error} role='alert'>{error ?? grounding?.error}</p>
@@ -409,6 +494,7 @@ export function CharacterLabDialog({
                   type='button'
                   onClick={() => {
                     updateExchanges(() => []);
+                    updateSummary(null);
                     setSavedMessage(null);
                     modelRun.reset();
                   }}
@@ -435,7 +521,7 @@ export function CharacterLabDialog({
                     </li>
                   ))}
                 </ul>
-                {planned && <PromptTokenSummary className={styles.hint} breakdown={planned.breakdown} size={contextSize} />}
+                {plannedBreakdown && <PromptTokenSummary className={styles.hint} breakdown={plannedBreakdown} size={contextSize} />}
                 <ContextLeftOutNotice
                   className={styles.hint}
                   omitted={plannedFit?.omitted ?? []}

@@ -40,6 +40,11 @@ export const CHARACTER_PROFILE_REPLY_FORMAT =
   'Use null for the name unless the description gives one. Every quote must be copied ' +
   'exactly from the description; a fact without one is discarded.';
 
+/** Labels the 4.74 summary for the model: a stand-in for earlier turns, not context or canon. */
+export const CONVERSATION_SUMMARY_HEADING =
+  'Summary of your earlier conversation with the author (a working summary for this session, ' +
+  'not canon; it stands in for the turns before the messages below and may leave things out):';
+
 const LAB_OUTPUT_NOTE =
   'Your reply is draft material for the author. It does not change their story, canon, or notes.';
 
@@ -55,6 +60,8 @@ export type CharacterVoiceRequest =
       character: CharacterVoiceContext;
       /** Earlier turns in this session, oldest first. */
       transcript: CharacterVoiceTurn[];
+      /** The author-visible summary of turns before `transcript` (4.74). */
+      summary?: string | null;
       message: string;
       authorInstructions?: string;
     }
@@ -111,7 +118,10 @@ export function buildCharacterVoicePrompt(request: CharacterVoiceRequest): Chara
           CHARACTER_KNOWLEDGE_DISCLAIMER,
           LAB_OUTPUT_NOTE,
           renderAuthorInstructions(request.authorInstructions),
-          `Context for ${character.name}:\n\n${renderContext(character)}`
+          `Context for ${character.name}:\n\n${renderContext(character)}`,
+          request.summary?.trim()
+            ? `${CONVERSATION_SUMMARY_HEADING}\n${request.summary.trim()}`
+            : null
         ]),
         messages: [
           ...request.transcript.map((turn) => ({

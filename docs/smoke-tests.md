@@ -222,6 +222,22 @@ lorebook) is a good first sample; do not add third-party cards to the repo.
 3. With a hosted provider at its daily limit, Another version is refused
    with the budget message and the reply shown is unchanged.
 
+## 1g. Rolling Character Lab Summaries (slice 4.74)
+
+1. Use a local model with a small context (4,096 tokens, for example) and
+   talk to a character until the replies are long: after a few turns the lab
+   says the conversation fills about N% of the model's context and offers
+   **Summarize earlier turns**. (Turns are only offered once there are more
+   than the two most recent.)
+2. Summarize: an editable box appears, labeled "Summary of the earlier
+   conversation · N turns · not canon"; the covered turns are marked
+   Summarized, and the prompt total drops. Send another message: the server's
+   prompt contains the summary, not the summarized turns.
+3. Edit the summary ("edited" appears) and send: the edited wording is what
+   the model gets. Remove summary: the next message sends every turn again.
+4. Save to Scratchpad: the turns are saved; the summary is not. Nothing new
+   appears in the World Bible.
+
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 
 Goal: verify the writing-first review flow from imported manuscript text
