@@ -68,7 +68,12 @@ export const test = base.extend<{desktop: Desktop}>({
       desktop.app = launched.app;
       desktop.page = launched.page;
       desktop.page.on('console', (message) => {
-        if (message.type() === 'error') desktop.rendererErrors.push(message.text());
+        if (message.type() !== 'error') return;
+        const source = message.location().url;
+        // The app looks for a local Ollama on startup; a refused loopback
+        // connection just means none is running on this machine.
+        if (/net::ERR_CONNECTION_REFUSED/.test(message.text()) && /^http:\/\/(localhost|127\.0\.0\.1):/.test(source)) return;
+        desktop.rendererErrors.push(source ? `${message.text()} (${source})` : message.text());
       });
       desktop.page.on('pageerror', (error) => desktop.rendererErrors.push(error.message));
     };

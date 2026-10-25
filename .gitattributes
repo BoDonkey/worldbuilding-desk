@@ -1,0 +1,3 @@
+# Keep LF on every platform. Build checks hash checked-in sources and compare
+# generated files byte for byte, which fails on a Windows CRLF checkout.
+* text=auto eol=lf
