@@ -1016,6 +1016,15 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.15a project vault core passed full remote Web CI, including
+  `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
+  [run 40194139403](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40194139403)
+  for [PR #80](https://github.com/BoDonkey/worldbuilding-desk/pull/80).
+  Coverage: 16 CI-policy tests, file-size gate, lint with the existing
+  warning, 1298 web (14 new vault tests) + 47 engine + 12 UI + 37 desktop
+  unit tests, both builds, and Cypress 164/164 with retries disabled. The
+  packaged Electron suite passing on both platforms confirms the synchronous
+  cipher and the wrapped database work in the installed app.
 - Slice 5.14 optional encrypted backups passed full remote Web CI, including
   `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
   [run 40186887061](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40186887061)
