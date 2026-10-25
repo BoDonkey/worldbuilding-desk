@@ -1,9 +1,10 @@
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import type {ComponentProps} from 'react';
-import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {ProjectAISettings} from '../../entityTypes';
 import {getConsultationBudgetStatus} from '../../services/editor';
+import {clearModelContextSizeCache} from '../../services/llm/modelContextSize';
 import {AIAssistant} from './AIAssistant';
 
 const mocks = vi.hoisted(() => ({
@@ -53,8 +54,8 @@ vi.mock('../../services/craft/getCraftLibraryService', () => ({
 
 vi.mock('../../services/llm/LLMService', () => ({
   LLMService: class {
-    async *stream() {
-      mocks.stream();
+    async *stream(request: unknown) {
+      mocks.stream(request);
       yield 'This should not be used.';
     }
   }
@@ -476,5 +477,61 @@ describe('AIAssistant factual lookup integration', () => {
       </MemoryRouter>
     );
     expect(screen.queryByRole('button', {name: 'Clear selected text'})).toBeNull();
+  });
+
+  describe('context budget (4.71)', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      clearModelContextSizeCache();
+    });
+
+    it('leaves out what does not fit a small local model, lowest priority first, and says so', async () => {
+      clearModelContextSizeCache();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) =>
+          url === 'http://localhost:5001/props'
+            ? ({ok: true, json: async () => ({n_ctx: 2048})} as Response)
+            : ({ok: false, json: async () => ({})} as Response)
+        )
+      );
+      mocks.search.mockResolvedValue([
+        {
+          score: 2,
+          chunk: {
+            id: 'sera-world-0',
+            documentId: 'sera',
+            documentTitle: 'Sera Kestrel',
+            content: 'Sera Kestrel description: Junior delver.',
+            metadata: {type: 'worldbible'}
+          }
+        },
+        {
+          score: 1.9,
+          chunk: {
+            id: 'harbor-notes-0',
+            documentId: 'lore:harbor-notes',
+            documentTitle: 'Harbor Notes',
+            content: `Harbor rumor. ${'The tide bell rings twice at dusk. '.repeat(120)}`,
+            metadata: {type: 'lore'}
+          }
+        }
+      ]);
+      renderAssistant({
+        projectId: 'project-context-budget',
+        aiConfig: {...hostedSettings, provider: 'local-openai', configs: {'local-openai': {}}},
+        showWritingCoach: false
+      });
+
+      await screen.findByText('Project context ready.');
+      fireEvent.change(screen.getByRole('textbox'), {target: {value: 'Brainstorm a tense harbor scene with Sera Kestrel.'}});
+      fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+
+      await screen.findByText('This should not be used.');
+      const [[request]] = mocks.stream.mock.calls as unknown as Array<[{context: Array<{source: string}>}]>;
+      expect(request.context.map((chunk) => chunk.source)).toEqual(['Accepted canon: World Bible record - Sera Kestrel']);
+      expect(screen.getByText('Left out to fit the model’s context')).toBeInTheDocument();
+      expect(screen.getByText('General Source Note: project reference, not automatically canon - Harbor Notes')).toBeInTheDocument();
+    });
   });
 });

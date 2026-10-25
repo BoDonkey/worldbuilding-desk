@@ -209,6 +209,11 @@ export interface ProjectAISettings {
    * author inserts them, and inserted text is marked as AI text.
    */
   allowSceneDrafts?: boolean;
+  /**
+   * Adds World Bible records one hop from a grounded character to the model's
+   * context, within the context budget (Slice 4.71). Off by default.
+   */
+  includeLinkedRecords?: boolean;
 }
 
 export interface InspectorSettings {

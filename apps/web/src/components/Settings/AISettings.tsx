@@ -39,6 +39,7 @@ import {InlineAlert, type InlineAlertVariant} from '../common';
 import {describeError} from '../../services/errors';
 import {AI_PROVIDER_LABELS} from '../../services/llm/providerLabels';
 import {LocalServerAddressField, LocalServerReplyLengthField} from './LocalServerFields';
+import {ModelContextFields} from './ModelContextFields';
 import {
   getConsultationBudgetStatus,
   LOCAL_CONSULTATION_DAILY_GUARD
@@ -821,23 +822,11 @@ export const AISettings: React.FC<AISettingsProps> = ({
           </div>
         )}
 
-        <h3 className={styles.toolsHeading}>Scene drafts</h3>
-        <div className={styles.field}>
-          <label className={styles.label}>
-            <input
-              type='checkbox'
-              checked={Boolean(aiSettings.allowSceneDrafts) && inspectorSettings.enableAIConsultation}
-              disabled={!inspectorSettings.enableAIConsultation}
-              onChange={(e) => onSettingsChange({...aiSettings, allowSceneDrafts: e.target.checked})}
-            />{' '}
-            Allow AI scene drafts
-          </label>
-          <p className={styles.help}>
-            {inspectorSettings.enableAIConsultation
-              ? 'The AI may draft a whole scene when you ask, from an empty scene. Drafts are previews until you insert them, and inserted text is marked as AI text. This applies to this project only.'
-              : 'Turn on AI consultation actions below to allow scene drafts.'}
-          </p>
-        </div>
+        <ModelContextFields
+          aiSettings={aiSettings}
+          consultationEnabled={inspectorSettings.enableAIConsultation}
+          onSettingsChange={onSettingsChange}
+        />
 
         <h3 className={styles.toolsHeading}>Lore Inspector AI Guardrails</h3>
         <div className={styles.field}>

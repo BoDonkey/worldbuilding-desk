@@ -46,7 +46,9 @@ export type CharacterVoiceSectionKind =
   | 'canon-record'
   | 'accepted-facts'
   | 'dialogue-style'
-  | 'story-state';
+  | 'story-state'
+  /** Another World Bible record one hop from the character (4.71), only when asked for. */
+  | 'linked-record';
 
 export interface CharacterVoiceProvenance {
   type: 'world-entity' | 'alias' | 'canonical-fact' | 'character-style' | 'character-sheet';
@@ -59,6 +61,8 @@ export interface CharacterVoiceSection {
   source: string;
   content: string;
   provenance: CharacterVoiceProvenance[];
+  /** One entry per accepted fact, so the context budget can leave out single facts. */
+  items?: {text: string; provenance: CharacterVoiceProvenance; rank?: number}[];
 }
 
 /** Read-only grounding for one character at one manuscript position. */
@@ -84,6 +88,74 @@ export interface CharacterVoiceStateInputs {
 
 export const STORY_STATE_KNOWLEDGE_NOTE =
   'This is what is true in the story at this point, not a record of what the character knows.';
+
+/**
+ * Which accepted facts the context budget keeps first when not all fit
+ * (4.71): who the character is and how they connect to others before
+ * history, looks, and habits.
+ */
+export const FACT_TYPE_RANK: Record<CanonicalFact['factType'], number> = {
+  identity: 10,
+  age: 9,
+  occupation: 8,
+  membership: 8,
+  relationship: 8,
+  heritage: 7,
+  goal: 7,
+  ability: 6,
+  appearance: 5,
+  background: 4,
+  trait: 3,
+  alias: 2
+};
+
+export const NO_ACCEPTED_FACTS = 'No accepted facts are recorded for this character at this point.';
+
+/** At most this many linked records are offered to the budget per character. */
+export const MAX_LINKED_RECORDS = 8;
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Records one hop from the character: those in its `links`, then those an
+ * accepted fact of the character names exactly (by name or alias, as a whole
+ * phrase). Never the character itself, never two hops, never inferred.
+ */
+export function findLinkedRecords(params: {
+  entity: WorldEntity;
+  facts: CanonicalFact[];
+  entities: WorldEntity[];
+  aliases: ConsistencyAlias[];
+}): WorldEntity[] {
+  const {entity} = params;
+  const byId = new Map(params.entities.map((record) => [record.id, record]));
+  const found: WorldEntity[] = [];
+  const add = (record: WorldEntity | undefined) => {
+    if (record && record.id !== entity.id && record.projectId === entity.projectId && !found.includes(record)) {
+      found.push(record);
+    }
+  };
+  (entity.links ?? []).forEach((id) => add(byId.get(id)));
+
+  const factText = params.facts
+    .filter((fact) => fact.factType !== 'alias')
+    .map(factValueText)
+    .join('\n');
+  if (factText) {
+    const namesById = new Map<string, string[]>();
+    params.entities.forEach((record) => namesById.set(record.id, [record.name]));
+    params.aliases.forEach((alias) => {
+      if ((alias.targetType ?? 'entity') === 'entity') namesById.get(alias.targetId)?.push(alias.alias);
+    });
+    params.entities.forEach((record) => {
+      const names = (namesById.get(record.id) ?? []).map((name) => name.trim()).filter((name) => name.length >= 3);
+      if (names.some((name) => new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRegExp(name)}($|[^\\p{L}\\p{N}])`, 'iu').test(factText))) {
+        add(record);
+      }
+    });
+  }
+  return found.slice(0, MAX_LINKED_RECORDS);
+}
 
 const factValueText = (fact: CanonicalFact): string =>
   typeof fact.value === 'string' ? fact.value : `${fact.value.label}: ${fact.value.value}`;
@@ -173,6 +245,8 @@ export function buildCharacterVoiceContext(params: {
   characterStyles: CharacterStyle[];
   documents: WritingDocument[];
   state: CharacterVoiceStateInputs;
+  /** Add the records one hop away (4.71); the context budget decides how many fit. */
+  includeLinkedRecords?: boolean;
 }): CharacterVoiceContext {
   const resolver = createCharacterLinkResolver({
     categories: params.categories,
@@ -226,19 +300,23 @@ export function buildCharacterVoiceContext(params: {
       isAcceptedFact(fact, proposalStatusById) &&
       isFactValidAtPosition(fact, params.position, orderedDocuments)
   );
+  const factItems = facts.map((fact) => {
+    const validity = formatCanonicalFactValidity(fact, orderedDocuments);
+    return {
+      text: `- ${fact.factType.replace(/_/g, ' ')}: ${factValueText(fact)}${validity ? ` (${validity})` : ''}`,
+      provenance: {type: 'canonical-fact' as const, id: fact.id},
+      rank: FACT_TYPE_RANK[fact.factType] ?? 0
+    };
+  });
   sections.push({
     kind: 'accepted-facts',
     source: `Accepted canon facts - ${entity.name}`,
     content:
-      facts.length > 0
-        ? facts
-            .map((fact) => {
-              const validity = formatCanonicalFactValidity(fact, orderedDocuments);
-              return `- ${fact.factType.replace(/_/g, ' ')}: ${factValueText(fact)}${validity ? ` (${validity})` : ''}`;
-            })
-            .join('\n')
-        : 'No accepted facts are recorded for this character at this point.',
-    provenance: facts.map((fact) => ({type: 'canonical-fact', id: fact.id}))
+      factItems.length > 0
+        ? factItems.map((item) => item.text).join('\n')
+        : NO_ACCEPTED_FACTS,
+    provenance: factItems.map((item) => item.provenance),
+    items: factItems
   });
 
   const styleId = resolver.getCharacter(entity.id)?.characterStyleId;
@@ -282,6 +360,17 @@ export function buildCharacterVoiceContext(params: {
       source: `Story state at ${positionLabel} - ${entity.name}`,
       content: `${STORY_STATE_KNOWLEDGE_NOTE}\n${formatSnapshot(snapshot)}`,
       provenance: [{type: 'character-sheet', id: sheet.id}]
+    });
+  }
+
+  if (params.includeLinkedRecords) {
+    findLinkedRecords({entity, facts, entities: params.entities, aliases: params.aliases}).forEach((record) => {
+      sections.push({
+        kind: 'linked-record',
+        source: `Accepted canon: linked World Bible record - ${record.name} (linked to ${entity.name})`,
+        content: buildWorldBibleEntityContent(record),
+        provenance: [{type: 'world-entity', id: record.id}]
+      });
     });
   }
 

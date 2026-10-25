@@ -1,11 +1,14 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {Link} from 'react-router';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
+import {useModelContextSize} from '../../hooks/useModelContextSize';
+import {ContextLeftOutNotice} from '../common/ContextLeftOutNotice';
 import {useModelRun} from '../../hooks/useModelRun';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
 import {
   buildCharacterSceneSeeds,
+  buildBudgetedVoicePrompt,
   buildCharacterVoicePrompt,
   formatCharacterSceneInsertHtml,
   formatCharacterSceneScratchpadHtml,
@@ -109,12 +112,13 @@ export function CharacterSceneDialog({
   );
 
   const providerIssue = useMemo(() => getCharacterLabProviderIssue(lab.aiConfig), [lab.aiConfig]);
+  const contextSize = useModelContextSize(lab.aiConfig, isOpen);
 
   if (!isOpen) return null;
 
   const disclosure = describeCharacterLabDataFlow(
     budget.route,
-    'the chosen characters’ World Bible records, accepted facts, dialogue styles, and story state, plus your setup or the listed story threads'
+    `the chosen characters’ World Bible records${lab.aiConfig?.includeLinkedRecords ? ' (with linked records)' : ''}, accepted facts, dialogue styles, and story state, plus your setup or the listed story threads`
   );
   const direction: CharacterSceneDirection =
     directionKind === 'directed' ? {kind: 'directed', setup} : {kind: 'surprise', seeds};
@@ -126,6 +130,22 @@ export function CharacterSceneDialog({
   const canWrite =
     castReady && directionReady && !modelRun.isRunning && !providerIssue && consultationEnabled;
   const latest = drafts[drafts.length - 1] ?? null;
+  const maxTokens = lab.aiConfig ? resolveResponseTokenLimit(lab.aiConfig.provider, inspector?.maxResponseTokens) : undefined;
+  // The cast shares one budget, the first-chosen character first; the same fit is shown below.
+  const planPrompt = (planned: CharacterSceneDirection) =>
+    buildBudgetedVoicePrompt({
+      contexts: grounding.contexts,
+      contextTokens: contextSize?.tokens ?? null,
+      replyTokens: maxTokens,
+      build: (characters) => buildCharacterVoicePrompt({mode: 'scene', characters, direction: planned, authorInstructions})
+    });
+  let plannedFit = null;
+  try {
+    // Before the setup is written, plan with a stand-in so the fit is shown from the start.
+    plannedFit = grounding.contexts.length > 0 ? planPrompt(directionReady ? direction : {kind: 'directed', setup: '…'}).fit : null;
+  } catch {
+    // Not ready to write yet; the Write button explains why.
+  }
 
   const toggleCharacter = (entityId: string) =>
     setSelectedIds((current) =>
@@ -144,12 +164,7 @@ export function CharacterSceneDialog({
     }
     let prompt;
     try {
-      prompt = buildCharacterVoicePrompt({
-        mode: 'scene',
-        characters: grounding.contexts,
-        direction,
-        authorInstructions
-      });
+      prompt = planPrompt(direction).prompt;
     } catch (promptError) {
       setError(describeError(promptError, 'This scene cannot be written yet.'));
       return;
@@ -178,7 +193,7 @@ export function CharacterSceneDialog({
         {
           systemPrompt: prompt.systemPrompt,
           messages: prompt.messages,
-          maxTokens: resolveResponseTokenLimit(lab.aiConfig.provider, inspector?.maxResponseTokens),
+          maxTokens,
           cache: false
         },
         ({answer}) => updateDraft({text: answer})
@@ -381,17 +396,23 @@ export function CharacterSceneDialog({
               {grounding.contexts.length === 0 ? (
                 <p className={styles.hint}>Choose two or three characters.</p>
               ) : (
-                grounding.contexts.map((context) => (
+                (plannedFit?.contexts ?? grounding.contexts).map((context) => (
                   <div key={context.entityId}>
                     <strong>{context.name}</strong>
                     <ul>
                       {context.sections.map((section) => (
-                        <li key={section.kind}>{section.source}</li>
+                        <li key={section.source}>{section.source}</li>
                       ))}
                     </ul>
                   </div>
                 ))
               )}
+              <ContextLeftOutNotice
+                className={styles.hint}
+                omitted={plannedFit?.omitted ?? []}
+                budgetTokens={plannedFit?.budgetTokens ?? 0}
+                size={contextSize}
+              />
               <p className={styles.hint}>
                 Only the chosen characters are sent. Story state is what is true in the story at this
                 point, not what any character knows. Nothing here changes canon, facts, or state.

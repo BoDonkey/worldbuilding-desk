@@ -189,6 +189,21 @@ lorebook) is a good first sample; do not add third-party cards to the repo.
 3. Import the file in SillyTavern (Characters → Import) and check that the
    name, description, and personality appear. Not checked yet.
 
+## 1e. Context Budget and Linked Records (slice 4.71)
+
+1. On a small local model (for example a 2,048- or 4,096-token context),
+   open the Character Lab for a character with many accepted facts. Under
+   Grounded in, "Left out to fit the model’s context" names the model's size
+   and, behind Show, what was left out; identity, occupation, membership, and
+   relationship facts stay before traits. Send: the reply arrives and is not
+   refused for length.
+2. With a large or hosted model, nothing is left out.
+3. Settings → **Include linked World Bible records**. Reopen the lab: records
+   linked to the character, or named in its accepted facts, appear as
+   "linked World Bible record" lines; a record named by nobody does not.
+4. Ask the assistant a question with long Source Notes on a small model: the
+   reply shows "Left out to fit the model’s context" with the notes left out.
+
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 
 Goal: verify the writing-first review flow from imported manuscript text

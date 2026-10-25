@@ -1091,6 +1091,28 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 4.71 context budget and linked records: what the model is given now
+  fits the configured model's context. The size comes from the running
+  server where it says (Ollama's `/api/ps` for the loaded model, checked on
+  Ollama 0.40.10 at 40,960; the local model server's `/props` from 4.75),
+  the provider's context for hosted models (Anthropic 200,000, OpenAI
+  128,000, Google 1,000,000), and 4,096 otherwise, shown as assumed. Project
+  context gets the room left after the instructions, the conversation, and
+  the reply (a quarter of the context, 768 to 2,048 tokens, or the reply cap),
+  never more than 24,000 tokens, so hosted prompts do not grow. Each kind of
+  context (the author's selection, World Bible records, accepted facts,
+  dialogue style, story state, pending proposals, Source Notes, scene
+  drafts, rules, linked records) has a share; what does not fit is left out
+  lowest priority first, and leftover room goes to the rest. Accepted facts
+  are weighed one at a time, identity, age, occupation, membership, and
+  relationships before history, looks, and habits; the model is told how many
+  facts were left out so it does not settle them itself. The assistant, the
+  Character Lab, character scenes, and scene drafts (point-of-view character
+  first) list what was left out. New setting, off by default: **Include
+  linked World Bible records** adds the records one step from a grounded
+  character: those in its links and those its accepted facts name exactly by
+  name or alias, never two steps, at most eight, and lowest priority.
+  Estimates are deliberately high (about three characters per token).
 - Slice 4.70 character card export: a World Bible character's Writing aids
   tab has **Export character card**, which downloads `<Name>.card.json` in the
   Tavern Character Card V2 format for SillyTavern. The description holds the

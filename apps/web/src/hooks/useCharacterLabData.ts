@@ -222,6 +222,7 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
             factProposals: current.factProposals,
             characterStyles: current.settings?.characterStyles ?? [],
             documents: current.documents,
+            includeLinkedRecords: Boolean(current.settings?.aiSettings?.includeLinkedRecords),
             state: {
               ruleset: current.ruleset,
               events: current.events,
