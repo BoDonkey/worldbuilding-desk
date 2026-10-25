@@ -6,7 +6,11 @@
  */
 
 export const LOCAL_SERVER_RESPONSE_LIMIT_MESSAGE =
-  "The local model stopped at its response length limit, so no complete answer was used. Raise the maximum response length in the model server's settings, or Max response tokens in Settings, and try again.";
+  "The local model stopped at its response length limit, so no complete answer was used. Load the model with a larger context size in the model server, or raise Maximum reply length in Settings if your server does not report its context size, and try again.";
+
+/** Bounds for the author's Maximum reply length, checked on every IPC request. */
+export const MIN_LOCAL_REPLY_TOKENS = 64;
+export const MAX_LOCAL_REPLY_TOKENS = 131072;
 
 /** An address with no path gets `/v1`, as in the renderer. */
 export function localServerApiBase(baseUrl: string): string {
@@ -73,6 +77,79 @@ export class LocalServerStatusError extends Error {
     this.name = 'LocalServerStatusError';
     this.status = status;
   }
+}
+
+/**
+ * Reply length (Slice 4.75), as in the renderer: the context size minus a prompt
+ * estimate that errs high, because KoboldCPP silently drops the start of a
+ * prompt when prompt plus cap exceed the context.
+ */
+export const LOCAL_SERVER_PROMPT_MARGIN_TOKENS = 256;
+export const LOCAL_SERVER_MIN_REPLY_TOKENS = 512;
+
+export function estimateLocalPromptTokens(messages: ReadonlyArray<{content: string}>): number {
+  let ascii = 0;
+  let other = 0;
+  for (const message of messages) {
+    for (const char of message.content) {
+      if (char.charCodeAt(0) < 128) ascii += 1;
+      else other += 1;
+    }
+  }
+  return Math.ceil(ascii / 3) + other + messages.length * 8;
+}
+
+export function parseLocalServerContextSize(data: unknown): number | undefined {
+  const record = data as {default_generation_settings?: {n_ctx?: unknown}; n_ctx?: unknown; value?: unknown} | null;
+  const size = record?.default_generation_settings?.n_ctx ?? record?.n_ctx ?? record?.value;
+  return typeof size === 'number' && Number.isInteger(size) && size >= 256 ? size : undefined;
+}
+
+const CONTEXT_SIZE_PATHS = ['/props', '/api/extra/true_max_context_length'];
+
+export async function readLocalServerContextSize(
+  apiBase: string,
+  options: {fetchImpl?: typeof fetch; signal?: AbortSignal} = {}
+): Promise<number | undefined> {
+  let origin: string;
+  try {
+    origin = new URL(apiBase).origin;
+  } catch {
+    return undefined;
+  }
+  for (const path of CONTEXT_SIZE_PATHS) {
+    try {
+      const response = await (options.fetchImpl ?? fetch)(`${origin}${path}`, {signal: options.signal});
+      const size = response.ok ? parseLocalServerContextSize(await response.json()) : undefined;
+      if (size) return size;
+    } catch (error) {
+      if ((error as {name?: unknown})?.name === 'AbortError') throw error;
+    }
+  }
+  return undefined;
+}
+
+export class LocalServerContextFullError extends Error {
+  constructor(promptTokens: number, contextSize: number) {
+    super(
+      `This request is too long for the local model: the prompt is about ${promptTokens.toLocaleString('en-US')} tokens, and the model's context holds ${contextSize.toLocaleString('en-US')}. It was not sent, because the server would drop the start of the prompt to make room. Load the model with a larger context size, or ask about less material.`
+    );
+    this.name = 'LocalServerContextFullError';
+  }
+}
+
+export function planLocalReplyTokens(input: {
+  contextSize?: number;
+  promptTokens: number;
+  requested?: number;
+  fallback?: number;
+}): number | undefined {
+  const {contextSize, promptTokens, requested, fallback} = input;
+  if (!contextSize) return requested ?? fallback;
+  const available = contextSize - promptTokens - LOCAL_SERVER_PROMPT_MARGIN_TOKENS;
+  const needed = Math.min(requested ?? LOCAL_SERVER_MIN_REPLY_TOKENS, LOCAL_SERVER_MIN_REPLY_TOKENS);
+  if (available < needed) throw new LocalServerContextFullError(promptTokens, contextSize);
+  return requested === undefined ? available : Math.min(requested, available);
 }
 
 export function assertLocalServerResponseComplete(finishReason: unknown): void {

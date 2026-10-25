@@ -1,7 +1,7 @@
 {
   "apps/web/src/assets/components/WorldBibleRoute.module.css": 2487,
   "apps/web/src/components/Editor/EditorWithAI.tsx": 1306,
-  "apps/web/src/components/Settings/AISettings.tsx": 1252,
+  "apps/web/src/components/Settings/AISettings.tsx": 1237,
   "apps/web/src/components/Workspace/WorkspaceContextDrawer.tsx": 1328,
   "apps/web/src/routes/CharacterSheetsRoute.tsx": 2105,
   "apps/web/src/routes/LoreRoute.tsx": 1766,

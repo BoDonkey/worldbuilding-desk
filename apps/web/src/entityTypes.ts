@@ -184,6 +184,8 @@ export interface OllamaProviderSettings {
 export interface LocalOpenAIProviderSettings {
   baseUrl?: string;
   model?: string;
+  /** Reply cap in tokens for a server that does not report its context size (Slice 4.75). */
+  maxReplyTokens?: number;
 }
 
 export interface ProviderConfigMap {

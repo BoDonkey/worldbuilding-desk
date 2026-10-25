@@ -101,7 +101,13 @@ cloud models cross the egress boundary and must not inherit local-provider
 claims or policy. A local OpenAI-compatible server (`local-openai`: KoboldCPP,
 LM Studio, llama.cpp) is on-device only at a loopback address; it never
 carries an API key and never uses the hosted OpenAI provider's code or
-disclosure.
+disclosure. Its reply cap comes from the server's reported context size
+(`/props` or KoboldCPP's `/api/extra/true_max_context_length`) minus a
+prompt estimate that errs high, because KoboldCPP silently drops the start of
+a prompt that does not fit beside the cap; a request without room is refused
+before it is sent, and the author's Maximum reply length applies only when
+the server reports no size. Renderer (`services/llm/localServer.ts`) and main
+process (`localServerPolicy.ts`) apply the same rules.
 
 One provider-route classification (`services/llm/providerRoute.ts`) drives
 the data-flow disclosures and consultation accounting: `private-local` only

@@ -46,3 +46,20 @@ export function normalizeConfiguredModel(model: string | undefined): string | un
   const normalized = model?.trim();
   return normalized ? normalized : undefined;
 }
+
+/**
+ * Bounds for the local model server's Maximum reply length (Slice 4.75). The
+ * desktop main process checks the same ones.
+ */
+export const MIN_LOCAL_REPLY_TOKENS = 64;
+export const MAX_LOCAL_REPLY_TOKENS = 131072;
+
+/** A whole number within the bounds, else undefined (no setting). */
+export function normalizeLocalMaxReplyTokens(value: unknown): number | undefined {
+  return typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= MIN_LOCAL_REPLY_TOKENS &&
+    value <= MAX_LOCAL_REPLY_TOKENS
+    ? value
+    : undefined;
+}

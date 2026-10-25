@@ -394,7 +394,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.72 | Prompt breakdown with token counts | 4 | S | — |
 | 4.73 | Alternative replies | 4 | M | — |
 | 4.74 | Rolling Character Lab summaries | 4 | M | — |
-| 4.75 | Local reply length from server context | 4 | S | — |
+| 4.75 | Local reply length from server context | 4 | S | Done `4bf1e2a` — the local model server gets `max_tokens` = the reported context (`/props`, else KoboldCPP `/api/extra/true_max_context_length`; checked live on KoboldCPP 1.123.1 at 16,384 and llama.cpp b11669 at 8,192 per slot) minus a high prompt estimate and a 256-token margin, so replies are no longer stopped at KoboldCPP's 2,048-token default; finding: KoboldCPP silently drops the start of a prompt when prompt plus cap exceed the context, so a request with under 512 tokens of room is refused before sending; servers reporting no size (LM Studio, not run) use Advanced → **Maximum reply length** (64–131,072); desktop main process mirrors the rules and validates the setting; also fixed the intermittent Compendium route unit test (a ProjectsRoute load finishing after unmount cleared the next test's active project); live checks through the web provider and desktop adapters on both servers; 12 planted regressions caught; lint baseline; 1,186 web + 47 engine + 12 UI + 37 desktop tests; web/desktop builds; file-size gate; Cypress 154/154; `cypress-smoke` green (run 40145816555, PR #71) |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |

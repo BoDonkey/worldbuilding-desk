@@ -3,16 +3,21 @@ import {
   assertLocalServerAddress,
   assertLocalServerResponseComplete,
   buildLocalServerChatPayload,
+  estimateLocalPromptTokens,
   fetchLocalServer,
   localServerAcceptsSchema,
   localServerApiBase,
   noteSchemaRefusal,
+  planLocalReplyTokens,
+  readLocalServerContextSize,
   resolveLocalServerModel
 } from '../localServer';
 
 interface LocalOpenAIProviderConfig {
   baseUrl?: string;
   model?: string;
+  /** The author's Maximum reply length, used when the server does not report its context size. */
+  maxReplyTokens?: number;
 }
 
 /**
@@ -25,10 +30,12 @@ export class LocalOpenAIProvider implements LLMProvider {
   name = 'Local model server';
   private readonly baseUrl?: string;
   private readonly model?: string;
+  private readonly maxReplyTokens?: number;
 
   constructor(config: LocalOpenAIProviderConfig) {
     this.baseUrl = config.baseUrl;
     this.model = config.model;
+    this.maxReplyTokens = config.maxReplyTokens;
   }
 
   async generateCompletion(request: LLMRequest): Promise<LLMResponse> {
@@ -87,12 +94,21 @@ export class LocalOpenAIProvider implements LLMProvider {
   private async send(request: LLMRequest, stream: boolean): Promise<Response> {
     const apiBase = localServerApiBase(request.baseUrl ?? this.baseUrl);
     assertLocalServerAddress(apiBase);
-    const model = await resolveLocalServerModel(apiBase, request.model ?? this.model, {signal: request.signal});
+    const [model, contextSize] = await Promise.all([
+      resolveLocalServerModel(apiBase, request.model ?? this.model, {signal: request.signal}),
+      readLocalServerContextSize(apiBase, {signal: request.signal})
+    ]);
+    const maxTokens = planLocalReplyTokens({
+      contextSize,
+      promptTokens: estimateLocalPromptTokens(buildLocalServerChatPayload(request, model, stream).messages),
+      requested: request.maxTokens,
+      fallback: this.maxReplyTokens
+    });
     const post = (constrain: boolean) =>
       fetchLocalServer(apiBase, '/chat/completions', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(buildLocalServerChatPayload(request, model, stream, {constrain})),
+        body: JSON.stringify(buildLocalServerChatPayload(request, model, stream, {constrain, maxTokens})),
         signal: request.signal
       });
     const constrain = Boolean(request.responseSchema) && localServerAcceptsSchema(apiBase);

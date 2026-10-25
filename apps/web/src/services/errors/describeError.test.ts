@@ -2,6 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {classifyError, describeError} from './describeError';
 import {listDiagnostics, resetDiagnosticsForTests} from './diagnostics';
 import {ProjectMigrationError} from '../storage';
+import {LOCAL_SERVER_RESPONSE_LIMIT_MESSAGE, LocalServerContextFullError} from '../llm/localServer';
 
 describe('describeError', () => {
   beforeEach(() => {
@@ -57,6 +58,15 @@ describe('describeError', () => {
     expect(describeError(new Error('Anthropic API error: ECONNREFUSED'), 'x')).toBe(
       'Could not reach Anthropic. Check your internet connection and try again.'
     );
+  });
+
+  it('shows the local model server reply-length messages unchanged (4.75)', () => {
+    for (const error of [
+      new LocalServerContextFullError(123456, 131072),
+      new Error(LOCAL_SERVER_RESPONSE_LIMIT_MESSAGE)
+    ]) {
+      expect(describeError(error, 'fallback')).toBe(error.message);
+    }
   });
 
   it('maps auth, quota, and provider outages', () => {

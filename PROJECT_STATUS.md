@@ -1091,6 +1091,29 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 4.75 local reply length from server context: requests to the local
+  model server now carry a `max_tokens` sized to the room the prompt leaves
+  in the loaded model's context, so replies are no longer stopped at
+  KoboldCPP's 2,048-token default. The size comes from `GET /props` at the
+  server root (llama.cpp, and KoboldCPP, which mirrors it) or KoboldCPP's
+  `/api/extra/true_max_context_length`; both were checked on running servers
+  (KoboldCPP 1.123.1, 16,384; llama.cpp b11669, 8,192 per slot). Finding:
+  when the prompt and the cap together exceed the context, KoboldCPP drops
+  the start of the prompt without saying so (an 11,137-token prompt with an
+  8,000-token cap reached the model as its last 8,384 tokens, system prompt
+  gone, and the answer was invented). So the prompt is estimated high (three
+  ASCII characters or one other character per token, plus 256 tokens of
+  margin), a smaller cap a feature sets is kept, and a request that leaves
+  under 512 tokens of room is refused before it is sent with a plain "too
+  long for the local model" message. On a server that reports no size (LM
+  Studio, not available to run), Settings → Advanced → **Maximum reply
+  length** sets the cap; blank leaves the server's own limit. A reply that
+  still hits a limit is refused as before. The desktop main process applies
+  the same rules and checks the setting's bounds (64–131,072). Hosted
+  providers and Ollama are unchanged. Also fixed: Projects no longer acts on
+  a project list that finishes loading after the page has closed; it could
+  clear the active project another page had just set (the cause of the
+  intermittent Compendium route unit-test failure, including on PR #70).
 - Slice 4.68 constrained local output for proposals: the three features
   that expect a structured reply (Canvas brainstorm, Canvas coaching, and
   character from description) now hand the local model server a JSON Schema
@@ -1122,7 +1145,7 @@ runtime schema, and nothing here changes the roadmap's status board.
   offers the models the server lists. With no model set, requests name the
   first listed model, or none so the server uses the model it has loaded. No
   `response_format` is sent (4.68 settles what each server accepts), no token
-  cap is sent unless a feature sets one, and a reply cut off at a length
+  cap is sent unless a feature sets one (4.75 sizes it from the context), and a reply cut off at a length
   limit is refused with a plain message. Desktop requests run in the main
   process, as Ollama's do. Ollama-only features (local AI review, the canon
   decision "Force local Ollama" mode) stay Ollama-only. Checked against a

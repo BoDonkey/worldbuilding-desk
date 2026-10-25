@@ -28,6 +28,19 @@ describe('validatePayload', () => {
     expect(() => validatePayload(withSchema({name: 'x', schema: {description: 'a'.repeat(20001)}}))).toThrow(/too large/);
   });
 
+  it('accepts a whole-number Maximum reply length within bounds and refuses anything else (4.75)', () => {
+    const withLength = (maxReplyTokens: unknown) => ({
+      ...base(),
+      providerId: 'local-openai',
+      providerConfig: {baseUrl: 'http://localhost:5001/v1', maxReplyTokens}
+    });
+    expect(() => validatePayload(withLength(4096))).not.toThrow();
+    expect(() => validatePayload(withLength(undefined))).not.toThrow();
+    for (const bad of [63, 131073, 512.5, '4096', null, Number.NaN]) {
+      expect(() => validatePayload(withLength(bad))).toThrow(/maxReplyTokens must be a whole number from 64 to 131072/);
+    }
+  });
+
   it('refuses a key sent from the renderer, even an empty one', () => {
     expect(() => validatePayload({...base(), apiKey: 'sk-ant-secret'})).toThrow(/must not be sent/);
     expect(() => validatePayload({...base(), apiKey: undefined})).toThrow(/must not be sent/);
