@@ -295,6 +295,8 @@ describe('Character lab', () => {
 
   it('runs on a local OpenAI-compatible server with no key and the on-device disclosure', () => {
     cy.intercept('GET', `${LOCAL_SERVER}/models`, {statusCode: 200, body: {data: [{id: 'kobold-model'}]}});
+    // The reported context size sets the reply cap (4.75); asked at the server root, not under /v1.
+    cy.intercept('GET', 'http://localhost:5001/props', {statusCode: 200, body: {default_generation_settings: {n_ctx: 8192}}});
     cy.intercept('POST', `${LOCAL_SERVER}/chat/completions`, {
       statusCode: 200,
       headers: {'content-type': 'text/event-stream'},
@@ -323,8 +325,14 @@ describe('Character lab', () => {
 
     cy.wait('@localServer').then(({request}) => {
       expect(request.headers).not.to.have.property('authorization');
-      const body = request.body as {model: string; stream: boolean; messages: Array<{role: string; content: string}>};
+      const body = request.body as {
+        model: string;
+        stream: boolean;
+        max_tokens: number;
+        messages: Array<{role: string; content: string}>;
+      };
       expect(body.model).to.equal('kobold-model');
+      expect(body.max_tokens).to.be.within(512, 8192 - 256);
       expect(body.stream).to.equal(true);
       expect(body.messages[0].role).to.equal('system');
       expect(body.messages[0].content).to.contain('sworn to the Ember Court');

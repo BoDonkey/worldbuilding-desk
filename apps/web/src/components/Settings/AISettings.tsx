@@ -38,6 +38,7 @@ import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {InlineAlert, type InlineAlertVariant} from '../common';
 import {describeError} from '../../services/errors';
 import {AI_PROVIDER_LABELS} from '../../services/llm/providerLabels';
+import {LocalServerAddressField, LocalServerReplyLengthField} from './LocalServerFields';
 import {
   getConsultationBudgetStatus,
   LOCAL_CONSULTATION_DAILY_GUARD
@@ -687,26 +688,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
         </div>
 
         {aiSettings.provider === 'local-openai' && (
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor='local-server-base-url'>Server address</label>
-            <input
-              id='local-server-base-url'
-              type='text'
-              className={styles.input}
-              value={currentBaseUrl ?? ''}
-              onChange={(e) =>
-                onSettingsChange({
-                  ...aiSettings,
-                  configs: {...aiSettings.configs, 'local-openai': {...aiSettings.configs['local-openai'], baseUrl: e.target.value}}
-                })
-              }
-              placeholder={PROVIDER_DEFAULT_BASE_URLS['local-openai']}
-            />
-            <p className={styles.help}>
-              KoboldCPP: http://localhost:5001/v1 · LM Studio: http://localhost:1234/v1 · llama.cpp server:
-              http://localhost:8080/v1. Only addresses on this computer are allowed; no API key is needed.
-            </p>
-          </div>
+          <LocalServerAddressField aiSettings={aiSettings} onSettingsChange={onSettingsChange} value={currentBaseUrl} />
         )}
 
         {hostedProvider && (
@@ -809,6 +791,9 @@ export const AISettings: React.FC<AISettingsProps> = ({
 
         {showAdvanced && (
           <>
+        {aiSettings.provider === 'local-openai' && (
+          <LocalServerReplyLengthField aiSettings={aiSettings} onSettingsChange={onSettingsChange} />
+        )}
         {aiSettings.provider === 'ollama' && (
           <div className={styles.field}>
             <label className={styles.label}>Ollama Base URL</label>
@@ -1022,7 +1007,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
               here. Prices checked {HOSTED_PRICE_TABLE_CHECKED_AT}.
             </p>
           ) : (
-            <p className={styles.help}>Local replies have no response cap or provider charge.</p>
+            <p className={styles.help}>Local replies have no provider charge and do not use this cap; the local model&apos;s context size sets their length.</p>
           )}
         </div>
         <div className={styles.field}>

@@ -9,7 +9,8 @@ import {llmCache} from './LLMCache';
 import {
   DEFAULT_AI_PROVIDER,
   PROVIDER_DEFAULT_BASE_URLS,
-  PROVIDER_FALLBACK_MODELS
+  PROVIDER_FALLBACK_MODELS,
+  normalizeLocalMaxReplyTokens
 } from './providerConfig';
 import {foldContextIntoSystemPrompt} from './contextPrompt';
 import {
@@ -45,9 +46,15 @@ type ProviderCredentials =
       model?: string;
     }
   | {
-      id: 'ollama' | 'local-openai';
+      id: 'ollama';
       baseUrl?: string;
       model?: string;
+    }
+  | {
+      id: 'local-openai';
+      baseUrl?: string;
+      model?: string;
+      maxReplyTokens?: number;
     };
 
 export class LLMService {
@@ -56,6 +63,8 @@ export class LLMService {
   private readonly providerId: AIProviderId;
   private readonly providerModel?: string;
   private readonly providerBaseUrl?: string;
+  /** The local model server's reply cap for servers that do not report a context size. */
+  private readonly localMaxReplyTokens?: number;
   private readonly electronAPI = typeof window !== 'undefined' ? window.electronAPI : undefined;
 
   constructor(settings?: ProjectAISettings | null) {
@@ -66,6 +75,9 @@ export class LLMService {
     }
     if ('baseUrl' in credentials) {
       this.providerBaseUrl = credentials.baseUrl;
+    }
+    if ('maxReplyTokens' in credentials) {
+      this.localMaxReplyTokens = credentials.maxReplyTokens;
     }
     this.provider = this.usesDesktopBridge() ? null : this.instantiateProvider(credentials);
   }
@@ -140,7 +152,11 @@ export class LLMService {
           model: credentials.model
         });
       case 'local-openai':
-        return new LocalOpenAIProvider({baseUrl: credentials.baseUrl, model: credentials.model});
+        return new LocalOpenAIProvider({
+          baseUrl: credentials.baseUrl,
+          model: credentials.model,
+          maxReplyTokens: credentials.maxReplyTokens
+        });
     }
 
     throw new Error('Provider is not implemented.');
@@ -169,7 +185,8 @@ export class LLMService {
         return {
           id: 'local-openai',
           baseUrl: settings?.configs?.['local-openai']?.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS['local-openai'],
-          model: settings?.configs?.['local-openai']?.model
+          model: settings?.configs?.['local-openai']?.model,
+          maxReplyTokens: normalizeLocalMaxReplyTokens(settings?.configs?.['local-openai']?.maxReplyTokens)
         };
       default:
         throw new Error(`Provider "${providerId}" is not supported yet.`);
@@ -240,6 +257,7 @@ export class LLMService {
       think: request.think,
       systemPrompt: request.systemPrompt,
       baseUrl: request.baseUrl,
+      localMaxReplyTokens: this.localMaxReplyTokens,
       messages: request.messages.map((message) => ({
         role: message.role,
         content: message.content
@@ -313,9 +331,7 @@ export class LLMService {
         .llmStream({
           providerId: this.providerId,
           request: this.buildElectronRequest(request),
-          providerConfig: {
-            baseUrl: request.baseUrl
-          },
+          providerConfig: this.electronProviderConfig(request),
           requestId
         })
         .catch((error: unknown) => {
@@ -351,6 +367,13 @@ export class LLMService {
     }
   }
 
+  private electronProviderConfig(request: LLMRequest) {
+    return {
+      baseUrl: request.baseUrl,
+      ...(this.localMaxReplyTokens ? {maxReplyTokens: this.localMaxReplyTokens} : {})
+    };
+  }
+
   private async completeViaElectron(request: LLMRequest): Promise<string> {
     const api = this.electronAPI;
     if (!api?.llmComplete) {
@@ -364,9 +387,7 @@ export class LLMService {
     const completion = api.llmComplete({
       providerId: this.providerId,
       request: this.buildElectronRequest(request),
-      providerConfig: {
-        baseUrl: request.baseUrl
-      }
+      providerConfig: this.electronProviderConfig(request)
     });
 
     if (!request.signal) {

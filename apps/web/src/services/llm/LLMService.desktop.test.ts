@@ -57,6 +57,25 @@ describe('LLMService in the desktop app', () => {
     expect(payload).not.toHaveProperty('apiKey');
   });
 
+  it("passes the local server's Maximum reply length to the main process only when it is valid (4.75)", async () => {
+    const {llmComplete} = desktopWindow();
+    const ask = (maxReplyTokens: unknown) =>
+      new LLMService({
+        provider: 'local-openai',
+        configs: {'local-openai': {baseUrl: 'http://127.0.0.1:8080/v1', maxReplyTokens}}
+      } as unknown as ProjectAISettings).complete({messages: [{role: 'user', content: 'Hi'}], cache: false});
+
+    await ask(1500);
+    await ask(10);
+    await ask(undefined);
+    const configs = llmComplete.mock.calls.map((call) => (call as unknown as [{providerConfig: unknown}])[0].providerConfig);
+    expect(configs).toEqual([
+      {baseUrl: 'http://127.0.0.1:8080/v1', maxReplyTokens: 1500},
+      {baseUrl: 'http://127.0.0.1:8080/v1'},
+      {baseUrl: 'http://127.0.0.1:8080/v1'}
+    ]);
+  });
+
   it('fails fast when the vault reports no key for the provider', async () => {
     desktopWindow({anthropic: false, openai: true, gemini: true});
     await getProviderKeyStatus();

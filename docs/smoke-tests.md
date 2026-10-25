@@ -145,6 +145,15 @@ the desktop app and the browser build.
    `response_format: json_schema` (visible in the server log), and the result
    appears as a proposal, not an "unreadable reply" error. A server that
    refuses the schema still answers on a second, unconstrained request.
+5. Reply length (slice 4.75): ask the Character Lab or the assistant for a
+   long reply (over 2,048 tokens, or a thinking model on a hard question).
+   KoboldCPP and `llama-server` report their context size, so each request
+   carries a `max_tokens` of the room the prompt leaves (visible in the server
+   log) and the reply finishes instead of stopping at 2,048 tokens. Load a
+   model with a small context (for example 2,048) and ask about a long scene:
+   the app says the request is too long for the local model and sends
+   nothing. On a server that reports no size (LM Studio), set Advanced →
+   Maximum reply length and check the request carries it.
 
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 

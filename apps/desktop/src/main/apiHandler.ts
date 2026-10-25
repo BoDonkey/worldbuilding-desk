@@ -8,7 +8,7 @@ import {
 } from './providers/ProviderRegistry';
 import {isProviderId, resolveProviderBaseUrl, type ProviderId} from './endpointPolicy';
 import {resolveOllamaRequestModel} from './ollamaModelPolicy';
-import {resolveLocalServerRequestModel} from './localServerPolicy';
+import {MAX_LOCAL_REPLY_TOKENS, MIN_LOCAL_REPLY_TOKENS, resolveLocalServerRequestModel} from './localServerPolicy';
 import {
   isHostedProviderId,
   type HostedProviderId,
@@ -20,6 +20,8 @@ export interface LLMPayload {
   request: LLMRequestPayload;
   providerConfig?: {
     baseUrl?: string;
+    /** Local model server only: the reply cap when the server reports no context size. */
+    maxReplyTokens?: number;
   };
   requestId?: string;
 }
@@ -167,6 +169,17 @@ export function validatePayload(payload: unknown): asserts payload is LLMPayload
     if (config.baseUrl !== undefined && typeof config.baseUrl !== 'string') {
       throw new Error('providerConfig.baseUrl must be a string if provided');
     }
+    if (
+      config.maxReplyTokens !== undefined &&
+      (typeof config.maxReplyTokens !== 'number' ||
+        !Number.isInteger(config.maxReplyTokens) ||
+        config.maxReplyTokens < MIN_LOCAL_REPLY_TOKENS ||
+        config.maxReplyTokens > MAX_LOCAL_REPLY_TOKENS)
+    ) {
+      throw new Error(
+        `providerConfig.maxReplyTokens must be a whole number from ${MIN_LOCAL_REPLY_TOKENS} to ${MAX_LOCAL_REPLY_TOKENS} if provided`
+      );
+    }
     // Throws for any address outside the provider's scheme/host policy.
     resolveProviderBaseUrl(p.providerId, config.baseUrl as string | undefined);
   }
@@ -225,7 +238,8 @@ export function setupAPIHandlers(vault: ProviderKeyVault) {
     const adapter = createCompletionAdapter(providerId, {
       apiKey,
       baseUrl,
-      request
+      request,
+      maxReplyTokens: payload.providerConfig?.maxReplyTokens
     });
 
     return adapter.complete();
@@ -244,6 +258,7 @@ export function setupAPIHandlers(vault: ProviderKeyVault) {
         apiKey,
         baseUrl,
         request,
+        maxReplyTokens: payload.providerConfig?.maxReplyTokens,
         signal: controller.signal
       });
       const chunks: string[] = [];

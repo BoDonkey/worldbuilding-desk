@@ -394,7 +394,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.72 | Prompt breakdown with token counts | 4 | S | — |
 | 4.73 | Alternative replies | 4 | M | — |
 | 4.74 | Rolling Character Lab summaries | 4 | M | — |
-| 4.75 | Local reply length from server context | 4 | S | — |
+| 4.75 | Local reply length from server context | 4 | S | WIP |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |

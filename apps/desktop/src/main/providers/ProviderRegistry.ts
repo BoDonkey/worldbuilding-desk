@@ -1,10 +1,13 @@
 import type {ProviderId} from '../endpointPolicy';
 import {
   assertLocalServerResponseComplete,
+  estimateLocalPromptTokens,
   fetchLocalServer,
   localServerAcceptsSchema,
   localServerApiBase,
-  noteSchemaRefusal
+  noteSchemaRefusal,
+  planLocalReplyTokens,
+  readLocalServerContextSize
 } from '../localServerPolicy';
 
 export type {ProviderId};
@@ -37,6 +40,8 @@ export interface ProviderConfig {
   apiKey?: string;
   baseUrl?: string;
   request: LLMRequestPayload;
+  /** Local model server only: the author's reply cap when the server reports no context size. */
+  maxReplyTokens?: number;
   /** Aborts the provider request, e.g. when the author presses Stop. */
   signal?: AbortSignal;
 }
@@ -423,9 +428,17 @@ export class OllamaCompletionAdapter implements CompletionAdapter {
   }
 }
 
-/** Mirrors the renderer's `buildLocalServerChatPayload`: a schema only when asked, no default token cap. */
-export function buildLocalServerChatPayload(config: ProviderConfig, stream: boolean, options: {constrain?: boolean} = {}) {
-  const {model, maxTokens, temperature} = config.request;
+/**
+ * Mirrors the renderer's `buildLocalServerChatPayload`: a schema only when asked, and the caller's token
+ * cap unless `options.maxTokens` replaces it with the planned one.
+ */
+export function buildLocalServerChatPayload(
+  config: ProviderConfig,
+  stream: boolean,
+  options: {constrain?: boolean; maxTokens?: number} = {}
+) {
+  const {model, temperature} = config.request;
+  const maxTokens = 'maxTokens' in options ? options.maxTokens : config.request.maxTokens;
   const schema = options.constrain === false ? undefined : config.request.responseSchema;
   return {
     ...(model ? {model} : {}),
@@ -441,12 +454,19 @@ export function buildLocalServerChatPayload(config: ProviderConfig, stream: bool
 
 async function postLocalServer(config: ProviderConfig, stream: boolean): Promise<Response> {
   const apiBase = localServerApiBase(config.baseUrl ?? 'http://localhost:5001/v1');
+  // Reply room from the server's context size, as in the renderer (Slice 4.75).
+  const maxTokens = planLocalReplyTokens({
+    contextSize: await readLocalServerContextSize(apiBase, {signal: config.signal}),
+    promptTokens: estimateLocalPromptTokens(buildMessagesWithSystem(config.request)),
+    requested: config.request.maxTokens,
+    fallback: config.maxReplyTokens
+  });
   const post = (constrain: boolean) =>
     fetchLocalServer(apiBase, '/chat/completions', {
       method: 'POST',
       signal: config.signal,
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(buildLocalServerChatPayload(config, stream, {constrain}))
+      body: JSON.stringify(buildLocalServerChatPayload(config, stream, {constrain, maxTokens}))
     });
   const constrain = Boolean(config.request.responseSchema) && localServerAcceptsSchema(apiBase);
   try {

@@ -68,7 +68,42 @@ describe('AISettings local model server', () => {
 
     fireEvent.click(screen.getByRole('button', {name: 'Show advanced settings'}));
     expect(screen.queryByTestId('hosted-response-cost-ceiling')).not.toBeInTheDocument();
-    expect(screen.getByText('Local replies have no response cap or provider charge.')).toBeInTheDocument();
+    expect(
+      screen.getByText("Local replies have no provider charge and do not use this cap; the local model's context size sets their length.")
+    ).toBeInTheDocument();
+  });
+
+  it('keeps Maximum reply length in advanced settings, blank meaning the server default (4.75)', () => {
+    const onSettingsChange = vi.fn();
+    render(<AISettings aiSettings={localSettings} projectId='project-1' projectMode='general' onSettingsChange={onSettingsChange} />);
+    expect(screen.queryByLabelText('Maximum reply length (tokens)')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', {name: 'Show advanced settings'}));
+    const field = screen.getByLabelText('Maximum reply length (tokens)');
+    expect(field).toHaveValue(null);
+    expect(screen.getByText(/KoboldCPP and the llama\.cpp server report their context size/)).toBeInTheDocument();
+
+    fireEvent.change(field, {target: {value: '4096'}});
+    expect(onSettingsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({configs: {'local-openai': {baseUrl: 'http://localhost:1234/v1', model: 'qwen3', maxReplyTokens: 4096}}})
+    );
+  });
+
+  it('clears Maximum reply length back to the server default', () => {
+    const onSettingsChange = vi.fn();
+    const withLength = {...localSettings, configs: {'local-openai': {...localSettings.configs['local-openai'], maxReplyTokens: 4096}}};
+    render(<AISettings aiSettings={withLength} projectId='project-1' projectMode='general' onSettingsChange={onSettingsChange} />);
+    fireEvent.click(screen.getByRole('button', {name: 'Show advanced settings'}));
+    const field = screen.getByLabelText('Maximum reply length (tokens)');
+    expect(field).toHaveValue(4096);
+    fireEvent.change(field, {target: {value: ''}});
+    expect(onSettingsChange.mock.lastCall?.[0].configs['local-openai'].maxReplyTokens).toBeUndefined();
+  });
+
+  it('shows Maximum reply length only for the local model server', () => {
+    render(<AISettings aiSettings={{...settings, provider: 'ollama'}} projectId='project-1' projectMode='general' onSettingsChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', {name: 'Show advanced settings'}));
+    expect(screen.queryByLabelText('Maximum reply length (tokens)')).not.toBeInTheDocument();
   });
 
   it('tests the connection and offers the listed models', async () => {

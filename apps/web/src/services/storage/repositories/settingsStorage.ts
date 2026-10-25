@@ -17,7 +17,8 @@ import {
   DEFAULT_AI_PROVIDER,
   PROVIDER_DEFAULT_BASE_URLS,
   PROVIDER_FALLBACK_MODELS,
-  normalizeConfiguredModel
+  normalizeConfiguredModel,
+  normalizeLocalMaxReplyTokens
 } from '../../llm/providerConfig';
 
 const LAST_AI_PROVIDER_STORAGE_KEY = 'wbd:ai:last-provider';
@@ -187,7 +188,8 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
     'local-openai': {
       ...aiSettings.configs['local-openai'],
       model: normalizeConfiguredModel(aiSettings.configs['local-openai']?.model),
-      baseUrl: aiSettings.configs['local-openai']?.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS['local-openai']
+      baseUrl: aiSettings.configs['local-openai']?.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS['local-openai'],
+      maxReplyTokens: normalizeLocalMaxReplyTokens(aiSettings.configs['local-openai']?.maxReplyTokens)
     }
   };
   aiSettings.promptTools = aiSettings.promptTools ?? [];

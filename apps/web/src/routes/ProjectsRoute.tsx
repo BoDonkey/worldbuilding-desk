@@ -110,8 +110,18 @@ function ProjectsRoute() {
     }
   };
 
+  // A load that finishes after the route closes must not change the app's active project.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const loadProjects = useCallback(async () => {
     const all = await getAllProjects();
+    if (!mountedRef.current) return;
     setProjects(all);
     if (activeProject && !all.some((project) => project.id === activeProject.id)) {
       await onSelectProject(null);
