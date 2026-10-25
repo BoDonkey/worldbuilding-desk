@@ -1001,6 +1001,15 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.14 optional encrypted backups passed full remote Web CI, including
+  `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
+  [run 40186887061](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40186887061)
+  for [PR #79](https://github.com/BoDonkey/worldbuilding-desk/pull/79).
+  Coverage: 16 CI-policy tests, file-size gate, lint with the existing
+  warning, 1284 web + 47 engine + 12 UI + 37 desktop unit tests, both builds,
+  Cypress 164/164 with retries disabled, and 14 Electron E2E tests per
+  platform, including an encrypted backup exported to disk, refused with a
+  wrong passphrase, and imported with the right one.
 - Slice 5.3 packaged-app validation passed full remote Web CI, including
   `cypress-smoke` and the new `Desktop E2E` jobs on macOS and Windows, in
   [run 40185198414](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40185198414)
