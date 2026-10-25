@@ -52,6 +52,8 @@ import {describeError} from '../services/errors';
 import {saveCharacterFromDescription} from '../services/characterLab/characterFromDescriptionStorage';
 import type {CharacterFromDescriptionRecords} from '../services/characterLab/characterFromDescription';
 import {getRAGService} from '../services/rag/getRAGService';
+import {saveCharacterCardImport} from '../services/characterCards/characterCardStorage';
+import type {CharacterCardImportRecords} from '../services/characterCards/characterCardImport';
 
 interface CharacterLabProjectData {
   projectId: string;
@@ -275,6 +277,15 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
     [projectId]
   );
 
+  const saveCardImport = useCallback(
+    async (records: CharacterCardImportRecords, categorySlug?: string) => {
+      if (!projectId) throw new Error('No project is open.');
+      const ragService = await getRAGService(projectId).catch(() => null);
+      await saveCharacterCardImport(records, {ragService, categorySlug});
+    },
+    [projectId]
+  );
+
   return {
     isLoaded: Boolean(current),
     loadError,
@@ -287,6 +298,7 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
     buildContext,
     findNameCollisions,
     saveToScratchpad,
-    saveFromDescription
+    saveFromDescription,
+    saveCardImport
   };
 }

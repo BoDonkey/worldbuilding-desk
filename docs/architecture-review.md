@@ -162,6 +162,13 @@ Normal assistant context should distinguish:
 Pending and rejected proposals are excluded unless the author enters an
 explicit proposal-review workflow.
 
+Imported third-party material enters the same way. A character card
+(`services/characterCards/`, 4.69) becomes a draft character marked Needs
+completion plus Source Notes, written in one transaction after an explicit
+preview; no fact is accepted. Because Source Notes can be retrieved into the
+app's own prompts, text written as instructions to another model (a card's
+system prompt and post-history instructions) is not imported.
+
 The bundled craft library is a separate read-only reference corpus, not project
 context, Source Notes, accepted canon, or factual evidence. It uses a
 coach-scoped provider rather than the ordinary project `CompositeRAGService`.

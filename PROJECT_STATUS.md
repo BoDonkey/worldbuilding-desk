@@ -1091,6 +1091,27 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 4.69 character card import: World Bible → Characters → **Import a
+  character card** reads Tavern Character Cards (V1, V2, V3) from JSON or
+  from a PNG's `ccv3`/`chara` text chunk (tEXt, iTXt, or compressed), V3
+  first when both are present. Checked on SillyTavern's bundled default card
+  (both chunks, a four-entry lorebook); only the public format is used, no
+  SillyTavern code or assets. A preview shows where each part goes before
+  anything is written: description to Description; personality, scenario,
+  first message, example dialogue, alternate greetings, and creator notes as
+  labeled sections in Notes; the whole card (plus nickname and tags) as a
+  `Character card: <name>` Source Note; each kept lorebook entry as its own
+  Source Note linked to the character (switched-off entries start unticked).
+  `{{char}}` becomes the name; `{{user}}` is kept and pointed out. The card's
+  system prompt and post-history instructions are not imported, because
+  Source Notes can be retrieved into the app's own prompts, and the portrait
+  is not imported. A name already used by a character or alias asks whether
+  to add the card to that character (Source Notes only, character unchanged)
+  or create a separate one. The draft is marked Needs completion, everything
+  is written in one transaction, and no fact is accepted. Malformed,
+  oversized (20 MB file, 50,000-character field, 200 lorebook entries), and
+  card-less files are refused with a plain reason. Other platforms' cards
+  (HiWaifu) were not checked: no sample was available.
 - Slice 4.75 local reply length from server context: requests to the local
   model server now carry a `max_tokens` sized to the room the prompt leaves
   in the loaded model's context, so replies are no longer stopped at

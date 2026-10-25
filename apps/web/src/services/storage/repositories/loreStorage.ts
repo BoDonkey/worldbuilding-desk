@@ -99,6 +99,32 @@ export async function deleteLoreDocument(id: string): Promise<void> {
   emitLoreRecordsChanged();
 }
 
+/** Part of a multi-store write; same result as `saveLoreDocument`. */
+export async function putLoreDocumentInTransaction(
+  tx: ProjectWriteTransaction,
+  document: LoreDocument
+): Promise<void> {
+  await tx.put(LORE_DOCUMENT_STORE_NAME, document);
+  tx.afterCommit(emitLoreRecordsChanged);
+}
+
+/** Part of a multi-store write. Links may span several notes; each note's set is normalized on its own. */
+export async function putLoreDocumentLinksInTransaction(
+  tx: ProjectWriteTransaction,
+  links: LoreDocumentLink[]
+): Promise<void> {
+  const byDocument = new Map<string, LoreDocumentLink[]>();
+  for (const link of links) {
+    byDocument.set(link.loreDocumentId, [...(byDocument.get(link.loreDocumentId) ?? []), link]);
+  }
+  for (const documentLinks of byDocument.values()) {
+    for (const link of normalizeLoreDocumentLinks(documentLinks)) {
+      await tx.put(LORE_DOCUMENT_LINK_STORE_NAME, link);
+    }
+  }
+  tx.afterCommit(emitLoreRecordsChanged);
+}
+
 /** Part of a multi-store write; same result as `replaceLoreDocumentLinks`. */
 export async function replaceLoreDocumentLinksInTransaction(
   tx: ProjectWriteTransaction,

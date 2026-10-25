@@ -17,7 +17,11 @@ import {WorldBibleCharacterHealth} from '../components/WorldBible/WorldBibleChar
 import {WorldBibleLinkedSourceNote} from '../components/WorldBible/WorldBibleLinkedSourceNote';
 import {WorldBibleDialogueStyleControl} from '../components/WorldBible/WorldBibleDialogueStyleControl';
 import {CharacterLabDialog} from '../components/CharacterLab/CharacterLabDialog';
-import {CharacterFromDescriptionDialog} from '../components/CharacterLab/CharacterFromDescriptionDialog';
+import {
+  CharacterIntakeDialog,
+  CharacterIntakeTasks,
+  type CharacterIntakeKind
+} from '../components/WorldBible/CharacterIntakeTasks';
 import type {CharacterVoicePosition} from '../services/characterLab';
 import {WorldBibleMechanicsPanel} from '../components/WorldBible/WorldBibleMechanicsPanel';
 import {
@@ -127,8 +131,8 @@ function WorldBibleRoute() {
   const [negativeSpaceStatus, setNegativeSpaceStatus] =
     useState<SystemNegativeSpaceStatus>('open');
   const [negativeSpaceSceneIds, setNegativeSpaceSceneIds] = useState<string[]>([]);
+  const [characterIntake, setCharacterIntake] = useState<CharacterIntakeKind | null>(null);
   const [labEntityId, setLabEntityId] = useState<string | null>(null);
-  const [isFromDescriptionOpen, setIsFromDescriptionOpen] = useState(false);
   const [characterDetailSection, setCharacterDetailSection] =
     useState<CharacterDetailSection>('canon');
   const [areItemDetailsExpanded, setAreItemDetailsExpanded] = useState(false);
@@ -1061,16 +1065,7 @@ function WorldBibleRoute() {
               </button>
             </div>
             {isCharacterCategory(activeCategory) && (
-              <div className={styles.castTask}>
-                <h3>From a description</h3>
-                <p>
-                  Describe a character in a few sentences. The character lab splits it into
-                  facts for your review and suggestions kept as notes.
-                </p>
-                <button type='button' onClick={() => setIsFromDescriptionOpen(true)}>
-                  Start from a description
-                </button>
-              </div>
+              <CharacterIntakeTasks onStart={setCharacterIntake} />
             )}
             <div className={styles.castTask}>
               <h3>Import {activeCategory.name.replace(/s$/i, '')}</h3>
@@ -2142,15 +2137,13 @@ function WorldBibleRoute() {
         </div>
       </div>
 
-      {isFromDescriptionOpen && activeCategory && (
-        <CharacterFromDescriptionDialog
-          isOpen
-          projectId={activeProject.id}
-          category={{id: activeCategory.id, slug: activeCategory.slug}}
-          onOpenCharacter={openCharacterFromDescription}
-          onClose={() => setIsFromDescriptionOpen(false)}
-        />
-      )}
+      <CharacterIntakeDialog
+        kind={characterIntake}
+        projectId={activeProject.id}
+        category={activeCategory ? {id: activeCategory.id, slug: activeCategory.slug} : null}
+        onOpenCharacter={openCharacterFromDescription}
+        onClose={() => setCharacterIntake(null)}
+      />
 
       {labEntityId && (
         <CharacterLabDialog
