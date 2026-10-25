@@ -4,9 +4,9 @@ import tseslint from 'typescript-eslint';
 import {defineConfig, globalIgnores} from 'eslint/config';
 
 export default defineConfig([
-  globalIgnores(['dist', 'release']),
+  globalIgnores(['dist', 'release', 'e2e-results']),
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'e2e/**/*.ts', 'playwright.config.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2022,

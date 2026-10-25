@@ -6,6 +6,7 @@ import {
 } from 'react';
 import {
   BrowserRouter,
+  HashRouter,
   Navigate,
   Outlet,
   Route,
@@ -210,6 +211,12 @@ function AppRoutes() {
   );
 }
 
+// The desktop app loads index.html from disk. A path route there becomes a
+// URL like file:///workspace with no file behind it, so a reload shows a
+// blank page. Under file:// the route lives in the hash instead; the browser
+// build keeps normal paths. The origin, and so the saved data, is unchanged.
+const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
+
 function App() {
   const projectSettings = useAppStore((s) => s.projectSettings);
   useEffect(() => {
@@ -230,9 +237,9 @@ function App() {
   return (
     <ThemeProvider>
       <AccessibilityProvider>
-        <BrowserRouter>
+        <Router>
           <AppRoutes />
-        </BrowserRouter>
+        </Router>
       </AccessibilityProvider>
     </ThemeProvider>
   );

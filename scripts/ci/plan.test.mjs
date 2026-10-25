@@ -87,6 +87,7 @@ const needsFor = ({application = 'true', mode = 'full', verified = 'false'} = {}
   'tooling-verify': {result: 'success'},
   'web-verify': {result: application === 'true' ? 'success' : 'skipped'},
   'desktop-verify': {result: application === 'true' && verified === 'false' ? 'success' : 'skipped'},
+  'desktop-e2e': {result: application === 'true' && verified === 'false' ? 'success' : 'skipped'},
   'cypress-run': {result: application === 'true' && verified === 'false' && mode !== 'none' ? 'success' : 'skipped'}
 });
 

@@ -45,6 +45,7 @@ pnpm-debug.log*
 # Testing
 coverage/
 .nyc_output/
+apps/desktop/e2e-results/
 
 # Misc
 .cache/

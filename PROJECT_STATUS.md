@@ -848,6 +848,22 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Current targeted architecture sizes are `WorkspaceRoute.tsx` 2,075 lines,
   `WorldBibleRoute.tsx` 2,044, `CharacterSheetsRoute.tsx` 2,140,
   `CompendiumRoute.tsx` 1,551, and `useWorkspaceConsistency.ts` 2,072.
+- The desktop app keeps its route in the URL hash (`index.html#/workspace`)
+  because it loads the renderer from disk; a path route there pointed at a
+  file that does not exist, so a reload showed a blank page. The browser
+  build keeps normal paths, and the renderer's origin (so its saved data) is
+  unchanged (slice 5.3).
+- Packaged-app validation (slice 5.3): `apps/desktop/e2e` drives the built or
+  `electron-builder --dir` app with Playwright. It covers startup under the
+  packaged CSP, reload and restart, the bridge surface, local model server
+  Test connection and its unreachable message, an assistant reply streamed
+  chunk by chunk from a fake loopback server through the main process, Stop
+  aborting the main-process request, a failed reply, IPC refusal of
+  renderer keys and remote addresses, the external-link and navigation
+  guards, and a backup zip exported to disk and imported back. Runs block
+  the embedding-model hosts, so they also show the assistant works offline.
+  The `Desktop E2E` CI job runs it on macOS and Windows for every
+  application change.
 
 ### Current Assessment
 - The completed grade-A fitness plan reduced the five targeted files from
@@ -916,7 +932,6 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   after the workspace UI shell settles.
 - Add targeted smoke coverage for the newer World Bible rename / alias / ignore resolution paths after the recent extraction and workflow pass.
 - Add targeted smoke coverage for the workspace import/review path after the recent extraction.
-- Add one Playwright Electron E2E covering the LLM streaming path — smallest change with the highest payoff against silent IPC regressions.
 - Decide auto-update strategy (Squirrel / electron-updater / manual) before the first externally shared build; affects main-process structure and code signing.
 - Re-enable suppressed React hook lint rules one at a time (`set-state-in-effect`, `purity`, `preserve-manual-memoization`); prefer targeted inline disables with a `// why:` comment over blanket config suppression.
 
@@ -978,6 +993,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.3 packaged-app validation passed full remote Web CI, including
+  `cypress-smoke` and the new `Desktop E2E` jobs on macOS and Windows, in
+  [run 40185198414](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40185198414)
+  for [PR #78](https://github.com/BoDonkey/worldbuilding-desk/pull/78).
+  Coverage: 16 CI-policy tests, file-size gate, lint with the existing
+  ConsumableEffectEditor warning, 1276 web + 47 engine + 12 UI + 37 desktop
+  unit tests, both builds, 13 Electron E2E tests against the unsigned
+  packaged app per platform, and Cypress 161/161 with retries disabled. The
+  first Windows runs found a CRLF build failure and two startup races in the
+  new tests; all three are fixed in the PR.
 - Slices 3.19–3.21 (theme tokens, Compendium form extraction, scene-roster
   mutation services) passed full remote Web CI, including `cypress-smoke`,
   in [run 39273413648](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/39273413648)
@@ -2033,6 +2058,15 @@ pnpm dev:web
 pnpm build:web
 pnpm start:desktop:dev
 ```
+
+### Desktop End-to-End Tests
+```bash
+pnpm package:desktop:dir                          # unsigned app in apps/desktop/release
+E2E_APP=packaged pnpm --filter desktop e2e         # the packaged app
+pnpm build:web && pnpm build:desktop && pnpm --filter desktop e2e   # the built dist instead
+```
+Unset `ELECTRON_RUN_AS_NODE` first if your terminal sets it. On macOS set
+`CSC_IDENTITY_AUTO_DISCOVERY=false` to package without signing.
 
 ### AI Proxy
 ```bash
