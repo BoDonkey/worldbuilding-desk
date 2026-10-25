@@ -49,4 +49,17 @@ describe('WorldBibleCharacterSections', () => {
 
     expect(screen.getByRole('button', {name: 'Record a scene change'})).toBeInTheDocument();
   });
+
+  it('shows the character card export under Writing aids', () => {
+    render(
+      <WorldBibleCharacterSections
+        {...baseProps}
+        activeSection='writing-aids'
+        cardExportAction={<button type='button'>Export character card</button>}
+      />
+    );
+
+    expect(screen.getByRole('button', {name: 'Export character'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Export character card'})).toBeInTheDocument();
+  });
 });

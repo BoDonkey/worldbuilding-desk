@@ -22,6 +22,8 @@ import {
   CharacterIntakeTasks,
   type CharacterIntakeKind
 } from '../components/WorldBible/CharacterIntakeTasks';
+import {CharacterCardExportButton} from '../components/WorldBible/CharacterCardExportButton';
+import {triggerJsonDownload} from '../utils/downloadJson';
 import type {CharacterVoicePosition} from '../services/characterLab';
 import {WorldBibleMechanicsPanel} from '../components/WorldBible/WorldBibleMechanicsPanel';
 import {
@@ -92,19 +94,6 @@ const LATEST_POSITION: CharacterVoicePosition = {kind: 'latest'};
 const getWorldBibleRailStorageKey = (projectId: string) =>
   `wbd:world-bible:category-rail-collapsed:${projectId}`;
 
-const triggerJsonDownload = (fileName: string, data: unknown): void => {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: 'application/json'
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
@@ -1207,6 +1196,9 @@ function WorldBibleRoute() {
                   onExport={() => {
                     if (selectedEntity) void handleExportCharacter(selectedEntity);
                   }}
+                  cardExportAction={
+                    selectedEntity ? <CharacterCardExportButton projectId={activeProject.id} entityId={selectedEntity.id} /> : null
+                  }
                   labAction={
                     selectedEntity ? (
                       <button type='button' onClick={() => setLabEntityId(selectedEntity.id)}>

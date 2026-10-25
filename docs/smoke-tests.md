@@ -178,6 +178,17 @@ lorebook) is a good first sample; do not add third-party cards to the repo.
 5. Cards from another platform (for example HiWaifu) are in scope only if it
    exports this format; try its export here before promising support.
 
+## 1d. Character Card Export (slice 4.70)
+
+1. Open a character with accepted facts, an alias, and a pending proposal;
+   Writing aids → **Export character card**. `<Name>.card.json` downloads.
+2. The file has `"spec": "chara_card_v2"`; the description shows the
+   character's fields, "Also known as", and accepted facts; personality lists
+   the traits; Notes are in creator notes. The pending proposal and Source
+   Notes are not in the file.
+3. Import the file in SillyTavern (Characters → Import) and check that the
+   name, description, and personality appear. Not checked yet.
+
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 
 Goal: verify the writing-first review flow from imported manuscript text

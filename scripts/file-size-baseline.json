@@ -6,7 +6,7 @@
   "apps/web/src/routes/CharacterSheetsRoute.tsx": 2105,
   "apps/web/src/routes/LoreRoute.tsx": 1766,
   "apps/web/src/routes/WorkspaceRoute.tsx": 1831,
-  "apps/web/src/routes/WorldBibleRoute.tsx": 2162,
+  "apps/web/src/routes/WorldBibleRoute.tsx": 2154,
   "apps/web/src/services/consistency/ConsistencyEngineService.ts": 1250,
   "apps/web/src/styles/WorkspaceRoute.module.css": 2376
 }

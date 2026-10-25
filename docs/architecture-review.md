@@ -168,6 +168,10 @@ completion plus Source Notes, written in one transaction after an explicit
 preview; no fact is accepted. Because Source Notes can be retrieved into the
 app's own prompts, text written as instructions to another model (a card's
 system prompt and post-history instructions) is not imported.
+Export (4.70) goes the other way under the same rule: a card holds only
+what the Character Lab grounds the character with at the latest point
+(its record, aliases, and fully accepted facts), never pending proposals,
+Source Notes, or other records.
 
 The bundled craft library is a separate read-only reference corpus, not project
 context, Source Notes, accepted canon, or factual evidence. It uses a

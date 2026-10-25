@@ -1091,6 +1091,21 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 4.70 character card export: a World Bible character's Writing aids
+  tab has **Export character card**, which downloads `<Name>.card.json` in the
+  Tavern Character Card V2 format for SillyTavern. The description holds the
+  Description field, the other filled fields (labeled), "Also known as" with
+  the aliases, and the accepted facts; trait facts become the personality;
+  the Notes field goes in the card's creator notes, with the export date.
+  Only what the Character Lab grounds the character with at the latest point
+  is written: accepted facts whose proposal finished accepting, and the
+  character's own aliases. Pending proposals, Source Notes, story state, and
+  other records are never included, and the card's chat fields (first
+  message, system prompt, and the rest) are left empty. Rich text keeps its
+  paragraphs and list items. Characters have no portraits, so no PNG card is
+  written; dialogue style is a display format, not a voice description, so
+  it is not exported. The card reads back through the 4.69 importer; it was
+  not loaded into a running SillyTavern.
 - Slice 4.69 character card import: World Bible → Characters → **Import a
   character card** reads Tavern Character Cards (V1, V2, V3) from JSON or
   from a PNG's `ccv3`/`chara` text chunk (tEXt, iTXt, or compressed), V3
