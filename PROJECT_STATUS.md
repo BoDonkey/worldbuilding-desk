@@ -1028,6 +1028,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.15b project vault UX and derived data passed full remote Web CI,
+  including `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
+  [run 40196961910](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40196961910)
+  for [PR #81](https://github.com/BoDonkey/worldbuilding-desk/pull/81).
+  Two Cypress failures on the first attempts were pre-existing flakes also
+  seen on main (the `ai-scene-revision` AI tab, run 40120019885; a seed
+  `cy.then()` timeout, run 40143329410) and passed on rerun. Coverage: 16
+  CI-policy tests, file-size gate, lint with the existing warning, 1306 web
+  (8 new) + 47 engine + 12 UI + 37 desktop unit tests, both builds, and
+  Cypress 167/167 locally with retries disabled.
 - Slice 5.15a project vault core passed full remote Web CI, including
   `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
   [run 40194139403](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40194139403)
