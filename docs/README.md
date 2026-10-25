@@ -77,6 +77,11 @@ Other files:
   requiring author approval, and carries provisional unscheduled slices; fold
   accepted IA into the blueprint and approved work into the roadmap, then
   archive it.
+- `docs/project-vault-plan.md` — active working plan for roadmap slice 5.15
+  (password-protected project vaults): the storage-seam design, key hierarchy,
+  migration discipline, threat boundary, and the 5.15a–5.15c split. The
+  roadmap remains authoritative for requirements and status; archive the plan
+  when 5.15c closes.
 - `docs/corkboard-improvement.md` and `docs/corkboard-scenes-plan.md` — dated
   (2026-09-12) planning prompt and the resulting proposal for one-click
   Chapter Card ↔ scene linking (shared link UI, create linked scene,
