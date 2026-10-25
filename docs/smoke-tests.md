@@ -209,6 +209,19 @@ lorebook) is a good first sample; do not add third-party cards to the repo.
    prompt tokens the server reports: on KoboldCPP 1.123.1 the estimate ran
    1.2–1.6× high on English and JSON and about even on accented or CJK text.
 
+## 1f. Alternative Replies (slice 4.73)
+
+1. Character Lab → Talk: send a message, then **Another version**. A second
+   reply arrives; ‹ › step between them ("Version 2 of 2"). Step back to the
+   first and send the next message: the conversation continues from the
+   version shown, the version controls leave the earlier reply, and Save to
+   Scratchpad contains only that version.
+2. Assistant: ask for something creative, then **Another version**. Step to
+   the one you prefer and use Preview scene revision: the preview shows that
+   version. Reload: only the version shown is in the conversation.
+3. With a hosted provider at its daily limit, Another version is refused
+   with the budget message and the reply shown is unchanged.
+
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 
 Goal: verify the writing-first review flow from imported manuscript text

@@ -203,7 +203,8 @@ describe('Ask your project', () => {
       expect(body).to.contain('Pending proposal, not canon - Sera — background: secretly a spy');
       expect(body).to.contain('never as established fact');
     });
-    cy.contains('her loyalty becomes the open question').should('be.visible');
+    // Both replies have the same text; the latest is the one in view.
+    cy.get('[class*="messageContent"]').last().should('be.visible').and('contain.text', 'her loyalty becomes the open question');
   });
 
   it('holds Send until pending proposals have loaded after the option is checked', () => {

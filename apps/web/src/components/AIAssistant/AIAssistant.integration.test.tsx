@@ -55,8 +55,8 @@ vi.mock('../../services/craft/getCraftLibraryService', () => ({
 vi.mock('../../services/llm/LLMService', () => ({
   LLMService: class {
     async *stream(request: unknown) {
-      mocks.stream(request);
-      yield 'This should not be used.';
+      const reply = mocks.stream(request) as string | undefined;
+      yield reply ?? 'This should not be used.';
     }
   }
 }));
@@ -537,6 +537,75 @@ describe('AIAssistant factual lookup integration', () => {
       // Only what was sent is counted: the one source kept is the whole project context.
       const sourceTokens = screen.getByText(/^~\d+ tokens$/).textContent!.replace(/\D/g, '');
       expect(screen.getByLabelText('Prompt size')).toHaveTextContent(`project context ~${sourceTokens})`);
+    });
+  });
+
+  describe('another version (4.73)', () => {
+    const send = (text: string) => {
+      fireEvent.change(screen.getByRole('textbox'), {target: {value: text}});
+      fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+    };
+
+    it('repeats the same request, steps between versions, and keeps only the one shown', async () => {
+      mocks.search.mockResolvedValue([
+        {
+          score: 1.2,
+          chunk: {
+            id: 'harbor-0',
+            documentId: 'lore:harbor',
+            documentTitle: 'Harbor Notes',
+            content: 'The tide bell rings twice at dusk.',
+            metadata: {type: 'lore'}
+          }
+        }
+      ]);
+      mocks.stream.mockReturnValueOnce('First idea.').mockReturnValueOnce('Second idea.').mockReturnValueOnce('Next answer.');
+      const onInsert = vi.fn();
+      renderAssistant({
+        projectId: 'project-versions',
+        aiConfig: {...hostedSettings, inspectorSettings: {...hostedSettings.inspectorSettings!, maxConsultationsPerDay: 10}},
+        showWritingCoach: false,
+        onInsert
+      });
+      await screen.findByText('Project context ready.');
+      send('Brainstorm a harbor scene.');
+      await screen.findByText('First idea.');
+
+      fireEvent.click(screen.getByRole('button', {name: 'Another version'}));
+      await screen.findByText('Second idea.');
+      expect(screen.getByText(/Version 2 of 2/)).toBeInTheDocument();
+      // The same request again; only the stop signal is new.
+      const [[first], [second]] = mocks.stream.mock.calls as unknown as Array<[{signal?: unknown}]>;
+      expect({...second, signal: null}).toEqual({...first, signal: null});
+      expect(JSON.stringify(second)).toContain('The tide bell rings twice at dusk.');
+      // Each version is its own consultation.
+      expect(getConsultationBudgetStatus('project-versions', 10).used).toBe(2);
+
+      fireEvent.click(screen.getByRole('button', {name: 'Previous version'}));
+      expect(screen.getByText('First idea.')).toBeInTheDocument();
+      expect(screen.queryByText('Second idea.')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', {name: 'Preview scene revision'}));
+      expect(onInsert).toHaveBeenCalledWith('First idea.', expect.objectContaining({origin: 'scene-revision'}));
+
+      send('Brainstorm the next scene.');
+      await screen.findByText('Next answer.');
+      expect(screen.getByText('First idea.')).toBeInTheDocument();
+      expect(screen.queryByText('Version 1 of 2')).not.toBeInTheDocument();
+      expect(sessionStorage.getItem('wbd:assistant-conversation:project-versions')).not.toContain('Second idea.');
+    });
+
+    it('applies the consultation budget to another version', async () => {
+      mocks.search.mockResolvedValue([]);
+      mocks.stream.mockReturnValueOnce('Only idea.');
+      renderAssistant({projectId: 'project-versions-budget', aiConfig: hostedSettings, showWritingCoach: false});
+      await screen.findByText('Project context ready.');
+      send('Brainstorm a harbor scene.');
+      await screen.findByText('Only idea.');
+      const another = await screen.findByRole('button', {name: 'Another version'});
+      fireEvent.click(another);
+      await waitFor(() => expect(mocks.stream).toHaveBeenCalledTimes(1));
+      expect(screen.getByText('Only idea.')).toBeInTheDocument();
+      expect(screen.queryByText(/Version 2 of 2/)).not.toBeInTheDocument();
     });
   });
 });

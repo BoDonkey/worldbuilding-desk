@@ -3,6 +3,7 @@ import type {Dispatch, SetStateAction} from 'react';
 import type {LLMMessage} from '../services/llm/types';
 import type {CraftCitation} from '../services/craft/types';
 import type {AITextProvenance} from '../services/editor/aiTextProvenance';
+import {keepShownReply} from '../services/assistant/replyVersions';
 import type {PromptBreakdown} from '../services/llm/contextBudget';
 import type {ModelContextSize} from '../services/llm/modelContextSize';
 
@@ -19,6 +20,9 @@ export type AssistantChatMessage = LLMMessage & {
   craftCitations?: CraftCitation[];
   /** Present only on model-written replies; inserting such a reply marks it as AI text. */
   provenance?: AITextProvenance;
+  /** Other versions while the author chooses (Slice 4.73); never saved. */
+  versions?: {content: string; provenance?: AITextProvenance}[];
+  versionIndex?: number;
 };
 
 const MAX_SAVED_MESSAGES = 100;
@@ -100,7 +104,8 @@ const saveAssistantConversation = (
   try {
     storage.setItem(
       storageKey(projectId, scope),
-      JSON.stringify(messages.slice(-MAX_SAVED_MESSAGES))
+      // Only the version shown is saved; unkept versions live only on screen.
+      JSON.stringify(messages.slice(-MAX_SAVED_MESSAGES).map(keepShownReply))
     );
   } catch {
     // Conversation continuity is helpful UI state, not a reason to block chat.

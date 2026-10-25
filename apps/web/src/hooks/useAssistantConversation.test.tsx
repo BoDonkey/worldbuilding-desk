@@ -66,4 +66,25 @@ describe('useAssistantConversation', () => {
       {role: 'assistant', content: 'Model reply', provenance}
     ]);
   });
+
+  it('saves only the reply version shown, never the unkept ones (4.73)', () => {
+    const {result} = renderHook(() => useAssistantConversation('project-versions'));
+    act(() => {
+      result.current[1]([
+        {role: 'user', content: 'Draft the gate scene.'},
+        {
+          role: 'assistant',
+          content: 'Version two.',
+          versions: [{content: 'UNKEPT version one.'}, {content: 'Version two.'}],
+          versionIndex: 1
+        }
+      ]);
+    });
+    // On screen the versions remain to choose from; in storage only the one shown.
+    expect(result.current[0][1]?.versions).toHaveLength(2);
+    const saved = window.sessionStorage.getItem('wbd:assistant-conversation:project-versions') ?? '';
+    expect(saved).toContain('Version two.');
+    expect(saved).not.toContain('UNKEPT');
+    expect(loadAssistantConversation('project-versions')[1]).toEqual({role: 'assistant', content: 'Version two.'});
+  });
 });

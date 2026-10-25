@@ -11,6 +11,60 @@ export interface CharacterLabExchange {
   positionLabel: string;
   /** The author pressed Stop, so `reply` is whatever arrived before that. */
   stopped: boolean;
+  /**
+   * Other versions of the reply (Slice 4.73), present only while the author is
+   * choosing. `reply` and `stopped` always mirror the version shown. Sending
+   * the next message keeps the shown version and drops the rest.
+   */
+  versions?: {reply: string; stopped: boolean}[];
+  versionIndex?: number;
+}
+
+/** At most this many versions of one reply. */
+export const MAX_REPLY_VERSIONS = 5;
+
+export const exchangeVersionCount = (exchange: CharacterLabExchange): number => exchange.versions?.length ?? 1;
+
+/** Starts an empty new version and shows it. */
+export function startExchangeVersion(exchange: CharacterLabExchange): CharacterLabExchange {
+  const versions = [...(exchange.versions ?? [{reply: exchange.reply, stopped: exchange.stopped}]), {reply: '', stopped: false}];
+  return {...exchange, versions, versionIndex: versions.length - 1, reply: '', stopped: false};
+}
+
+/** Updates the version shown. */
+export function updateShownVersion(
+  exchange: CharacterLabExchange,
+  changes: Partial<Pick<CharacterLabExchange, 'reply' | 'stopped'>>
+): CharacterLabExchange {
+  const next = {...exchange, ...changes};
+  if (!exchange.versions || exchange.versionIndex === undefined) return next;
+  const versions = exchange.versions.map((version, index) =>
+    index === exchange.versionIndex ? {reply: next.reply, stopped: next.stopped} : version
+  );
+  return {...next, versions};
+}
+
+/** Shows another version; out-of-range indexes are ignored. */
+export function showExchangeVersion(exchange: CharacterLabExchange, index: number): CharacterLabExchange {
+  const version = exchange.versions?.[index];
+  return version ? {...exchange, versionIndex: index, reply: version.reply, stopped: version.stopped} : exchange;
+}
+
+/** Drops the version shown (a failed generation), going back to the one before it. */
+export function dropShownVersion(exchange: CharacterLabExchange): CharacterLabExchange {
+  if (!exchange.versions || exchange.versionIndex === undefined) return exchange;
+  const versions = exchange.versions.filter((_, index) => index !== exchange.versionIndex);
+  const kept = showExchangeVersion({...exchange, versions}, Math.max(0, exchange.versionIndex - 1));
+  return versions.length > 1 ? kept : keepShownVersion(kept);
+}
+
+/** Keeps the version shown and discards the others. */
+export function keepShownVersion(exchange: CharacterLabExchange): CharacterLabExchange {
+  if (!exchange.versions) return exchange;
+  const kept = {...exchange};
+  delete kept.versions;
+  delete kept.versionIndex;
+  return kept;
 }
 
 /**
