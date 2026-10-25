@@ -88,6 +88,8 @@ describe('scene dialogs on a small model (4.71)', () => {
       </MemoryRouter>
     );
     expect(screen.getByLabelText('Left out of the model’s context')).toHaveTextContent('The model takes 2,048 tokens.');
+    expect(screen.getByLabelText('Prompt size')).toHaveTextContent(/^Prompt: about [\d,]+ tokens of the model’s 2,048/);
+    expect(screen.getAllByText(/^~[\d,]+ tokens$/).length).toBe(4);
     fireEvent.change(screen.getByLabelText('Scene setup'), {target: {value: 'Borin blocks the forge door.'}});
     fireEvent.click(screen.getByRole('button', {name: 'Write scene'}));
     await waitFor(() => expect(run).toHaveBeenCalled());

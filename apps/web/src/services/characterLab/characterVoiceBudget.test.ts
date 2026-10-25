@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {CanonicalFact, WorldEntity} from '../../entityTypes';
 import type {ConsistencyAlias} from '../storage';
+import {estimateTextTokens} from '../llm/contextBudget';
 import {buildBudgetedVoicePrompt, fitCharacterVoiceContexts} from './characterVoiceBudget';
 import {findLinkedRecords, MAX_LINKED_RECORDS, type CharacterVoiceContext, type CharacterVoiceSection} from './characterVoiceContext';
 
@@ -171,5 +172,30 @@ describe('fact ranking', () => {
     const kept = fit.contexts[0]!.sections[1]!.items!;
     expect(kept.map((item) => item.provenance.id)).toContain('oath');
     expect(kept.length).toBeLessThan(items.length);
+  });
+});
+
+describe('prompt breakdown (4.72)', () => {
+  const build = (contexts: CharacterVoiceContext[]) => ({
+    systemPrompt: `Rules.\n${contexts.flatMap((entry) => entry.sections.map((section) => `[Source: ${section.source}]\n${section.content}\n\n`)).join('')}`,
+    messages: [{content: 'Hello'}]
+  });
+
+  it('counts the sections as sent, after the budget, apart from the instructions', () => {
+    const {breakdown, fit} = buildBudgetedVoicePrompt({contexts: [context('Aria', facts(200))], contextTokens: 4096, build});
+    expect(breakdown.instructionsTokens).toBe(3 + 8);
+    expect(breakdown.conversationTokens).toBe(2 + 8);
+    expect(breakdown.sections.map((section) => section.source)).toEqual([
+      'Accepted canon: World Bible record - Aria',
+      'Accepted canon facts - Aria'
+    ]);
+    const sent = fit!.contexts[0]!.sections[1]!;
+    expect(breakdown.sections[1]!.tokens).toBe(estimateTextTokens(`[Source: ${sent.source}]\n${sent.content}\n\n`));
+    expect(breakdown.totalTokens).toBeLessThan(4096);
+  });
+
+  it('still counts everything while the context size is unknown', () => {
+    const {breakdown} = buildBudgetedVoicePrompt({contexts: [context('Aria', facts(200))], contextTokens: null, build});
+    expect(breakdown.totalTokens).toBeGreaterThan(4096);
   });
 });

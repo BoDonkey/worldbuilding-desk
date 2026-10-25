@@ -196,3 +196,44 @@ export function fitContextChunks<C extends ContextChunkLike>(params: {
   );
   return {kept: fit.kept.map((item) => item.value), dropped: fit.dropped.map((item) => item.value), budgetTokens: budget};
 }
+
+/** What fills one prompt, estimated (Slice 4.72). */
+export interface PromptBreakdown {
+  instructionsTokens: number;
+  conversationTokens: number;
+  /** Project context, one entry per source label, in the order sent. */
+  sections: {source: string; tokens: number}[];
+  totalTokens: number;
+}
+
+export const messageTokens = (messages: ReadonlyArray<{content: string}>): number =>
+  messages.reduce((sum, message) => sum + estimateTextTokens(message.content) + 8, 0);
+
+export function buildPromptBreakdown(params: {
+  instructions: string;
+  messages: ReadonlyArray<{content: string}>;
+  sections: {source: string; content: string}[];
+}): PromptBreakdown {
+  const bySource = new Map<string, number>();
+  params.sections.forEach((section) =>
+    bySource.set(
+      section.source,
+      (bySource.get(section.source) ?? 0) + estimateTextTokens(`[Source: ${section.source}]\n${section.content}\n\n`)
+    )
+  );
+  const sections = [...bySource].map(([source, tokens]) => ({source, tokens}));
+  const instructionsTokens = estimateTextTokens(params.instructions) + 8;
+  const conversationTokens = messageTokens(params.messages);
+  return {
+    instructionsTokens,
+    conversationTokens,
+    sections,
+    totalTokens: instructionsTokens + conversationTokens + sections.reduce((sum, section) => sum + section.tokens, 0)
+  };
+}
+
+/** `~1,234 tokens` for one section of the prompt (Slice 4.72). */
+export const sectionTokenLabel = (breakdown: PromptBreakdown | null | undefined, source: string): string | null => {
+  const tokens = breakdown?.sections.find((section) => section.source === source)?.tokens;
+  return tokens === undefined ? null : `~${tokens.toLocaleString()} tokens`;
+};

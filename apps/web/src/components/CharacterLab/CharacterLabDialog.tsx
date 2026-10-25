@@ -16,6 +16,8 @@ import {
 } from '../../services/characterLab';
 import {useModelContextSize} from '../../hooks/useModelContextSize';
 import {ContextLeftOutNotice} from '../common/ContextLeftOutNotice';
+import {PromptTokenSummary} from '../common/PromptTokenSummary';
+import {sectionTokenLabel} from '../../services/llm/contextBudget';
 import {LLMService} from '../../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {describeError} from '../../services/errors';
@@ -119,7 +121,8 @@ export function CharacterLabDialog({
 
   if (!isOpen) return null;
   // Before anything is typed, plan with a stand-in message so the fit is shown from the start.
-  const plannedFit = context ? planPrompt(context, input.trim() ? input : '…').fit : null;
+  const planned = context ? planPrompt(context, input.trim() ? input : '…') : null;
+  const plannedFit = planned?.fit ?? null;
 
   const name = context?.name ?? 'this character';
   const disclosure = describeCharacterLabDataFlow(
@@ -363,9 +366,12 @@ export function CharacterLabDialog({
                 <h3>Grounded in</h3>
                 <ul>
                   {(plannedFit?.contexts[0] ?? context).sections.map((section) => (
-                    <li key={section.source}>{section.source}</li>
+                    <li key={section.source}>
+                      {section.source} <small>{sectionTokenLabel(planned?.breakdown, section.source)}</small>
+                    </li>
                   ))}
                 </ul>
+                {planned && <PromptTokenSummary className={styles.hint} breakdown={planned.breakdown} size={contextSize} />}
                 <ContextLeftOutNotice
                   className={styles.hint}
                   omitted={plannedFit?.omitted ?? []}

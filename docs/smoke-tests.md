@@ -203,6 +203,11 @@ lorebook) is a good first sample; do not add third-party cards to the repo.
    "linked World Bible record" lines; a record named by nobody does not.
 4. Ask the assistant a question with long Source Notes on a small model: the
    reply shows "Left out to fit the model’s context" with the notes left out.
+5. (4.72) Each Grounded in line shows "~N tokens", and "Prompt: about N
+   tokens of the model’s M" totals instructions, conversation, and project
+   context with the room left for the reply. Compare the total with the
+   prompt tokens the server reports: on KoboldCPP 1.123.1 the estimate ran
+   1.2–1.6× high on English and JSON and about even on accented or CJK text.
 
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 
