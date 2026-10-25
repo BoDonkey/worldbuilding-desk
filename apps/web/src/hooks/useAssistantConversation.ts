@@ -6,6 +6,7 @@ import type {AITextProvenance} from '../services/editor/aiTextProvenance';
 import {keepShownReply} from '../services/assistant/replyVersions';
 import type {PromptBreakdown} from '../services/llm/contextBudget';
 import type {ModelContextSize} from '../services/llm/modelContextSize';
+import {projectBrowserStorage, type ProjectBrowserStorage} from '../services/storage';
 
 export type AssistantChatMessage = LLMMessage & {
   contextSources?: string[];
@@ -30,14 +31,9 @@ const MAX_SAVED_MESSAGES = 100;
 const storageKey = (projectId: string, scope?: string) =>
   scope ? `wbd:assistant-conversation:${scope}:${projectId}` : `wbd:assistant-conversation:${projectId}`;
 
-const getSessionStorage = (): Storage | null => {
-  if (typeof window === 'undefined') return null;
-  try {
-    return window.sessionStorage;
-  } catch {
-    return null;
-  }
-};
+// A protected project's conversation stays in memory (slice 5.15b).
+const getSessionStorage = (projectId: string): ProjectBrowserStorage | null =>
+  projectBrowserStorage(projectId, 'session');
 
 const isCraftCitation = (value: unknown): value is CraftCitation =>
   Boolean(value) &&
@@ -80,7 +76,7 @@ const isAssistantChatMessage = (value: unknown): value is AssistantChatMessage =
 
 export const loadAssistantConversation = (
   projectId: string,
-  storage: Storage | null = getSessionStorage(),
+  storage: ProjectBrowserStorage | null = getSessionStorage(projectId),
   scope?: string
 ): AssistantChatMessage[] => {
   if (!storage) return [];
@@ -98,7 +94,7 @@ const saveAssistantConversation = (
   projectId: string,
   messages: AssistantChatMessage[],
   scope?: string,
-  storage: Storage | null = getSessionStorage()
+  storage: ProjectBrowserStorage | null = getSessionStorage(projectId)
 ): void => {
   if (!storage) return;
   try {

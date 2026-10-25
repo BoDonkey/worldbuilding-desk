@@ -12,7 +12,8 @@ import {
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME
 } from '../db';
-import {readProjectRecords} from '../projectIndex';
+import {getAllByProject, readProjectRecords} from '../projectIndex';
+import {newZoneProfileId, newZoneProgressId} from '../zoneRecordIds';
 import {
   createDefaultSettlementBaseStats,
   getZoneAffinityPercent,
@@ -40,15 +41,6 @@ export interface RecordZoneExposureResult {
   unlockedMilestoneIds: string[];
 }
 
-function zoneProfileId(projectId: string, biomeKey: string): string {
-  return `zone-profile:${projectId}:${biomeKey}`;
-}
-
-function zoneProgressId(projectId: string, biomeKey: string, characterSheetId?: string): string {
-  return characterSheetId
-    ? `zone-progress:${projectId}:${biomeKey}:sheet:${characterSheetId}`
-    : `zone-progress:${projectId}:${biomeKey}:global`;
-}
 
 export async function getZoneAffinityProfilesByProject(
   projectId: string
@@ -75,16 +67,16 @@ export async function upsertZoneAffinityProfile(params: {
   maxAffinityPoints?: number;
   milestones?: ZoneAffinityProfile['milestones'];
 }): Promise<ZoneAffinityProfile> {
-  const id = zoneProfileId(params.projectId, params.biomeKey);
   const db = await openDb();
   const tx = db.transaction(ZONE_AFFINITY_PROFILE_STORE_NAME, 'readwrite');
   const store = tx.objectStore(ZONE_AFFINITY_PROFILE_STORE_NAME);
-  const existing = (await requestToPromise(
-    store.get(id)
-  )) as ZoneAffinityProfile | undefined;
+  // Found by biome inside this transaction; ids are random (project schema 8).
+  const existing = (await getAllByProject<ZoneAffinityProfile>(store, params.projectId)).find(
+    (profile) => profile.biomeKey === params.biomeKey
+  );
   const now = Date.now();
   const next: ZoneAffinityProfile = {
-    id,
+    id: existing?.id ?? newZoneProfileId(params.projectId),
     projectId: params.projectId,
     biomeKey: params.biomeKey,
     name: params.name,
@@ -111,16 +103,15 @@ export async function getZoneAffinityProgress(
   biomeKey: string,
   characterSheetId?: string
 ): Promise<ZoneAffinityProgress> {
-  const id = zoneProgressId(projectId, biomeKey, characterSheetId);
   const db = await openDb();
   const tx = db.transaction(ZONE_AFFINITY_PROGRESS_STORE_NAME, 'readwrite');
   const store = tx.objectStore(ZONE_AFFINITY_PROGRESS_STORE_NAME);
-  const existing = (await requestToPromise(
-    store.get(id)
-  )) as ZoneAffinityProgress | undefined;
+  const existing = (await getAllByProject<ZoneAffinityProgress>(store, projectId)).find(
+    (record) => record.biomeKey === biomeKey && (record.characterSheetId ?? null) === (characterSheetId ?? null)
+  );
   if (existing) return existing;
   const created: ZoneAffinityProgress = {
-    id,
+    id: newZoneProgressId(projectId),
     projectId,
     biomeKey,
     characterSheetId,

@@ -5,7 +5,11 @@ import type {Project, ProjectSettings} from '../entityTypes';
 import {
   getOrCreateSettings,
   saveProjectSettings as persistProjectSettings,
-  getProjectById
+  getProjectById,
+  getProjectVaultState,
+  isProtectedProject,
+  lockProjectVault,
+  subscribeVaultChanges
 } from '../services/storage';
 import {describeError} from '../services/errors';
 
@@ -46,6 +50,11 @@ export const useAppStore = create<AppState>()(
 
         setActiveProject: async (project) => {
           const requestId = ++projectSettingsRequestId;
+          // Opening another project locks the protected one that was open (slice 5.15b).
+          const previousId = get().activeProject?.id;
+          if (previousId && previousId !== project?.id && isProtectedProject(previousId)) {
+            lockProjectVault(previousId);
+          }
           set({
             activeProject: project,
             projectSettings: null,
@@ -147,7 +156,10 @@ export const useAppStore = create<AppState>()(
       name: 'wbd-app-shell',
       storage: createJSONStorage(getAppStorage),
       partialize: (state) => ({
-        activeProject: state.activeProject,
+        // A protected project's name never reaches browser storage, and a
+        // restart opens on Projects, where it can be unlocked.
+        activeProject:
+          state.activeProject && isProtectedProject(state.activeProject.id) ? null : state.activeProject,
         isRailCollapsed: state.isRailCollapsed,
       }),
       onRehydrateStorage: () => (state) => {
@@ -156,12 +168,12 @@ export const useAppStore = create<AppState>()(
           state.projectSettingsStatus = 'loading';
           state.projectSettingsError = null;
           getProjectById(rehydratedProjectId)
-            .then((project) => {
+            .then(async (project) => {
               if (useAppStore.getState().activeProject?.id !== rehydratedProjectId) {
                 return null;
               }
 
-              if (!project) {
+              if (!project || (await getProjectVaultState(project.id)) === 'locked') {
                 useAppStore.setState({
                   activeProject: null,
                   projectSettings: null,
@@ -200,3 +212,24 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+// When the open project locks (here or in another tab), close it so nothing
+// from it stays on screen; when it becomes protected, rewrite the persisted
+// shell state without its name.
+subscribeVaultChanges((projectId) => {
+  const {activeProject} = useAppStore.getState();
+  if (activeProject?.id !== projectId) return;
+  void getProjectVaultState(projectId).then((state) => {
+    if (useAppStore.getState().activeProject?.id !== projectId) return;
+    if (state === 'locked') {
+      useAppStore.setState({
+        activeProject: null,
+        projectSettings: null,
+        projectSettingsStatus: 'idle',
+        projectSettingsError: null
+      });
+    } else {
+      useAppStore.setState((current) => ({...current}));
+    }
+  });
+});

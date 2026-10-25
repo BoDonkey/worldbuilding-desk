@@ -11,6 +11,8 @@ import {
   getDocumentsByProject,
   getEntitiesByProject,
   getRulesetByProjectId,
+  getProjectVaultState,
+  isProtectedProject,
   exportProjectBackupZip,
   importProjectBackup,
   parseProjectBackupZip,
@@ -41,6 +43,8 @@ import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/ProjectsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useBackupPassphraseFlow} from '../hooks/useBackupPassphraseFlow';
+import {useProjectVault} from '../hooks/useProjectVault';
+import {LockedProjectCard, ProjectVaultActions} from '../components/Projects/ProjectVaultCard';
 import {describeError} from '../services/errors';
 import {RouteFeedback} from '../components/common';
 import {SAMPLE_PROJECT_NAME} from '../fixtures/sampleProjectContent';
@@ -137,7 +141,8 @@ function ProjectsRoute() {
         getEntitiesByProject(project.id),
         getDocumentsByProject(project.id)
       ]);
-      if (ruleset) {
+      // A locked project's ruleset is still sealed.
+      if (ruleset && (await getProjectVaultState(project.id)) !== 'locked') {
         rulesetMap.set(project.id, ruleset);
       }
       countsMap.set(project.id, {
@@ -152,6 +157,12 @@ function ProjectsRoute() {
   useEffect(() => {
     void loadProjects();
   }, [loadProjects]);
+
+  const vault = useProjectVault({
+    projectIds: projects.map((project) => project.id),
+    onMessage: setFeedback,
+    onProjectsChanged: () => void loadProjects()
+  });
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -361,7 +372,7 @@ function ProjectsRoute() {
   };
 
   const handleExportProjectBackup = async (project: Project) => {
-    const choice = await chooseExport(project.name);
+    const choice = await chooseExport(project.name, {projectProtected: isProtectedProject(project.id)});
     if (!choice) return;
     setExportingProjectId(project.id);
     setFeedback(null);
@@ -830,7 +841,19 @@ function ProjectsRoute() {
           const hasRuleset = projectRulesets.has(project.id);
           const ruleset = projectRulesets.get(project.id);
           const parentConfig = getSeriesBibleConfig(project);
-          const parentOptions = projects.filter((p) => p.id !== project.id);
+          const parentOptions = projects.filter((p) => p.id !== project.id && vault.vaultStateOf(p.id) !== 'locked');
+
+          if (vault.vaultStateOf(project.id) === 'locked') {
+            return (
+              <LockedProjectCard
+                key={project.id}
+                project={project}
+                deleting={deletingProjectId === project.id}
+                onUnlock={() => void vault.unlockAndOpen(project, handleOpen)}
+                onDelete={() => handleDelete(project)}
+              />
+            );
+          }
 
           return (
             <li key={project.id} className={styles.projectCard}>
@@ -952,6 +975,13 @@ function ProjectsRoute() {
                 >
                   {deletingProjectId === project.id ? 'Deleting...' : 'Delete'}
                 </button>
+                <ProjectVaultActions
+                  state={vault.vaultStateOf(project.id)}
+                  onProtect={() => vault.requestProtect(project)}
+                  onLock={() => vault.lockProject(project.id)}
+                  onChangePassphrase={() => vault.requestChangePassphrase(project)}
+                  onRemoveProtection={() => vault.requestRemoveProtection(project)}
+                />
               </div>
             </li>
           );
@@ -962,6 +992,7 @@ function ProjectsRoute() {
 
       {confirmDialog}
       {backupDialogs}
+      {vault.vaultDialogs}
     </section>
   );
 }

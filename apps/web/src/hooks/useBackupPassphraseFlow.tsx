@@ -4,6 +4,7 @@ import {BackupPassphraseError, BackupPassphraseRequiredError} from '../services/
 
 interface ExportRequest {
   projectName: string;
+  projectProtected: boolean;
   resolve: (choice: {passphrase?: string} | null) => void;
 }
 
@@ -31,9 +32,9 @@ export function useBackupPassphraseFlow() {
   const [unlockRequest, setUnlockRequest] = useState<UnlockRequest | null>(null);
 
   const chooseExport = useCallback(
-    (projectName: string) =>
+    (projectName: string, options: {projectProtected?: boolean} = {}) =>
       new Promise<{passphrase?: string} | null>((resolve) => {
-        setExportRequest({projectName, resolve});
+        setExportRequest({projectName, projectProtected: Boolean(options.projectProtected), resolve});
       }),
     []
   );
@@ -85,6 +86,7 @@ export function useBackupPassphraseFlow() {
         {exportRequest && (
           <ExportBackupDialog
             projectName={exportRequest.projectName}
+            projectProtected={exportRequest.projectProtected}
             busy={false}
             onExport={(passphrase) => {
               setExportRequest(null);

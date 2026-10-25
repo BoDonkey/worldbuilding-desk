@@ -1,3 +1,5 @@
+import {projectBrowserStorage} from '../storage';
+
 interface CachedSynopsis {
   goal: string;
   recentEvent: string;
@@ -13,7 +15,7 @@ export const getCachedSynopsis = (
   revision: number | string
 ): CachedSynopsis | null => {
   try {
-    const raw = localStorage.getItem(cacheKey(projectId, subjectId, revision));
+    const raw = projectBrowserStorage(projectId, 'local')?.getItem(cacheKey(projectId, subjectId, revision));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<CachedSynopsis>;
     if (
@@ -39,5 +41,5 @@ export const setCachedSynopsis = (
   revision: number | string,
   synopsis: CachedSynopsis
 ): void => {
-  localStorage.setItem(cacheKey(projectId, subjectId, revision), JSON.stringify(synopsis));
+  projectBrowserStorage(projectId, 'local')?.setItem(cacheKey(projectId, subjectId, revision), JSON.stringify(synopsis));
 };

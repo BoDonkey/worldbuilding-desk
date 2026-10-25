@@ -473,8 +473,8 @@ function LoreRoute() {
 
   const contextMayNeedRebuild = contextStaleReasons.length > 0;
 
-  const indexLoreDocument = (document: LoreDocument, links: LoreDocumentLink[]) =>
-    indexSourceNote(ragService, document, links);
+  const indexLoreDocument = async (document: LoreDocument, links: LoreDocumentLink[]) => // A save can beat the service load.
+    indexSourceNote(ragService ?? (activeProject && (await getRAGService({projectId: activeProject.id, inheritFromParent: activeProject.inheritRag, parentProjectId: activeProject.parentProjectId}))), document, links);
 
   const deleteLoreRagDocument = async (documentId: string) => {
     if (!ragService) return;

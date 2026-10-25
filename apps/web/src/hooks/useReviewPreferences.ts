@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import type {Project, ProjectSettings} from '../entityTypes';
+import {projectBrowserStorage} from '../services/storage';
 
 /**
  * Per-project review preferences kept in this browser: unknown names the
@@ -31,7 +32,7 @@ export function useReviewPreferences({
       return;
     }
     try {
-      const raw = localStorage.getItem(`workspaceReviewPrefs:${activeProject.id}`);
+      const raw = projectBrowserStorage(activeProject.id, 'local')?.getItem(`workspaceReviewPrefs:${activeProject.id}`);
       if (!raw) {
         setDismissedUnknownByDocument({});
         setReviewPrefsHydrated(true);
@@ -80,7 +81,7 @@ export function useReviewPreferences({
   useEffect(() => {
     if (!activeProject || !projectSettings || !isReviewPrefsHydrated) return;
     try {
-      const raw = localStorage.getItem(`workspaceReviewPrefs:${activeProject.id}`);
+      const raw = projectBrowserStorage(activeProject.id, 'local')?.getItem(`workspaceReviewPrefs:${activeProject.id}`);
       if (!raw) return;
       const parsed = JSON.parse(raw) as
         | {
@@ -119,7 +120,7 @@ export function useReviewPreferences({
 
   useEffect(() => {
     if (!activeProject || !isReviewPrefsHydrated) return;
-    localStorage.setItem(
+    projectBrowserStorage(activeProject.id, 'local')?.setItem(
       `workspaceReviewPrefs:${activeProject.id}`,
       JSON.stringify({
         dismissedUnknownByDocument,
