@@ -1,5 +1,5 @@
-import {openDB} from 'idb';
 import type {DBSchema, IDBPDatabase} from 'idb';
+import {openDerivedRecordStore, type DerivedRecordStore} from '../storage';
 import type {DocumentChunk, RAGDiagnostics, RAGDocumentDiagnostic, RAGSearchResult} from './types';
 import {getLexicalSearchScore} from '../retrieval/lexicalSearch';
 
@@ -52,20 +52,25 @@ export interface RAGProvider {
 }
 
 export class RAGService implements RAGProvider {
-  private db: IDBPDatabase<RAGDatabase> | null = null;
+  private db: DerivedRecordStore<DocumentChunk> | null = null;
   private entityVocabulary: EntityVocabulary = [];
   private embeddingPipelinePromise: Promise<EmbeddingPipeline> | null = null;
 
   async init(projectId: string): Promise<void> {
-    this.db = await openDB<RAGDatabase>(`rag-${projectId}`, 2, {
+    this.db = await openDerivedRecordStore<DocumentChunk>({
+      projectId,
+      databaseName: `rag-${projectId}`,
+      version: 2,
+      storeName: 'chunks',
       upgrade(db) {
-        if (!db.objectStoreNames.contains('chunks')) {
-          const chunkStore = db.createObjectStore('chunks', {keyPath: 'id'});
+        const database = db as unknown as IDBPDatabase<RAGDatabase>;
+        if (!database.objectStoreNames.contains('chunks')) {
+          const chunkStore = database.createObjectStore('chunks', {keyPath: 'id'});
           chunkStore.createIndex('by-document', 'documentId');
           chunkStore.createIndex('by-type', 'metadata.type');
         }
       },
-      blocking: () => this.close()
+      onBlocking: () => this.close()
     });
   }
 
@@ -79,16 +84,7 @@ export class RAGService implements RAGProvider {
   }
 
   async deleteDocument(documentId: string): Promise<void> {
-    const db = this.requireDb();
-    const tx = db.transaction('chunks', 'readwrite');
-    const store = tx.objectStore('chunks');
-    const index = store.index('by-document');
-    let cursor = await index.openCursor(IDBKeyRange.only(documentId));
-    while (cursor) {
-      await cursor.delete();
-      cursor = await cursor.continue();
-    }
-    await tx.done;
+    await this.requireDb().deleteByDocument(documentId);
   }
 
   async indexDocument(
@@ -122,13 +118,13 @@ export class RAGService implements RAGProvider {
         }
       };
 
-      await this.requireDb().put('chunks', chunk);
+      await this.requireDb().put(chunk);
     }
   }
 
   async search(query: string, limit: number = 5): Promise<RAGSearchResult[]> {
     const queryEmbedding = await this.getEmbedding(query);
-    const allChunks = await this.requireDb().getAll('chunks');
+    const allChunks = await this.requireDb().getAll();
 
     const ranked = allChunks
       .map((chunk) => ({
@@ -158,7 +154,7 @@ export class RAGService implements RAGProvider {
   }
 
   async getDiagnostics(): Promise<RAGDiagnostics> {
-    const chunks = await this.requireDb().getAll('chunks');
+    const chunks = await this.requireDb().getAll();
     return buildRagDiagnostics(chunks);
   }
 
@@ -273,7 +269,7 @@ export class RAGService implements RAGProvider {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
-  private requireDb(): IDBPDatabase<RAGDatabase> {
+  private requireDb(): DerivedRecordStore<DocumentChunk> {
     if (!this.db) {
       throw new Error('Indexed context database has not been initialized');
     }

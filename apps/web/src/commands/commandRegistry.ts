@@ -1,6 +1,7 @@
 import type {NavigateFunction} from 'react-router';
 import type {Project, ProjectSettings} from '../entityTypes';
 import {getProjectCapabilities} from '../projectMode';
+import {isProtectedProject, lockProjectVault} from '../services/storage';
 import {dispatchWorkspaceCommand} from './workspaceCommands';
 
 export interface AppCommand {
@@ -97,6 +98,22 @@ export const createAppCommands = ({
       section: 'Navigation',
       keywords: ['sheets', 'state', 'stats', 'resources', 'characters'],
       run: () => navigate('/sheets')
+    });
+  }
+
+  // Slice 5.15b: lock a protected project without going to Projects.
+  if (activeProject && isProtectedProject(activeProject.id)) {
+    const projectId = activeProject.id;
+    navigationCommands.push({
+      id: 'project-lock',
+      label: 'Lock Project',
+      section: 'Navigation',
+      keywords: ['lock', 'protect', 'passphrase', 'close', 'project'],
+      description: 'Close this project; its passphrase is needed to open it again',
+      run: () => {
+        lockProjectVault(projectId);
+        window.location.reload();
+      }
     });
   }
 

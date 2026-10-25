@@ -4,7 +4,9 @@ import type {
   EntityCategory,
   Project,
   StoredRuleset,
-  WorldEntity
+  WorldEntity,
+  ZoneAffinityProfile,
+  ZoneAffinityProgress
 } from '../../entityTypes';
 import {getVaultState} from './vault/vaultRegistry';
 import {
@@ -17,8 +19,11 @@ import {
   PROJECT_ID_INDEX,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   PROJECT_SCOPED_STORE_NAMES,
-  PROJECT_STORE_NAME
+  PROJECT_STORE_NAME,
+  ZONE_AFFINITY_PROFILE_STORE_NAME,
+  ZONE_AFFINITY_PROGRESS_STORE_NAME
 } from './db';
+import {rekeyZoneProfiles, rekeyZoneProgress} from './zoneRecordIds';
 import {quarantineInvalidRules} from '@worldbuilding-desk/rules-engine';
 import {classifyCharacterIdentities} from '../characters/characterIdentity';
 import {
@@ -29,7 +34,7 @@ import {getAllByProject} from './projectIndex';
 import {requestToPromise, transactionToPromise} from './idbRequest';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SCHEMA_VERSION = 7;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 8;
 export const PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION = 1;
 
 export interface ProjectMigrationContext {
@@ -120,6 +125,36 @@ async function migrateQuarantineInvalidRules(
   await replaceRulesetSnapshot(context.projectId, next);
 }
 
+/**
+ * Zone-affinity ids embedded the zone's biome key (a slug of its name), and
+ * ids stay readable in a protected project. Gives those records random ids;
+ * lookups go by biome key (slice 5.15b).
+ */
+async function migrateZoneRecordIds(context: ProjectMigrationContext): Promise<void> {
+  const [profiles, progress] = await Promise.all([
+    readProjectRecords<ZoneAffinityProfile>(context.db, ZONE_AFFINITY_PROFILE_STORE_NAME, context.projectId),
+    readProjectRecords<ZoneAffinityProgress>(context.db, ZONE_AFFINITY_PROGRESS_STORE_NAME, context.projectId)
+  ]);
+  const nextProfiles = rekeyZoneProfiles(profiles);
+  const nextProgress = rekeyZoneProgress(progress);
+  if (nextProfiles.some((profile, index) => profile.id !== profiles[index].id)) {
+    await replaceProjectRecordsInStore({
+      db: context.db,
+      storeName: ZONE_AFFINITY_PROFILE_STORE_NAME,
+      projectId: context.projectId,
+      records: nextProfiles
+    });
+  }
+  if (nextProgress.some((record, index) => record.id !== progress[index].id)) {
+    await replaceProjectRecordsInStore({
+      db: context.db,
+      storeName: ZONE_AFFINITY_PROGRESS_STORE_NAME,
+      projectId: context.projectId,
+      records: nextProgress
+    });
+  }
+}
+
 async function migrateCharacterIdentityLinks(
   context: ProjectMigrationContext
 ): Promise<void> {
@@ -203,6 +238,11 @@ const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
     fromVersion: 6,
     toVersion: 7,
     migrate: migrateQuarantineInvalidRules
+  },
+  {
+    fromVersion: 7,
+    toVersion: 8,
+    migrate: migrateZoneRecordIds
   }
 ];
 

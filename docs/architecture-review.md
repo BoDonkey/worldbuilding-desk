@@ -325,9 +325,11 @@ covered as long as it goes through `openDb()`. Opening the database with
 this) or adding a separate database bypasses the vault. The seam uses
 synchronous AES-GCM (`@noble/ciphers`), so a sealed write can sit inside a
 `runProjectWriteTransaction`. The data key lives only in the in-memory
-registry, so a reload locks every vault. The retrieval and memory databases
-and project-derived browser-storage keys are not yet covered; 5.15b closes
-that.
+registry, so a reload locks every vault. Retrieval and memory stores open
+through `openDerivedRecordStore`, which keeps a protected project's records
+in memory only, and the content keys below go through
+`projectBrowserStorage`, which does the same (5.15b). A new derived database
+or content key must use these too.
 
 IndexedDB's structural `DB_VERSION`, per-project `storageSchemaVersion`, and
 portable project-snapshot `schemaVersion` are separate contracts. Opening a

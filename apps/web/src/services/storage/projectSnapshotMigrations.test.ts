@@ -3,6 +3,7 @@ import type {CharacterSheet, StateMutationEvent, StoredRuleset} from '../../enti
 import {replayCharacterState} from '../state/stateReplay';
 import {normalizeProjectSnapshot} from './projectBackupImport';
 import {migrateProjectSnapshotPayload} from './projectSnapshotMigrations';
+import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
 
 const legacySnapshot = () => ({
   schemaVersion: 1,
@@ -109,7 +110,7 @@ describe('migrateProjectSnapshotPayload', () => {
     });
     expect(migrated).toMatchObject({
       schemaVersion: 10,
-      project: {storageSchemaVersion: 7},
+      project: {storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
       data: {
         canonicalFacts: [{validFromSceneId: 'scene-2', validUntilSceneId: 'scene-4'}],
         worldCanvases: []
@@ -195,7 +196,7 @@ describe('migrateProjectSnapshotPayload', () => {
     });
 
     expect(snapshot.schemaVersion).toBe(10);
-    expect(snapshot.project.storageSchemaVersion).toBe(7);
+    expect(snapshot.project.storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
     expect(snapshot.data.ruleset?.rules).toEqual([
       {id: 'rule-ok', name: 'Long Rest', category: 'time', enabled: true, priority: 100, tags: [], effects: []}
     ]);
@@ -214,9 +215,9 @@ describe('migrateProjectSnapshotPayload', () => {
     expect(() =>
       normalizeProjectSnapshot({
         schemaVersion: 10,
-        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 8}
+        project: {id: 'project-1', name: 'Future', storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION + 1}
       })
-    ).toThrow('Backup project data uses storage schema 8');
+    ).toThrow(`Backup project data uses storage schema ${CURRENT_PROJECT_SCHEMA_VERSION + 1}`);
   });
 
   it('classifies v1 character identities and adds complete v2 backup fields', () => {
@@ -285,7 +286,7 @@ describe('migrateProjectSnapshotPayload', () => {
     });
 
     expect(snapshot.schemaVersion).toBe(10);
-    expect(snapshot.project.storageSchemaVersion).toBe(7);
+    expect(snapshot.project.storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
     expect(snapshot.data.corkboardChapterCards[0].sceneIds).toEqual(['scene-1', 'scene-2']);
     expect(snapshot.data.categories[0].recordType).toBe('system-negative-space');
     expect(snapshot.data.entities[0].systemNegativeSpace).toEqual({

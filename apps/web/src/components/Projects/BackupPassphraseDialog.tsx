@@ -8,7 +8,8 @@ import styles from '../../assets/components/BackupPassphraseDialog.module.css';
 const RECOVERY_WARNING =
   'SagaSpine never stores this passphrase and has no way to recover it. Without it, this backup cannot be opened.';
 
-function DialogFrame(props: {
+/** The shared passphrase dialog: a modal form with Cancel and a submit button. */
+export function DialogFrame(props: {
   titleId: string;
   title: string;
   busy: boolean;
@@ -56,11 +57,13 @@ function DialogFrame(props: {
 /** Chooses a plain or passphrase-protected backup before export (slice 5.14). */
 export function ExportBackupDialog(props: {
   projectName: string;
+  /** The project is protected with a passphrase (5.15b): encrypted is the default. */
+  projectProtected?: boolean;
   busy: boolean;
   onExport: (passphrase: string | undefined) => void;
   onCancel: () => void;
 }) {
-  const [encrypt, setEncrypt] = useState(false);
+  const [encrypt, setEncrypt] = useState(Boolean(props.projectProtected));
   const [passphrase, setPassphrase] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
@@ -92,7 +95,10 @@ export function ExportBackupDialog(props: {
           <input type='radio' name='backup-kind' checked={!encrypt} onChange={() => setEncrypt(false)} />
           <span>
             Plain backup (.zip)
-            <span className={styles.choiceHelp}>Anyone who has the file can read it.</span>
+            <span className={styles.choiceHelp}>
+              Anyone who has the file can read it.
+              {props.projectProtected && ' This project is protected on this computer; a plain backup is not.'}
+            </span>
           </span>
         </label>
         <label className={styles.choice}>

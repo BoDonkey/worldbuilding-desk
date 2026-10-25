@@ -42,6 +42,7 @@ export {
   MECHANICS_DRAFT_STORE_NAME
 } from './db';
 export * from './jsonTransfer';
+export * from './derivedRecordStore';
 export * from './projectWriteTransaction';
 export * from './projectBackupExport';
 export * from './projectBackupImport';
@@ -62,7 +63,14 @@ export {
   VaultIntegrityError,
   VaultPassphraseError
 } from './vault/vaultCrypto';
-export {lockAllVaults, subscribeVaultChanges, VaultLockedError, type VaultState} from './vault/vaultRegistry';
+export {
+  isVaultProject as isProtectedProject,
+  lockAllVaults,
+  subscribeVaultChanges,
+  VaultLockedError,
+  type VaultState
+} from './vault/vaultRegistry';
+export {projectBrowserStorage, type ProjectBrowserStorage} from './vault/projectBrowserStorage';
 export * from './projectBackupCollisions';
 export * from './projectBackupIdRemap';
 export * from './projectSnapshotService';

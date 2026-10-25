@@ -101,7 +101,11 @@ function deleteProjectLocalStorage(projectId: string): void {
   removeProjectFromWorkspaceUi(projectId);
 }
 
-async function deleteProjectAuxiliaryStorage(projectId: string): Promise<void> {
+/**
+ * Closes and deletes a project's on-disk retrieval and memory databases. They
+ * are rebuildable; a blocked deletion rejects so callers can stop first.
+ */
+export async function deleteProjectAuxiliaryStorage(projectId: string): Promise<void> {
   await Promise.all([closeRAGServices(projectId), closeShodhServices(projectId)]);
   await Promise.all([
     deleteDatabaseIfPresent(`rag-${projectId}`),

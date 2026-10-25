@@ -18,6 +18,7 @@ import {
   replaceRulesetSnapshot
 } from './repositories/rulesetStorage';
 import {
+  CURRENT_PROJECT_SCHEMA_VERSION,
   createProjectMigrationBackup,
   ensureProjectStorageCurrent,
   listProjectMigrationBackups,
@@ -226,8 +227,8 @@ describe('project migration backup', () => {
         .getAll()
     );
 
-    expect(current.storageSchemaVersion).toBe(7);
-    expect((stored as Project).storageSchemaVersion).toBe(7);
+    expect(current.storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
+    expect((stored as Project).storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
     expect(backups).toHaveLength(1);
   });
 
@@ -336,7 +337,7 @@ describe('project migration backup', () => {
         .get(linkedCard.id)
     );
 
-    expect(current.storageSchemaVersion).toBe(7);
+    expect(current.storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
     expect(storedCard).toEqual(linkedCard);
   });
 
@@ -368,7 +369,7 @@ describe('project migration backup', () => {
     const current = await ensureProjectStorageCurrent(db, project);
     const ruleset = await getRulesetByProjectId(project.id);
 
-    expect(current.storageSchemaVersion).toBe(7);
+    expect(current.storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
     expect(ruleset?.rules).toEqual([
       {id: 'rule-ok', name: 'Long Rest', category: 'time', enabled: true, priority: 100, tags: [], effects: []}
     ]);

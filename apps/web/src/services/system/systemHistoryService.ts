@@ -1,4 +1,5 @@
 import type {SystemHistoryCategory, SystemHistoryEntry} from '../../entityTypes';
+import {projectBrowserStorage} from '../storage';
 
 const MAX_ENTRIES = 200;
 
@@ -6,7 +7,7 @@ const getStorageKey = (projectId: string) => `systemHistory:${projectId}`;
 
 export const getSystemHistoryEntries = (projectId: string): SystemHistoryEntry[] => {
   try {
-    const raw = localStorage.getItem(getStorageKey(projectId));
+    const raw = projectBrowserStorage(projectId, 'local')?.getItem(getStorageKey(projectId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -59,10 +60,10 @@ export const appendSystemHistoryEntry = (
   };
 
   const next = [entry, ...existing].slice(0, MAX_ENTRIES);
-  localStorage.setItem(getStorageKey(projectId), JSON.stringify(next));
+  projectBrowserStorage(projectId, 'local')?.setItem(getStorageKey(projectId), JSON.stringify(next));
   return entry;
 };
 
 export const clearSystemHistoryEntries = (projectId: string): void => {
-  localStorage.removeItem(getStorageKey(projectId));
+  projectBrowserStorage(projectId, 'local')?.removeItem(getStorageKey(projectId));
 };

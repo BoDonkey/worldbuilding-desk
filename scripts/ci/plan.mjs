@@ -16,7 +16,7 @@ const uiScopes = [
   [/^apps\/web\/src\/(components\/Corkboard\/|styles\/CorkboardRoute\.module\.css$)/,
     ['corkboard-route', 'workspace-corkboard-links', 'post-merge-smoke', 'world-canvas']],
   [/^apps\/web\/src\/styles\/ProjectsRoute\.module\.css$/,
-    ['project-deletion', 'portable-data', 'onboarding', 'post-merge-smoke']]
+    ['project-deletion', 'portable-data', 'onboarding', 'post-merge-smoke', 'project-vault', 'encrypted-backup']]
 ];
 
 export function createPlan(files, allSpecs, {forceFull = false, main = false} = {}) {

@@ -21,9 +21,11 @@ SagaSpine is a desktop writing environment for fiction authors. The current prod
 
 - Project data is stored locally but working projects are not currently
   encrypted by SagaSpine; optional password-protected working project vaults
-  are planned as Slice 5.15 before beta. The vault storage layer exists
-  (5.15a) but no screen can turn it on yet; the Projects controls arrive in
-  5.15b. Backups can be encrypted (Slice
+  are being built as Slice 5.15 before beta. **Protect with Passphrase** on
+  the Projects page (5.15b) seals a project's records and keeps its
+  retrieval index, memories, and browser-storage text in memory only; the
+  on-disk verification and privacy copy follow in 5.15c. Backups can be
+  encrypted (Slice
   5.14): **Export Backup** offers a plain `.zip` or an encrypted
   `.sagabackup` file. The passphrase is never stored and cannot be recovered.
 - Local AI stays on the computer only on a verified route: Ollama at a
@@ -728,7 +730,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Current Architecture Status
 
 ### Stabilized
-- Project vault storage layer (slice 5.15a; nothing in the UI uses it yet).
+- Password-protected projects (slice 5.15b).
+  - Projects page: protect, unlock, lock, change passphrase, and remove
+    protection; the command palette can lock the open project. A locked
+    project shows only its label. Locking reloads the page.
+  - A protected project locks on restart and when another project opens,
+    and is never saved as the last open project.
+  - Its retrieval index, memories, and browser-storage text live in memory
+    only and are rebuilt after unlock; enabling protection deletes the old
+    derived databases. Its backup defaults to encrypted.
+  - Zone-affinity records use random ids (project schema 8).
+- Project vault storage layer (slice 5.15a).
   - `openDb()` and the rulesets database return a wrapped connection.
     Records of a protected project are sealed on write and opened on read:
     AES-256-GCM with a per-project data key, bound to the database, store,
@@ -1016,6 +1028,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.15b project vault UX and derived data passed full remote Web CI,
+  including `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
+  [run 40196961910](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40196961910)
+  for [PR #81](https://github.com/BoDonkey/worldbuilding-desk/pull/81).
+  Two Cypress failures on the first attempts were pre-existing flakes also
+  seen on main (the `ai-scene-revision` AI tab, run 40120019885; a seed
+  `cy.then()` timeout, run 40143329410) and passed on rerun. Coverage: 16
+  CI-policy tests, file-size gate, lint with the existing warning, 1306 web
+  (8 new) + 47 engine + 12 UI + 37 desktop unit tests, both builds, and
+  Cypress 167/167 locally with retries disabled.
 - Slice 5.15a project vault core passed full remote Web CI, including
   `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
   [run 40194139403](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40194139403)

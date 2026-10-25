@@ -246,12 +246,14 @@ describe('zone affinity', () => {
   it('upserts a profile by biome, merging omitted fields from the stored one', async () => {
     const projectId = newProject();
     const created = await upsertZoneAffinityProfile({projectId, biomeKey: 'ashfall', name: 'Ashfall', sourceEntityId: 'place-1'});
+    // Project schema 8: the id is random, not built from the biome key.
+    expect(created.id).toMatch(new RegExp(`^zone-profile:${projectId}:[0-9a-f-]{36}$`));
     expect(created).toMatchObject({
-      id: `zone-profile:${projectId}:ashfall`, progressScope: 'character', maxAffinityPoints: 100, milestones: [], sourceEntityId: 'place-1'
+      progressScope: 'character', maxAffinityPoints: 100, milestones: [], sourceEntityId: 'place-1'
     });
 
     const updated = await upsertZoneAffinityProfile({projectId, biomeKey: 'ashfall', name: 'Ash Wastes', maxAffinityPoints: 40});
-    expect(updated).toMatchObject({name: 'Ash Wastes', maxAffinityPoints: 40, sourceEntityId: 'place-1', createdAt: created.createdAt});
+    expect(updated).toMatchObject({id: created.id, name: 'Ash Wastes', maxAffinityPoints: 40, sourceEntityId: 'place-1', createdAt: created.createdAt});
     expect(await getZoneAffinityProfilesByProject(projectId)).toHaveLength(1);
   });
 

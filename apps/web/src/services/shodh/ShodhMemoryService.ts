@@ -1,5 +1,5 @@
-import {openDB} from 'idb';
 import type {DBSchema, IDBPDatabase} from 'idb';
+import {openDerivedRecordStore, type DerivedRecordStore} from '../storage';
 
 interface MemoryDB extends DBSchema {
   memories: {
@@ -38,15 +38,19 @@ export interface ShodhMemoryProvider {
 }
 
 export class ShodhMemoryService implements ShodhMemoryProvider {
-  private db: IDBPDatabase<MemoryDB> | null = null;
+  private db: DerivedRecordStore<MemoryEntry> | null = null;
 
   async init(projectId: string): Promise<void> {
-    this.db = await openDB<MemoryDB>(`shodh-memory-${projectId}`, 1, {
+    this.db = await openDerivedRecordStore<MemoryEntry>({
+      projectId,
+      databaseName: `shodh-memory-${projectId}`,
+      version: 1,
+      storeName: 'memories',
       upgrade(db) {
-        const store = db.createObjectStore('memories', {keyPath: 'id'});
+        const store = (db as unknown as IDBPDatabase<MemoryDB>).createObjectStore('memories', {keyPath: 'id'});
         store.createIndex('by-document', 'documentId');
       },
-      blocking: () => this.close()
+      onBlocking: () => this.close()
     });
   }
 
@@ -63,27 +67,19 @@ export class ShodhMemoryService implements ShodhMemoryProvider {
       ...entry
     };
 
-    await this.requireDb().put('memories', record);
+    await this.requireDb().put(record);
   }
 
   async listMemories(): Promise<MemoryEntry[]> {
-    return this.requireDb().getAll('memories');
+    return this.requireDb().getAll();
   }
 
   async deleteMemory(memoryId: string): Promise<void> {
-    await this.requireDb().delete('memories', memoryId);
+    await this.requireDb().delete(memoryId);
   }
 
   async deleteMemoriesForDocument(documentId: string): Promise<void> {
-    const db = this.requireDb();
-    const tx = db.transaction('memories', 'readwrite');
-    const index = tx.store.index('by-document');
-    let cursor = await index.openCursor(IDBKeyRange.only(documentId));
-    while (cursor) {
-      await cursor.delete();
-      cursor = await cursor.continue();
-    }
-    await tx.done;
+    await this.requireDb().deleteByDocument(documentId);
   }
 
   async captureAutoMemory(params: {
@@ -119,7 +115,7 @@ export class ShodhMemoryService implements ShodhMemoryProvider {
     return plain.slice(0, 500);
   }
 
-  private requireDb(): IDBPDatabase<MemoryDB> {
+  private requireDb(): DerivedRecordStore<MemoryEntry> {
     if (!this.db) {
       throw new Error('Project memory database has not been initialized');
     }

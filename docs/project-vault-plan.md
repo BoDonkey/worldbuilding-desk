@@ -116,25 +116,51 @@ project.
   inventory) are kept in memory or cleared on lock for protected projects.
 - Backup export of a protected project defaults to an encrypted `.sagabackup`.
 
+Built (5.15b):
+
+- Projects page: **Protect with Passphrase**, **Unlock and Open**, **Lock
+  Project**, **Change Passphrase**, **Remove Protection**
+  (`hooks/useProjectVault.tsx`, `components/Projects/ProjectVault*.tsx`).
+  The command palette also offers **Lock Project** while a protected project
+  is open. Locking reloads the page, so nothing unlocked stays in memory.
+- The app shell never persists a protected project as the open project;
+  opening another project locks the protected one; a lock closes it.
+- Retrieval and memory stores go through `openDerivedRecordStore`: an
+  in-memory store for a protected project (dropped on lock, rebuilt in the
+  background after unlock by `vaultContextLifecycle`), IndexedDB otherwise.
+  Enabling protection deletes the project's `rag-*` and `shodh-memory-*`
+  databases.
+- Content keys in browser storage go through `projectBrowserStorage`: kept in
+  memory for a protected project, moved back to browser storage when
+  protection is removed.
+- Zone-affinity records use random ids (project schema 8).
+- A second browser tab that misses the broadcast is accepted, not blocked:
+  the desktop app has one window, and the tab still cannot write a locked
+  project.
+
 ### 5.15c — Verification and copy (M)
 
-- Planted-phrase scan across every app-owned store and browser-storage key.
-- On-disk scan of the packaged desktop profile.
-- Cypress vault journeys.
+- Planted-phrase scan across every app-owned store and browser-storage key
+  (in jsdom already: `vault/projectVaultDerived.test.ts`; 5.15c adds a zone
+  record and runs it against the packaged app).
+- On-disk scan of the packaged desktop profile, including plaintext left in
+  old IndexedDB pages after enable.
+- Cypress vault journeys (protect, unlock, lock, restart, passphrase change,
+  encrypted export, and removal already in `project-vault.cy.ts`).
 - Electron packaged smoke on macOS and Windows.
 - A `docs/smoke-tests.md` procedure.
 - Privacy and help copy, written only after these checks pass.
 
 ## Known gaps to close or state
 
-- A browser tab that misses the registry broadcast (5.15b decides whether to
-  block a second tab while a vault is unlocked).
+- A browser tab that misses the registry broadcast. 5.15b accepted this
+  rather than blocking a second tab: the desktop app has one window.
 - Plaintext left in old IndexedDB pages after enable (5.15c measures it).
 - Record ids are readable. 5.15a checked how stored ids are built. Most are
   random or built from other ids. One exception: zone-affinity profiles and
   progress use `zone-profile:<project>:<biomeKey>` and
   `zone-progress:<project>:<biomeKey>:…`. `biomeKey` is a slug of the zone
   name or source entity name, so those names stay readable on a protected
-  project. **5.15b** moves those records to opaque ids, looking them up
-  through the `projectId` index, with a project schema migration. 5.15c's
-  planted-phrase scan includes a zone record.
+  project. 5.15b moved those records to random ids, found by `biomeKey`
+  through the `projectId` index (project schema 8, also applied on backup
+  import). 5.15c's planted-phrase scan includes a zone record.

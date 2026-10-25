@@ -19,6 +19,7 @@ import {
   PROJECT_STORE_NAME
 } from '../db';
 import {requestToPromise} from '../idbRequest';
+import {deleteProjectAuxiliaryStorage} from '../repositories/projectStorage';
 import {openRawRulesetDb, RULESET_STORE_NAME, RULESETS_DATABASE_NAME} from '../repositories/rulesetStorage';
 import {
   createVaultKey,
@@ -30,6 +31,7 @@ import {
   VaultIntegrityError,
   type VaultManifest
 } from './vaultCrypto';
+import {moveProjectBrowserContentToMemory, moveProjectBrowserContentToStorage} from './projectBrowserStorage';
 import {isSealedRecord, vaultRecordContext, type StoredRecord} from './vaultDatabase';
 import {
   beginVaultMigration,
@@ -202,12 +204,17 @@ export async function enableProjectVault(
   const {manifest, dataKey} = await createVaultKey(projectId, passphrase, options);
   beginVaultMigration(projectId, manifest, dataKey);
   try {
+    // Retrieval and memory data hold plaintext excerpts. From here on they are
+    // kept in memory for this project, so the on-disk copies are deleted first.
+    // They are rebuilt from the project's records.
+    await deleteProjectAuxiliaryStorage(projectId);
     await rewriteProject(projectId, 'seal', dataKey, manifest);
   } catch (error) {
     endVaultMigration(projectId, 'unprotected');
     throw error;
   }
   endVaultMigration(projectId, 'protected');
+  moveProjectBrowserContentToMemory(projectId);
 }
 
 /** Removes protection. Needs the passphrase; on any failure the project stays protected. */
@@ -224,6 +231,7 @@ export async function disableProjectVault(projectId: string, passphrase: string)
     if (!wasUnlocked) lockVault(projectId);
     throw error;
   }
+  moveProjectBrowserContentToStorage(projectId);
   endVaultMigration(projectId, 'unprotected');
 }
 

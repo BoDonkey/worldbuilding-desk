@@ -67,6 +67,7 @@ import {
   CURRENT_PROJECT_SCHEMA_VERSION,
   LEGACY_PROJECT_SCHEMA_VERSION
 } from './projectSchemaMigrations';
+import {rekeyZoneProfiles, rekeyZoneProgress} from './zoneRecordIds';
 import {extractSingleFileZip} from '../../utils/unzip';
 import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
 import {readProjectRecords} from './projectIndex';
@@ -155,6 +156,9 @@ export function normalizeProjectSnapshot(value: unknown): ProjectSnapshot {
   snapshot.data.characterIdentityReports ??= [];
   snapshot.counts.characterIdentityReports ??=
     snapshot.data.characterIdentityReports.length;
+  // Project schema 8: zone-affinity ids no longer embed the zone name.
+  snapshot.data.zoneAffinityProfiles = rekeyZoneProfiles(snapshot.data.zoneAffinityProfiles ?? []);
+  snapshot.data.zoneAffinityProgressRecords = rekeyZoneProgress(snapshot.data.zoneAffinityProgressRecords ?? []);
   snapshot.project.storageSchemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;
   return snapshot as ProjectSnapshot;
 }
