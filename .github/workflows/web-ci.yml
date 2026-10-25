@@ -148,6 +148,46 @@ jobs:
       - name: Build desktop
         run: pnpm --filter desktop build
 
+  # Packaged-app validation (slice 5.3): drives the electron-builder --dir
+  # output on both release platforms with Playwright.
+  desktop-e2e:
+    needs: changes
+    if: ${{ always() && (needs.changes.result != 'success' || (needs.changes.outputs.application == 'true' && needs.changes.outputs.verified != 'true')) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    name: Desktop E2E (${{ matrix.os }})
+    steps:
+      - name: Reject failed planning
+        if: ${{ needs.changes.result != 'success' }}
+        run: exit 1
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build and package the app (unsigned)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm package:desktop:dir
+      - name: Run packaged-app tests without retries
+        env:
+          E2E_APP: packaged
+        run: pnpm --filter desktop e2e
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-e2e-${{ matrix.os }}
+          path: apps/desktop/e2e-results
+          if-no-files-found: ignore
+
   cypress-run:
     needs: changes
     if: ${{ needs.changes.outputs.application == 'true' && needs.changes.outputs.mode != 'none' && needs.changes.outputs.verified != 'true' }}
@@ -196,7 +236,7 @@ jobs:
   # planning, tooling, fast checks, or any selected browser group.
   cypress-smoke:
     if: ${{ always() }}
-    needs: [changes, tooling-verify, web-verify, desktop-verify, cypress-run]
+    needs: [changes, tooling-verify, web-verify, desktop-verify, desktop-e2e, cypress-run]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
