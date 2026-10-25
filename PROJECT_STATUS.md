@@ -993,6 +993,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.3 packaged-app validation passed full remote Web CI, including
+  `cypress-smoke` and the new `Desktop E2E` jobs on macOS and Windows, in
+  [run 40185198414](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40185198414)
+  for [PR #78](https://github.com/BoDonkey/worldbuilding-desk/pull/78).
+  Coverage: 16 CI-policy tests, file-size gate, lint with the existing
+  ConsumableEffectEditor warning, 1276 web + 47 engine + 12 UI + 37 desktop
+  unit tests, both builds, 13 Electron E2E tests against the unsigned
+  packaged app per platform, and Cypress 161/161 with retries disabled. The
+  first Windows runs found a CRLF build failure and two startup races in the
+  new tests; all three are fixed in the PR.
 - Slices 3.19–3.21 (theme tokens, Compendium form extraction, scene-roster
   mutation services) passed full remote Web CI, including `cypress-smoke`,
   in [run 39273413648](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/39273413648)
