@@ -155,6 +155,29 @@ the desktop app and the browser build.
    nothing. On a server that reports no size (LM Studio), set Advanced →
    Maximum reply length and check the request carries it.
 
+## 1c. Character Card Import (slice 4.69)
+
+Automated tests build synthetic cards; run this with a real card before
+relying on a source the author names. SillyTavern's bundled
+`default/content/default_Seraphina.png` (V2 and V3 chunks plus a four-entry
+lorebook) is a good first sample; do not add third-party cards to the repo.
+
+1. World Bible → Characters → **Import a character card**, choose the PNG.
+   The preview shows the card's name, where the description and the other
+   fields go, that chat instructions and the portrait are not imported, a
+   note about `{{user}}` if the card uses it, and one checkbox per lorebook
+   entry (switched-off entries start unticked). Nothing is saved yet.
+2. Confirm. The character appears marked Needs completion, with `{{char}}`
+   replaced by its name; Source Notes hold `Character card: <name>` and one
+   note per kept lorebook entry. No facts are accepted.
+3. Import the same card again: the dialog asks whether to add the card to
+   the existing character or create a separate one. Adding leaves the
+   character unchanged and adds a second card note.
+4. Choose a non-card PNG, a text file, and a JSON file with no name: each is
+   refused with a plain reason and nothing is written.
+5. Cards from another platform (for example HiWaifu) are in scope only if it
+   exports this format; try its export here before promising support.
+
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 
 Goal: verify the writing-first review flow from imported manuscript text

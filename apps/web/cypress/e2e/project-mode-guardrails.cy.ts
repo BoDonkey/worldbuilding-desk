@@ -188,6 +188,7 @@ describe('Project mode guardrails', () => {
         expect([...$buttons].map((button) => button.textContent?.trim())).to.deep.equal([
           'Create Manually',
           'Start from a description',
+          'Import a character card',
           'Import Docs',
           'Paste Text'
         ]);
