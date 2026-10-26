@@ -27,6 +27,8 @@ describe('CharacterLabSummaryPanel', () => {
     render(<CharacterLabSummaryPanel summary={summary} offer={null} summarizableCount={0} busy={false} disabledReason={null} {...h} />);
     const box = screen.getByLabelText(/Summary of the earlier conversation · 3 turns · not canon/);
     expect(box).toHaveValue('They argued about the oath.');
+    expect(box).toHaveAttribute('maxlength', '2000');
+    expect(screen.getByText(/5 of 200 words/)).toBeInTheDocument();
     fireEvent.change(box, {target: {value: 'New wording.'}});
     expect(h.onEdit).toHaveBeenCalledWith('New wording.');
     expect(screen.queryByRole('button', {name: /Summarize|Add earlier/})).toBeNull();
@@ -49,5 +51,6 @@ describe('CharacterLabSummaryPanel', () => {
     rerender(<CharacterLabSummaryPanel summary={summary} offer={0.5} summarizableCount={2} busy {...handlers()} disabledReason={null} />);
     expect(screen.getByRole('button', {name: 'Add earlier turns to the summary'})).toBeDisabled();
     expect(screen.getByRole('button', {name: 'Remove summary'})).toBeDisabled();
+    expect(screen.getByRole('textbox')).toBeDisabled();
   });
 });

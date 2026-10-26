@@ -6,6 +6,9 @@ import {
   isSummarized,
   shouldOfferSummary,
   summarizableExchanges,
+  validateCharacterLabSummaryText,
+  SUMMARY_MAX_CHARS,
+  SUMMARY_MAX_WORDS,
   type CharacterLabSummary
 } from './characterLabSummary';
 import type {CharacterLabExchange} from './characterLabTranscript';
@@ -81,6 +84,18 @@ describe('buildSummaryRequest', () => {
     expect(request.systemPrompt).toContain('not canon');
     expect(request.messages[0]!.content).toBe('Summary so far (extend it with the turns below):\nEarlier: the oath.\n\nTurns to summarize:\n\nAuthor: Q-4\nAria: A-4');
     expect(() => buildSummaryRequest({characterName: 'Aria', previousSummary: null, exchanges: []})).toThrow('There are no earlier turns');
+  });
+});
+
+describe('validateCharacterLabSummaryText', () => {
+  it('keeps a bounded summary and rejects model output or edits beyond either limit', () => {
+    expect(validateCharacterLabSummaryText('  They argued about the oath.  ')).toBe('  They argued about the oath.  ');
+    expect(validateCharacterLabSummaryText(Array.from({length: SUMMARY_MAX_WORDS}, () => 'word').join(' '))).toBeTruthy();
+    expect(() => validateCharacterLabSummaryText(Array.from({length: SUMMARY_MAX_WORDS + 1}, () => 'word').join(' '))).toThrow(
+      /200 words/
+    );
+    expect(() => validateCharacterLabSummaryText('x'.repeat(SUMMARY_MAX_CHARS + 1))).toThrow(/2,000 characters/);
+    expect(validateCharacterLabSummaryText('   ')).toBe('   ');
   });
 });
 

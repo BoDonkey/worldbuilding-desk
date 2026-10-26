@@ -11,6 +11,7 @@ function subscribe<T>(channel: string, listener: Listener<T>) {
 contextBridge.exposeInMainWorld('electronAPI', {
   llmComplete: (payload: unknown) => ipcRenderer.invoke('llm:complete', payload),
   llmStream: (payload: unknown) => ipcRenderer.invoke('llm:stream', payload),
+  llmLocalContextSize: (payload: {baseUrl?: string}) => ipcRenderer.invoke('llm:local-context-size', payload),
   llmCancelStream: (requestId: string) => ipcRenderer.invoke('llm:stream:cancel', requestId),
   providerKeys: {
     status: () => ipcRenderer.invoke('provider-keys:status'),

@@ -29,6 +29,8 @@ declare global {
     providerKeys?: ElectronProviderKeysAPI;
     llmComplete: (payload: unknown) => Promise<string>;
     llmStream: (payload: unknown) => Promise<string>;
+    /** Reads a loopback local model server's context in the main process, outside renderer CORS. */
+    llmLocalContextSize?: (payload: {baseUrl?: string}) => Promise<number | null>;
     /** Stops an in-flight stream in the main process. Older desktop builds lack it. */
     llmCancelStream?: (requestId: string) => Promise<boolean>;
     onLLMChunk?: (callback: (payload: ElectronLLMChunkEvent) => void) => () => void;

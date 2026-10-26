@@ -68,7 +68,10 @@ async function readOllamaContext(baseUrl: string | undefined, model: string | un
 
 async function readLocalServerContext(baseUrl: string | undefined): Promise<ModelContextSize> {
   try {
-    const tokens = await readLocalServerContextSize(localServerApiBase(baseUrl));
+    const desktopProbe = typeof window !== 'undefined' ? window.electronAPI?.llmLocalContextSize : undefined;
+    const tokens = desktopProbe
+      ? await desktopProbe({baseUrl})
+      : await readLocalServerContextSize(localServerApiBase(baseUrl));
     if (tokens) return {tokens, source: 'reported'};
   } catch {
     // Unreachable: the request itself will say so.

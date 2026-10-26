@@ -126,10 +126,19 @@ describe('fitCharacterVoiceContexts', () => {
   });
 
   it('says so when no fact fits', () => {
-    const [aria] = fitCharacterVoiceContexts([context('Aria', facts(2, 600))], 30).contexts;
+    const fit = fitCharacterVoiceContexts([context('Aria', facts(2, 600))], 80);
+    const [aria] = fit.contexts;
     expect(aria!.sections.find((section) => section.kind === 'accepted-facts')?.content).toBe(
       "(2 accepted facts left out to fit the model's context.)"
     );
+    expect(fit.usedTokens).toBeLessThanOrEqual(fit.budgetTokens);
+  });
+
+  it('omits even the fact notice when the budget cannot pay for it', () => {
+    const fit = fitCharacterVoiceContexts([context('Aria', facts(2, 600))], 0);
+    expect(fit.contexts[0]!.sections).toEqual([]);
+    expect(fit.usedTokens).toBe(0);
+    expect(fit.omitted.filter((item) => item.source === 'Accepted canon facts - Aria')).toHaveLength(2);
   });
 
   it('shares one budget across characters, the first character first', () => {
@@ -168,7 +177,7 @@ describe('fact ranking', () => {
       ...facts(6).map((item) => ({...item, rank: 3})),
       {text: '- membership: sworn to the Ember Court', provenance: {type: 'canonical-fact' as const, id: 'oath'}, rank: 8}
     ];
-    const fit = fitCharacterVoiceContexts([context('Aria', items)], 60);
+    const fit = fitCharacterVoiceContexts([context('Aria', items)], 90);
     const kept = fit.contexts[0]!.sections[1]!.items!;
     expect(kept.map((item) => item.provenance.id)).toContain('oath');
     expect(kept.length).toBeLessThan(items.length);

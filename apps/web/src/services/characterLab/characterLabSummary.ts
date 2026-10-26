@@ -22,6 +22,24 @@ export interface CharacterLabSummary {
 export const SUMMARY_KEEP_RECENT = 2;
 /** Offer a summary once the conversation takes this share of the model's context. */
 export const SUMMARY_OFFER_SHARE = 0.35;
+/** The model and the author-visible editor share this deterministic limit. */
+export const SUMMARY_MAX_WORDS = 200;
+/** Also bound pathological single-word output so a summary cannot crowd out its own conversation. */
+export const SUMMARY_MAX_CHARS = 2_000;
+
+export const characterLabSummaryWordCount = (value: string): number =>
+  value.trim() ? value.trim().split(/\s+/u).length : 0;
+
+/** Model output and author edits pass through the same size guard before becoming prompt context. */
+export function validateCharacterLabSummaryText(value: string): string {
+  const text = value.trim();
+  if (text.length > SUMMARY_MAX_CHARS || characterLabSummaryWordCount(text) > SUMMARY_MAX_WORDS) {
+    throw new Error(
+      `Keep the conversation summary to ${SUMMARY_MAX_WORDS} words and ${SUMMARY_MAX_CHARS.toLocaleString('en-US')} characters or fewer.`
+    );
+  }
+  return value;
+}
 
 export const SUMMARY_LABEL = 'Summary of the earlier conversation';
 
@@ -96,7 +114,7 @@ export function buildSummaryRequest(params: {
         'story, so the conversation can continue in less space.',
       'Keep what the character said about themselves and others, anything promised or decided, ' +
         'questions left open, and the tone between them. Write in the third person, past tense, ' +
-        'in at most 200 words. Do not add anything that was not said. Reply with the summary only.',
+        `in at most ${SUMMARY_MAX_WORDS} words. Do not add anything that was not said. Reply with the summary only.`,
       'The summary is a working note for this session. It is not canon and does not change the story.'
     ].join('\n\n'),
     messages: [

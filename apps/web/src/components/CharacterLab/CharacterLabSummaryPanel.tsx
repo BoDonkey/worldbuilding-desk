@@ -1,5 +1,10 @@
 import type {CharacterLabSummary} from '../../services/characterLab';
-import {SUMMARY_LABEL} from '../../services/characterLab';
+import {
+  characterLabSummaryWordCount,
+  SUMMARY_LABEL,
+  SUMMARY_MAX_CHARS,
+  SUMMARY_MAX_WORDS
+} from '../../services/characterLab';
 import styles from '../../styles/CharacterLab.module.css';
 
 /**
@@ -45,11 +50,19 @@ export function CharacterLabSummaryPanel({
               {SUMMARY_LABEL} · {summary.coveredCount} {summary.coveredCount === 1 ? 'turn' : 'turns'} · not canon
               {summary.edited ? ' · edited' : ''}
             </span>
-            <textarea rows={4} value={summary.text} onChange={(event) => onEdit(event.target.value)} />
+            <textarea
+              rows={4}
+              value={summary.text}
+              maxLength={SUMMARY_MAX_CHARS}
+              disabled={busy}
+              aria-describedby='character-lab-summary-limit'
+              onChange={(event) => onEdit(event.target.value)}
+            />
           </label>
-          <p className={styles.hint}>
+          <p className={styles.hint} id='character-lab-summary-limit'>
             The model gets this summary instead of the turns marked Summarized. It is a note for this session only:
-            it is not canon and is never saved to the World Bible.
+            it is not canon and is never saved to the World Bible. {characterLabSummaryWordCount(summary.text)} of{' '}
+            {SUMMARY_MAX_WORDS} words.
           </p>
         </>
       )}
