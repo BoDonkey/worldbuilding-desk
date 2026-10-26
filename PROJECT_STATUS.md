@@ -19,13 +19,15 @@ SagaSpine is a desktop writing environment for fiction authors. The current prod
 
 ### Current Privacy Boundary
 
-- Project data is stored locally but working projects are not currently
-  encrypted by SagaSpine; optional password-protected working project vaults
-  are being built as Slice 5.15 before beta. **Protect with Passphrase** on
-  the Projects page (5.15b) seals a project's records and keeps its
-  retrieval index, memories, and browser-storage text in memory only; the
-  on-disk verification and privacy copy follow in 5.15c. Backups can be
-  encrypted (Slice
+- Project data is stored locally. Unprotected working projects are not
+  encrypted by SagaSpine. Optional **Protect with Passphrase** on the Projects
+  page seals a project's live app-owned records and keeps its retrieval index,
+  memories, and browser-storage text in memory only. Packaged-profile
+  verification confirms the planted text leaves every live store after
+  protection; because Chromium storage is append-only, fragments from earlier
+  unprotected writes can remain in reclaimable IndexedDB pages. Protection is
+  not secure deletion, does not hide an unlocked project, and does not cover
+  deliberately unencrypted exports. Backups can be encrypted (Slice
   5.14): **Export Backup** offers a plain `.zip` or an encrypted
   `.sagabackup` file. The passphrase is never stored and cannot be recovered.
 - Local AI stays on the computer only on a verified route: Ollama at a
@@ -738,7 +740,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
     and is never saved as the last open project.
   - Its retrieval index, memories, and browser-storage text live in memory
     only and are rebuilt after unlock; enabling protection deletes the old
-    derived databases. Its backup defaults to encrypted.
+    derived databases. Any legacy unfinished-mechanics draft is moved from
+    browser storage into primary project storage before sealing. Its backup
+    defaults to encrypted.
   - Zone-affinity records use random ids (project schema 8).
 - Project vault storage layer (slice 5.15a).
   - `openDb()` and the rulesets database return a wrapped connection.

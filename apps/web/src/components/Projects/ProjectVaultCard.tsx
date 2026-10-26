@@ -2,6 +2,17 @@ import type {Project} from '../../entityTypes';
 import type {VaultState} from '../../services/storage';
 import styles from '../../styles/ProjectsRoute.module.css';
 
+/** Plain-language boundary between local storage, vault protection, and secure deletion. */
+export function ProjectVaultHelp() {
+  return (
+    <p className={styles.sectionIntro}>
+      Projects are stored locally. <strong>Protect with Passphrase</strong> encrypts app-owned project data at rest and
+      requires the passphrase after a restart or manual lock. It does not hide an unlocked project, encrypt a plain
+      export, or securely erase storage pages written before protection.
+    </p>
+  );
+}
+
 /**
  * A locked project on the Projects page (slice 5.15b): only its label is
  * readable, so the card offers nothing but Unlock and Delete.

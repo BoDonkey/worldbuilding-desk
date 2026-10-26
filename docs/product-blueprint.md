@@ -91,7 +91,10 @@ Project locking is optional. Its recovery warning must be unambiguous: the
 passphrase is never stored, SagaSpine has no recovery service or backdoor, and
 losing it means losing access. Locking protects app-owned data at rest, not
 content visible while the project is unlocked or deliberately exported in an
-unencrypted format.
+unencrypted format. Enabling protection on an existing project rewrites the
+live app-owned records but is not secure deletion: plaintext fragments from
+earlier unprotected writes can remain in browser storage until the operating
+system or browser reclaims those pages.
 
 ### AI consultation budget
 

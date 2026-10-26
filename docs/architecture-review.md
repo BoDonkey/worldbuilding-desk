@@ -314,7 +314,10 @@ encrypted copy must be complete and readable before plaintext removal;
 failure or cancellation leaves the original representation unchanged. The
 normal pre-migration backup rule below does not authorize a plaintext backup
 while enabling a vault. There is no application or hosted passphrase-recovery
-path.
+path. Replacing live records is not secure deletion: packaged-profile scans
+must keep proving that no live app-owned store contains planted text, while
+privacy copy states that Chromium's append-only storage can retain fragments
+from earlier unprotected writes until those pages are reclaimed.
 
 The vault seam (5.15a, `services/storage/vault/`) is the connection that
 `openDb()` returns, plus the rulesets database. It seals records on `put`

@@ -20,6 +20,7 @@ import {
 } from '../db';
 import {requestToPromise} from '../idbRequest';
 import {deleteProjectAuxiliaryStorage} from '../repositories/projectStorage';
+import {migrateLegacyMechanicsDrafts} from '../repositories/mechanicsDraftStorage';
 import {openRawRulesetDb, RULESET_STORE_NAME, RULESETS_DATABASE_NAME} from '../repositories/rulesetStorage';
 import {
   createVaultKey,
@@ -201,6 +202,9 @@ export async function enableProjectVault(
 ): Promise<void> {
   await ensureVaultRegistry();
   if (isVaultProject(projectId)) throw new Error('This project is already protected.');
+  // An older build kept unfinished mechanics text in localStorage. Bring it
+  // through the primary storage seam before the sealing transaction starts.
+  await migrateLegacyMechanicsDrafts(projectId);
   const {manifest, dataKey} = await createVaultKey(projectId, passphrase, options);
   beginVaultMigration(projectId, manifest, dataKey);
   try {

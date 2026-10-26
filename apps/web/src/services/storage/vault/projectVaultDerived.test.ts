@@ -32,6 +32,12 @@ async function seed() {
   const memory = await getShodhService(projectId);
   await memory.captureAutoMemory({projectId, documentId: 'scene-1', title: 'One', content: PLANTED});
   appendSystemHistoryEntry(projectId, {category: 'system', message: `Mira found the ${PLANTED}`});
+  localStorage.setItem(`workspaceReviewPrefs:${projectId}`, JSON.stringify({dismissed: [PLANTED]}));
+  localStorage.setItem(`loreSynopsis:${projectId}:mira:1`, PLANTED);
+  localStorage.setItem(
+    `wbd:first-mechanics:${projectId}:mira`,
+    JSON.stringify({isAdding: true, kind: 'resource', name: PLANTED, defaultValue: '10'})
+  );
   sessionStorage.setItem(`wbd:assistant-conversation:${projectId}`, JSON.stringify([{role: 'user', content: PLANTED}]));
   sessionStorage.setItem(`wbd:assistant-conversation:ask:${projectId}`, JSON.stringify([{role: 'user', content: PLANTED}]));
   return projectId;
