@@ -228,7 +228,7 @@ run when a result was reused or coverage was focused.
    4.57 → 4.58 → 4.59;
    3.18 after 4.66; 3.22 → 3.23a → 3.23b; 3.23a → 3.23c;
    3.23a–3.23c before 5.15; 3.24a → 3.24b, both high priority; 4.67 → 4.68; 4.69 → 4.70;
-   5.14 before 5.15; 5.15a → 5.15b → 5.15c; 5.15 before 6.1;
+   5.14 before 5.15; 5.15a → 5.15b → 5.15c; 5.15c → 5.16 → 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -416,6 +416,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 5.15a | Project vaults: vault core | 5 | M | Done `f4bd848` — author-approved exception to the Phase 5 gate (2026-10-25), extended from 5.3/5.14; 5.15 split into 5.15a–5.15c, plan `docs/project-vault-plan.md`. `openDb()` and the rulesets database return a wrapped connection that seals protected projects' records on write and opens them on read (per-project 256-bit data key wrapped by PBKDF2-SHA256 600k; synchronous AES-256-GCM from `@noble/ciphers` 2.4.0 so sealing works inside transactions; bound to database, store, project, and id); cursors refused; locked projects read back sealed with a **Locked project** placeholder and refuse writes; every vault locks on reload. Enable/disable rewrite each database in one transaction verified before and after writing, with compensation for the rulesets database and no plaintext backup; passphrase change re-wraps only the key. Not reachable from the UI. Found: zone-affinity ids embed the zone-name slug (moved to 5.15b). 14 new tests; two planted regressions caught; lint baseline; 1298 web + 47 engine + 12 UI + 37 desktop tests; builds; Cypress 164/164; Web CI [run 40194139403](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40194139403) green including Desktop E2E on macOS and Windows |
 | 5.15b | Project vaults: UX + derived data | 5 | L | Done `84b70bb` — same gate exception as 5.15a. Projects page protect (no-recovery acknowledgment) / unlock and open / lock / change passphrase / remove protection; palette **Lock Project**; a locked project shows only its label; locks on restart and when another project opens, never persisted as the open project; lock reloads the page. Retrieval and memory stores go through `openDerivedRecordStore` (memory only while protected, dropped on lock, rebuilt after unlock; old `rag-*`/`shodh-memory-*` databases deleted on enable); content browser-storage keys go through `projectBrowserStorage`; protected backups default to encrypted; zone-affinity records get random ids (project schema 8, also on import). Fixed a race where a Source Note saved before the RAG service loaded was not indexed. Second-tab broadcast gap accepted (one desktop window). 8 new unit tests incl. a planted-phrase scan of every database and both browser storages; new `project-vault.cy.ts` (3); two planted regressions caught; lint baseline; 1306 web + 47 engine + 12 UI + 37 desktop tests; builds; Cypress 167/167 local; Web CI [run 40196961910](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40196961910) green including Desktop E2E on macOS and Windows after rerunning two pre-existing flakes also seen on main (`ai-scene-revision` AI tab, seed `cy.then()` timeout) |
 | 5.15c | Project vaults: verification + copy | 5 | M | WIP |
+| 5.16 | First-release dogfood polish | 5 | M | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -2341,6 +2342,45 @@ KoboldCPP.
   smoke coverage. Update the privacy/help copy only after these checks pass.
   Split on 2026-10-25 into 5.15a (vault core), 5.15b (UX and derived data),
   and 5.15c (verification and copy). Plan: `docs/project-vault-plan.md`.
+- **5.16 First-release dogfood polish.** Close the bounded usability and
+  accessibility findings from the first packaged-app dogfood pass before the
+  beta build; do not broaden this into a general redesign.
+  - Add automated accessibility scanning for representative primary routes
+    and dialogs in both themes, alongside the existing focus, keyboard and
+    ARIA assertions. Fix the dark Getting Started panel so its text and links
+    meet WCAG AA contrast against the soft-accent surface; prefer a shared
+    theme-token correction when it is safe for every consumer.
+  - Replace the connection result's six-model truncation with a keyboard-
+    operable, searchable or scrollable choice containing every model reported
+    by Ollama or a local OpenAI-compatible server. Keep manual model entry and
+    never select a model silently.
+  - For the first release, offer only **General Fiction** and **LitRPG** when
+    creating a project or changing an ordinary project's mode. Preserve the
+    `game` contract and all existing Game Simulation projects; an existing
+    game project must remain openable and must show its current mode until the
+    author explicitly changes it. Do not delete or migrate game data.
+  - Hide **Insert Status Block** and **Refresh Placeholders** when project
+    capabilities say game systems are off. If an author deliberately enables
+    game systems through supported controls, the actions may appear even in a
+    General Fiction project.
+  - Keep the verified first-run contract: a fresh install with no projects
+    creates **My First Project**, General Fiction, with an empty **Chapter
+    One**; deleting all projects later does not recreate it.
+  - Improve character import heading destinations deterministically. Strip an
+    exact record name (including possessive/punctuation variants) from a
+    suggested new-field label when that leaves a meaningful heading, so
+    `Leo Muller-Sarkesian Academic Background` proposes `Academic Background`.
+    When **New field** is chosen, expose an editable, validated label before
+    import rather than forcing the detected heading verbatim. Preserve author
+    choices through the existing reconciliation flow and keep duplicate-field
+    handling explicit.
+
+  Acceptance: targeted unit/component coverage for every rule above; an
+  accessibility scan and keyboard checks on the affected UI; light/dark and
+  narrow-width browser checks; General Fiction/LitRPG plus an existing-game
+  compatibility case; all detected local models remain selectable; character
+  import creates the edited field name and never the record-prefixed label;
+  applicable full verification tier green before 6.1.
 ## Phase 6 — Beta, RC, Launch
 
 - **6.1 Beta.** Signed, auto-updating build to a 10–30 author cohort
