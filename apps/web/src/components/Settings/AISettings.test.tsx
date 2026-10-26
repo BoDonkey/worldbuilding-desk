@@ -107,11 +107,12 @@ describe('AISettings local model server', () => {
   });
 
   it('tests the connection and offers the listed models', async () => {
+    const models = Array.from({length: 9}, (_, index) => ({id: `model-${index + 1}`}));
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) =>
         url.endsWith('/models')
-          ? new Response(JSON.stringify({data: [{id: 'qwen3'}, {id: 'mistral-7b'}]}))
+          ? new Response(JSON.stringify({data: models}))
           : new Response(JSON.stringify({choices: [{message: {content: 'OK'}, finish_reason: 'stop'}]}))
       )
     );
@@ -120,9 +121,10 @@ describe('AISettings local model server', () => {
 
     fireEvent.click(screen.getByRole('button', {name: 'Test connection'}));
     expect(await screen.findByText('Local model server connection succeeded.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', {name: 'Use mistral-7b'}));
+    expect(screen.getAllByRole('button', {name: /^Use model-/})).toHaveLength(9);
+    fireEvent.click(screen.getByRole('button', {name: 'Use model-9'}));
     expect(onSettingsChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({configs: {'local-openai': {baseUrl: 'http://localhost:1234/v1', model: 'mistral-7b'}}})
+      expect.objectContaining({configs: {'local-openai': {baseUrl: 'http://localhost:1234/v1', model: 'model-9'}}})
     );
   });
 });

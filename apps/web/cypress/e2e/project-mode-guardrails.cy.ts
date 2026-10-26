@@ -1,6 +1,9 @@
 import {DB_NAME, DB_VERSION} from '../../src/services/storage/db';
 
-function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
+function setSeededProjectMode(
+  projectMode: 'general' | 'litrpg' | 'game'
+): Cypress.Chainable<void> {
+  const enableGameSystems = projectMode !== 'general';
   return cy.window().then(
     (win) =>
       new Cypress.Promise<void>((resolve, reject) => {
@@ -16,12 +19,12 @@ function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
           getRequest.onsuccess = () => {
             store.put({
               ...getRequest.result,
-              projectMode: 'general',
+              projectMode,
               featureToggles: {
-                enableGameSystems: false,
-                enableRuntimeModifiers: false,
-                enableSettlementAndZoneSystems: false,
-                enableRuleAuthoring: false
+                enableGameSystems,
+                enableRuntimeModifiers: enableGameSystems,
+                enableSettlementAndZoneSystems: enableGameSystems,
+                enableRuleAuthoring: enableGameSystems
               }
             });
           };
@@ -168,9 +171,47 @@ describe('Project mode guardrails', () => {
     cy.viewport(1400, 1000);
     cy.visit('/');
     cy.seedSmokeProjectData();
-    setSeededProjectToGeneralFiction();
+    setSeededProjectMode('general');
     cy.reload();
     cy.contains('h2', 'Cypress Smoke Project').should('be.visible');
+  });
+
+  it('shows only first-release modes, hides mechanics toolbar actions, and preserves an existing game project', () => {
+    cy.viewport(390, 844);
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('button', 'Insert Status Block').should('not.exist');
+    cy.contains('button', 'Refresh Placeholders').should('not.exist');
+
+    cy.visit('/projects');
+    cy.contains('label', 'Project Type').find('select').then(($select) => {
+      expect([...$select[0].options].map((option) => option.value)).to.deep.equal([
+        'general',
+        'litrpg'
+      ]);
+    });
+
+    cy.visit('/settings');
+    cy.ensureSettingsSectionOpen('Project Mode');
+    cy.contains('summary', 'Project Mode').closest('details').find('select').then(($select) => {
+      expect([...$select[0].options].map((option) => option.value)).to.deep.equal([
+        'litrpg',
+        'general'
+      ]);
+    });
+    cy.ensureSettingsSectionOpen('Feature Toggles');
+    cy.contains('label', 'Enable Game Systems').find('input').check();
+    cy.visit('/workspace');
+    cy.contains('button', 'Insert Status Block').should('be.visible');
+    cy.contains('button', 'Refresh Placeholders').should('be.visible');
+
+    setSeededProjectMode('game');
+    cy.visit('/settings');
+    cy.ensureSettingsSectionOpen('Project Mode');
+    cy.contains('summary', 'Project Mode').closest('details').find('select')
+      .should('have.value', 'game')
+      .find('option[value="game"]')
+      .should('have.text', 'Game Simulation');
   });
 
   it('hides ruleset, sheets, and compendium surfaces for general fiction', () => {

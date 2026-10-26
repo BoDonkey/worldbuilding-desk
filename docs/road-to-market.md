@@ -228,7 +228,7 @@ run when a result was reused or coverage was focused.
    4.57 → 4.58 → 4.59;
    3.18 after 4.66; 3.22 → 3.23a → 3.23b; 3.23a → 3.23c;
    3.23a–3.23c before 5.15; 3.24a → 3.24b, both high priority; 4.67 → 4.68; 4.69 → 4.70;
-   5.14 before 5.15; 5.15a → 5.15b → 5.15c; 5.15c → 5.16 → 6.1;
+   5.14 before 5.15; 5.15a → 5.15b → 5.15c; 5.15c → 5.16 → 5.17 → 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -417,6 +417,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 5.15b | Project vaults: UX + derived data | 5 | L | Done `84b70bb` — same gate exception as 5.15a. Projects page protect (no-recovery acknowledgment) / unlock and open / lock / change passphrase / remove protection; palette **Lock Project**; a locked project shows only its label; locks on restart and when another project opens, never persisted as the open project; lock reloads the page. Retrieval and memory stores go through `openDerivedRecordStore` (memory only while protected, dropped on lock, rebuilt after unlock; old `rag-*`/`shodh-memory-*` databases deleted on enable); content browser-storage keys go through `projectBrowserStorage`; protected backups default to encrypted; zone-affinity records get random ids (project schema 8, also on import). Fixed a race where a Source Note saved before the RAG service loaded was not indexed. Second-tab broadcast gap accepted (one desktop window). 8 new unit tests incl. a planted-phrase scan of every database and both browser storages; new `project-vault.cy.ts` (3); two planted regressions caught; lint baseline; 1306 web + 47 engine + 12 UI + 37 desktop tests; builds; Cypress 167/167 local; Web CI [run 40196961910](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40196961910) green including Desktop E2E on macOS and Windows after rerunning two pre-existing flakes also seen on main (`ai-scene-revision` AI tab, seed `cy.then()` timeout) |
 | 5.15c | Project vaults: verification + copy | 5 | M | Done `a1b9621` — migrated the legacy first-mechanics draft before sealing; packaged Electron profile test plants text across primary/derived IndexedDB and local/session storage, proves every live app-owned store clean after protection, then scans the closed profile and records the reclaimable LevelDB-fragment limit; privacy/help and smoke copy state that protection is not secure deletion. Lint baseline; 1310 web + 47 engine + 12 UI + 38 desktop tests; builds; file-size/CI-policy gates; project-vault Cypress 3/3; packaged macOS scan 1/1; full main Web CI [run 40317006961](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40317006961) green without retries, including all Cypress shards, `cypress-smoke`, and packaged macOS/Windows. PR #83's parallel group 1 lost its Electron renderer under memory pressure; main passed the same shard, and `2f62711` enables Cypress memory reclamation (focused smoke 18/18) rather than hiding the flake with retries. Plan archived at `docs/archive/project-vault-plan.md`. |
 | 5.16 | First-release dogfood polish | 5 | M | WIP |
+| 5.17 | Writing-flow stability + assistant continuity | 5 | L | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -2382,6 +2383,32 @@ KoboldCPP.
   compatibility case; all detected local models remain selectable; character
   import creates the edited field name and never the record-prefixed label;
   applicable full verification tier green before 6.1.
+- **5.17 Writing-flow stability + assistant continuity.** Close the second
+  packaged-app dogfood pass before beta, prioritizing interruptions to the
+  author's writing flow over additive conveniences.
+  - Reproduce and fix manuscript scroll-to-top and visible text jitter during
+    deletion/autosave. Preserve the selection, editor scroll position, and
+    rendered text geometry across persistence updates; verify sustained typing,
+    backward deletion, and autosave in a long scene.
+  - Keep assistant conversation history as one coherent session when the
+    author answers a question or chooses among options. The expanded reply view
+    must allow the author to continue that conversation without closing it.
+  - Saving or copying assistant advice to Source Notes must offer the useful
+    conversation context—not only the latest assistant message—including the
+    author's question and the displayed reply/version, without silently saving
+    other discarded alternatives.
+  - Let writing-coach replies create a new Source Note directly through the
+    same author-reviewed path. Scene context cards must either be dismissible
+    or navigate to the exact Source Note or World Bible record they represent;
+    never imply a link when the source cannot be resolved.
+
+  Acceptance: regression coverage demonstrates stable cursor and scroll during
+  repeated autosaves in a long scene; no layout jitter is visible in a timed
+  browser check; follow-up answers retain the preceding options and question in
+  the request; conversation can continue from the expanded reply; saved Source
+  Notes contain the author-approved contextual transcript; each resolvable
+  context card opens its source and every card can be dismissed; applicable
+  full verification tier green before 6.1.
 ## Phase 6 — Beta, RC, Launch
 
 - **6.1 Beta.** Signed, auto-updating build to a 10–30 author cohort

@@ -15,6 +15,7 @@ import {
   detectImportSections,
   fileNameToEntityName,
   getNewFieldLabel,
+  getImportFieldLabelError,
   htmlToText,
   isExistingFieldMatch,
   mapImportedTextToFields,
@@ -150,6 +151,8 @@ const ensureSectionFields = async (
   sections.forEach((section) => {
     if (section.action !== 'new-field') return;
     const label = getNewFieldLabel(section);
+    const labelError = getImportFieldLabelError(label);
+    if (labelError) throw new Error(labelError);
     const existing = nextFields.find((field) => isExistingFieldMatch(field, label));
     if (existing) return;
 

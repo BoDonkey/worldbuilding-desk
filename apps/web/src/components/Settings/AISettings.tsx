@@ -764,7 +764,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
             </ul>
             {isLocalAIProvider(aiSettings.provider) && diagnostics.detectedModels?.length ? (
               <div className={styles.detectedModelActions}>
-                {diagnostics.detectedModels.slice(0, 6).map((model) => (
+                {diagnostics.detectedModels.map((model) => (
                   <button
                     key={model}
                     type='button'

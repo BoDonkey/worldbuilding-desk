@@ -1,4 +1,5 @@
 import './commands';
+import 'cypress-axe';
 
 // The private-local AI policy verifies Ollama models against /api/tags before
 // any request. CI has no Ollama, so every spec sees the seeded local model

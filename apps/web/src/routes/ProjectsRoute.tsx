@@ -797,7 +797,6 @@ function ProjectsRoute() {
               >
                 <option value='general'>General Fiction — narrative focus, no game systems</option>
                 <option value='litrpg'>LitRPG — system notifications, status windows, stat blocks</option>
-                <option value='game'>Game / TTRPG — rules-heavy, mechanics-forward</option>
               </select>
             </label>
           </div>

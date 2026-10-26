@@ -19,7 +19,7 @@ import {FontSizeControl} from '../components/Settings/FontSizeControl';
 import {EditorAppearanceControl} from '../components/Settings/EditorAppearanceControl';
 import {
   getDefaultFeatureToggles,
-  PROJECT_MODE_OPTIONS
+  getVisibleProjectModeOptions
 } from '../projectMode';
 import {useAppStore} from '../store/appStore';
 import {PageHeader} from '../components/PageHeader';
@@ -378,7 +378,7 @@ function SettingsRoute() {
               }
               className={styles.styleInput}
             >
-              {PROJECT_MODE_OPTIONS.map((option) => (
+              {getVisibleProjectModeOptions(settings.projectMode).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

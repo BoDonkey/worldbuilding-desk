@@ -72,7 +72,7 @@ describe('World Bible document import destinations', () => {
     destinationFor('ridge.md', 'Weather').select('New field: Tides');
     cy.contains('li', 'ridge.md').should(
       'contain.text',
-      'Adds a Tides field to Locations and fills it here.'
+      'Adds a new field named Tides to Locations and fills it here.'
     );
 
     cy.contains('li', 'harbor.md').contains('button', 'Import and open').click();
@@ -115,6 +115,39 @@ describe('World Bible document import destinations', () => {
     cy.contains('button', 'Create Manually').click();
     cy.contains('h2', 'New Character Canon').should('be.visible');
     cy.contains('form span', /^Education$/).should('be.visible');
+  });
+
+  it('removes the exact character name from an editable new-field label', () => {
+    cy.contains('[aria-label="World Bible categories"] button', /^Characters$/).click();
+    importDocuments([
+      markdownFile(
+        'leo.md',
+        '# Character Sheet: Leo Muller-Sarkesian\n\n## Leo Muller-Sarkesian Academic Background\nStudied abroad.'
+      )
+    ]);
+
+    destinationFor('leo.md', 'Leo Muller-Sarkesian Academic Background')
+      .find('option:selected')
+      .should('have.text', 'New field: Academic Background');
+    cy.contains('li', 'leo.md')
+      .find('input[aria-invalid], input[id^="import-new-field-"]')
+      .should('have.value', 'Academic Background')
+      .clear()
+      .type('Education');
+    cy.contains('li', 'leo.md').contains('button', 'Import and open').click();
+    cy.contains('[role="status"]', 'Imported 1 new entry').should('be.visible');
+
+    readStore<StoredCategory>('entityCategories').then((categories) => {
+      const characters = categories.find((category) => category.name === 'Characters');
+      expect(characters?.fieldSchema.map((field) => field.label)).to.include('Education');
+      expect(characters?.fieldSchema.map((field) => field.label)).not.to.include(
+        'Leo Muller-Sarkesian Academic Background'
+      );
+    });
+    readStore<StoredEntity>('entities').then((entities) => {
+      expect(entities.find((entity) => entity.name === 'Leo Muller-Sarkesian')?.fields.education)
+        .to.contain('Studied abroad.');
+    });
   });
 
   it('shows what a three-document batch has saved and brings the opened record into view', () => {

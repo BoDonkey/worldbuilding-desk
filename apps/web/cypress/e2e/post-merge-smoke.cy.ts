@@ -112,6 +112,33 @@ function setProjectMode(modeValue: 'litrpg' | 'game' | 'general'): void {
     });
 }
 
+function enableGameSystems(): void {
+  cy.ensureSettingsSectionOpen('Feature Toggles');
+  cy.contains('label', 'Enable Game Systems').find('input').check();
+}
+
+function setStoredProjectMode(mode: 'litrpg' | 'game' | 'general'): Cypress.Chainable<void> {
+  const gameSystemsEnabled = mode !== 'general';
+  return mutateSmokeDb(async (db) => {
+    const settings = await getRecord<{id: string; [key: string]: unknown}>(
+      db,
+      'projectSettings',
+      'settings-cypress-project-1'
+    );
+    await putRecord(db, 'projectSettings', {
+      ...settings,
+      projectMode: mode,
+      featureToggles: {
+        enableGameSystems: gameSystemsEnabled,
+        enableRuntimeModifiers: gameSystemsEnabled,
+        enableSettlementAndZoneSystems: gameSystemsEnabled,
+        enableRuleAuthoring: gameSystemsEnabled
+      },
+      updatedAt: Date.now()
+    });
+  });
+}
+
 function openAssistantAndAssertSelectedTool(
   selectedToolName: string
 ): void {
@@ -674,8 +701,7 @@ describe('Post-merge smoke checklist', () => {
     cy.reload();
     openAssistantAndAssertSelectedTool(TOOL_NAMES.litrpg);
 
-    cy.visit('/settings');
-    setProjectMode('game');
+    setStoredProjectMode('game');
     cy.visit('/workspace');
     cy.reload();
     openAssistantAndAssertSelectedTool(TOOL_NAMES.game);
@@ -1110,6 +1136,7 @@ describe('Post-merge smoke checklist', () => {
     cy.visit('/settings');
     cy.ensureSettingsSectionOpen('Project Mode');
     setProjectMode('general');
+    enableGameSystems();
     cy.visit('/workspace');
 
     cy.contains('button', 'Insert Status Block').click();
@@ -1134,6 +1161,7 @@ describe('Post-merge smoke checklist', () => {
     cy.visit('/settings');
     cy.ensureSettingsSectionOpen('Project Mode');
     setProjectMode('general');
+    enableGameSystems();
     cy.visit('/workspace');
 
     cy.contains('button', 'Insert Status Block').click();
