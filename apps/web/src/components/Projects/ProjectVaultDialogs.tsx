@@ -83,7 +83,9 @@ export function ProtectProjectDialog(props: {
       <p id='protect-project-help' className={styles.warning}>
         At least {MIN_VAULT_PASSPHRASE_LENGTH} characters. SagaSpine never stores this passphrase and has no way to
         recover it. If you lose it, this project is lost. Protection covers what is saved on this computer, not text
-        on screen while it is unlocked or files you export without encryption.
+        on screen while it is unlocked or files you export without encryption. If this project was previously saved
+        without protection, old fragments may remain in browser storage until the computer reclaims them; protecting
+        a project is not secure deletion of earlier copies.
       </p>
       <label className={styles.choice}>
         <input

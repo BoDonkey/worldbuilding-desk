@@ -44,7 +44,7 @@ import styles from '../styles/ProjectsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useBackupPassphraseFlow} from '../hooks/useBackupPassphraseFlow';
 import {useProjectVault} from '../hooks/useProjectVault';
-import {LockedProjectCard, ProjectVaultActions} from '../components/Projects/ProjectVaultCard';
+import {LockedProjectCard, ProjectVaultActions, ProjectVaultHelp} from '../components/Projects/ProjectVaultCard';
 import {describeError} from '../services/errors';
 import {RouteFeedback} from '../components/common';
 import {SAMPLE_PROJECT_NAME} from '../fixtures/sampleProjectContent';
@@ -829,9 +829,7 @@ function ProjectsRoute() {
 
         <section className={styles.listCard}>
           <h2>Existing Projects</h2>
-          <p className={styles.sectionIntro}>
-            Open a project to continue writing. Canon inheritance and backups remain available per project when needed.
-          </p>
+          <ProjectVaultHelp />
           {projects.length === 0 && (
             <p className={styles.emptyState}>No projects yet. Create one to get started.</p>
           )}

@@ -249,6 +249,49 @@ lorebook) is a good first sample; do not add third-party cards to the repo.
 4. Save to Scratchpad: the turns are saved; the summary is not. Nothing new
    appears in the World Bible.
 
+## 1h. Project Vault Protection (slice 5.15)
+
+Goal: prove that passphrase protection covers every live app-owned project
+record and persistent derivative in the packaged desktop app, while stating
+the limits of at-rest encryption honestly.
+
+1. In a packaged app, create or load a project with a distinctive phrase in
+   a scene, an assistant conversation and System history. In a
+   mechanics-enabled project, add a zone-affinity profile whose name and
+   biome key are also distinctive.
+2. Projects → **Protect with Passphrase**. Confirm the dialog says the
+   passphrase cannot be recovered, an existing project's old storage
+   fragments may remain until reclaimed, and protection is not secure
+   deletion. A short or mismatched passphrase and a missing recovery
+   acknowledgment must be refused inline.
+3. Protect the project. While it remains unlocked, confirm its scene and
+   project tools still work. Set `E2E_APP=packaged` in the current shell, then
+   run the packaged planted-phrase check: `pnpm --filter desktop exec
+   playwright test e2e/project-vault.e2e.ts`. It must find none of the planted text in live
+   IndexedDB records, derived databases, `localStorage`, or `sessionStorage`.
+   The closed-profile scan may report remnants only in Chromium's reclaimable
+   IndexedDB, Local Storage or Session Storage pages; a hit anywhere else is a
+   failure.
+4. Choose **Lock Project**. Only its locked label is visible; no name,
+   preview, scene text, search result or notification is shown. A wrong
+   passphrase is refused and the right one opens the intact project.
+5. Restart the packaged app and confirm the project is locked again. Open it,
+   change its passphrase, restart, and confirm the old passphrase fails while
+   the new one opens it.
+6. Export from the protected project. **Encrypted backup (.sagabackup)** is
+   selected by default; the dialog states that a plain export is not
+   protected. Complete the encrypted-backup checks in procedure 1 step 7.
+7. Remove protection: a wrong passphrase changes nothing; the right one
+   restores ordinary local records. Restart and confirm the project opens
+   normally and **Protect with Passphrase** is offered again.
+
+Failure signals: planted text in any live persistent store after protection;
+a profile-scan hit outside the named reclaimable browser-storage pages; a
+locked preview or notification revealing project text; a locked write;
+restart opening without the passphrase; either passphrase working after a
+change; unprotected backup defaults; data loss after unlock or removal; or
+copy that implies protection securely erases prior unencrypted writes.
+
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 
 Goal: verify the writing-first review flow from imported manuscript text

@@ -55,6 +55,8 @@ async function launch(userDataDir: string): Promise<{app: ElectronApplication; p
 export interface Desktop {
   app: ElectronApplication;
   page: Page;
+  /** Isolated Chromium profile used by this test, for at-rest verification. */
+  userDataDir: string;
   /** Errors the renderer logged or threw, including CSP violations. */
   rendererErrors: string[];
   /** Quits and starts the app again on the same profile. */
@@ -65,7 +67,7 @@ export const test = base.extend<{desktop: Desktop}>({
   // eslint-disable-next-line no-empty-pattern -- Playwright requires an object pattern here.
   desktop: async ({}, use, testInfo) => {
     const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sagaspine-e2e-'));
-    const desktop = {rendererErrors: []} as unknown as Desktop;
+    const desktop = {rendererErrors: [], userDataDir} as unknown as Desktop;
     const open = async () => {
       const launched = await launch(userDataDir);
       desktop.app = launched.app;

@@ -38,6 +38,8 @@ function protectProject() {
   projectCard().within(() => cy.contains('button', 'Protect with Passphrase').click());
   dialog('protect-project-title').within(() => {
     cy.contains('cannot be recovered').should('be.visible');
+    cy.contains('old fragments may remain').should('be.visible');
+    cy.contains('not secure deletion').should('be.visible');
     cy.contains('label', /^Passphrase/).find('input').type('short');
     cy.contains('label', /^Confirm passphrase/).find('input').type('short');
     cy.contains('button', 'Protect Project').click();
@@ -63,13 +65,14 @@ function unlock(passphrase: string) {
   });
 }
 
-describe('Password-protected projects (5.15b)', () => {
+describe('Password-protected projects (5.15)', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
     cy.visit('/');
     cy.seedSmokeProjectData();
     cy.visit('/projects');
     cy.contains('strong', projectName).should('be.visible');
+    cy.contains('Projects are stored locally.').should('be.visible');
   });
 
   it('protects a project, shows only its label while locked, and opens it with the passphrase', () => {
