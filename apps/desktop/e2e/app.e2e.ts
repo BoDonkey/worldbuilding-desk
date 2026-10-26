@@ -13,7 +13,16 @@ test('loads the bundled renderer from disk under its Content-Security-Policy', a
   expect(await page.evaluate(() => typeof (window as unknown as {require?: unknown}).require)).toBe('undefined');
   expect(
     await page.evaluate(() => Object.keys((window as unknown as {electronAPI: object}).electronAPI).sort())
-  ).toEqual(['llmCancelStream', 'llmComplete', 'llmStream', 'onLLMChunk', 'onLLMComplete', 'onLLMError', 'providerKeys']);
+  ).toEqual([
+    'llmCancelStream',
+    'llmComplete',
+    'llmLocalContextSize',
+    'llmStream',
+    'onLLMChunk',
+    'onLLMComplete',
+    'onLLMError',
+    'providerKeys'
+  ]);
 
   expect(desktop.rendererErrors).toEqual([]);
 });

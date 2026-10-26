@@ -1,6 +1,6 @@
 # SagaSpine Project Status
 
-**Last Updated:** October 24, 2026
+**Last Updated:** October 26, 2026
 
 ## Project Overview
 
@@ -1195,7 +1195,9 @@ runtime schema, and nothing here changes the roadmap's status board.
   it. The summary lives only for the app session, like the transcript: it
   is never saved, never written to the World Bible, and Save to Scratchpad
   still saves the turns themselves. The prompt total counts it as
-  conversation.
+  conversation. The 200-word/2,000-character ceiling is validated before
+  model output or author edits become prompt context; the editor is disabled
+  during an extension, and a stale-result guard preserves any concurrent edit.
 - Slice 4.73 alternative replies: the latest Character Lab reply (Talk and
   Reaction test) and the latest assistant reply have **Another version**,
   which sends the same request again (same question, grounding or context,
@@ -1246,6 +1248,8 @@ runtime schema, and nothing here changes the roadmap's status board.
   character: those in its links and those its accepted facts name exactly by
   name or alias, never two steps, at most eight, and lowest priority.
   Estimates are deliberately high (about three characters per token).
+  Accepted-fact omission notices and their source headers count inside the
+  same hard budget instead of being appended after the fit.
 - Slice 4.70 character card export: a World Bible character's Writing aids
   tab has **Export character card**, which downloads `<Name>.card.json` in the
   Tavern Character Card V2 format for SillyTavern. The description holds the
@@ -1279,8 +1283,10 @@ runtime schema, and nothing here changes the roadmap's status board.
   to add the card to that character (Source Notes only, character unchanged)
   or create a separate one. The draft is marked Needs completion, everything
   is written in one transaction, and no fact is accepted. Malformed,
-  oversized (20 MB file, 50,000-character field, 200 lorebook entries), and
-  card-less files are refused with a plain reason. Other platforms' cards
+  oversized (20 MB file, 8 MB decompressed PNG text, 50,000-character field,
+  200 lorebook entries), and card-less files are refused with a plain reason;
+  compressed PNG text is stopped while streaming before it can expand without
+  bound. Other platforms' cards
   (HiWaifu) were not checked: no sample was available.
 - Slice 4.75 local reply length from server context: requests to the local
   model server now carry a `max_tokens` sized to the room the prompt leaves
@@ -1301,7 +1307,10 @@ runtime schema, and nothing here changes the roadmap's status board.
   length** sets the cap; blank leaves the server's own limit. A reply that
   still hits a limit is refused as before. The desktop main process applies
   the same rules and checks the setting's bounds (64–131,072). Hosted
-  providers and Ollama are unchanged. Also fixed: Projects no longer acts on
+  providers and Ollama are unchanged. In the desktop app, the renderer asks a
+  narrow `llm:local-context-size` main-process probe for this value, so browser
+  CORS cannot force prompt budgeting back to the 4,096-token assumption. Also
+  fixed: Projects no longer acts on
   a project list that finishes loading after the page has closed; it could
   clear the active project another page had just set (the cause of the
   intermittent Compendium route unit-test failure, including on PR #70).

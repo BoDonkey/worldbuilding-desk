@@ -26,7 +26,7 @@ export interface FittedVoiceContexts {
   usedTokens: number;
 }
 
-type Ref = {context: number; section: number; item: number | null};
+type Ref = {context: number; section: number; item: number | 'notice' | null};
 
 const SECTION_FOR_KIND: Record<CharacterVoiceSection['kind'], ContextSectionKind> = {
   'canon-record': 'canon-record',
@@ -48,12 +48,19 @@ export function fitCharacterVoiceContexts(contexts: CharacterVoiceContext[], bud
     context.sections.forEach((section, sectionIndex) => {
       const header = `[Source: ${section.source}]\n`;
       if (section.kind === 'accepted-facts' && section.items && section.items.length > 0) {
-        // The section header is counted with the first fact.
+        // The header and worst-case omission note are their own highest-priority item, so the
+        // explanatory text is paid for before any individual fact is admitted.
+        items.push({
+          value: {context: contextIndex, section: sectionIndex, item: 'notice'},
+          section: 'accepted-facts',
+          text: `${header}(${section.items.length} more accepted facts left out to fit the model's context.)\n`,
+          relevance: Number.POSITIVE_INFINITY
+        });
         section.items.forEach((item, itemIndex) =>
           items.push({
             value: {context: contextIndex, section: sectionIndex, item: itemIndex},
             section: 'accepted-facts',
-            text: `${itemIndex === 0 ? header : ''}${item.text}\n`,
+            text: `${item.text}\n`,
             relevance: item.rank
           })
         );
@@ -69,10 +76,12 @@ export function fitCharacterVoiceContexts(contexts: CharacterVoiceContext[], bud
 
   const fit = fitContextToBudget(items, budgetTokens);
   const keptWhole = new Set<string>();
+  const keptFactNotices = new Set<string>();
   const keptItems = new Map<string, Set<number>>();
   fit.kept.forEach(({value}) => {
     const key = `${value.context}:${value.section}`;
     if (value.item === null) keptWhole.add(key);
+    else if (value.item === 'notice') keptFactNotices.add(key);
     else keptItems.set(key, (keptItems.get(key) ?? new Set()).add(value.item));
   });
 
@@ -81,6 +90,7 @@ export function fitCharacterVoiceContexts(contexts: CharacterVoiceContext[], bud
     sections: context.sections.flatMap((section, sectionIndex): CharacterVoiceSection[] => {
       const key = `${contextIndex}:${sectionIndex}`;
       if (section.kind === 'accepted-facts' && section.items && section.items.length > 0) {
+        if (!keptFactNotices.has(key)) return [];
         const kept = section.items.filter((_, index) => keptItems.get(key)?.has(index));
         const left = section.items.length - kept.length;
         // Tell the model facts exist that it was not given, so it does not settle them itself.
@@ -98,15 +108,32 @@ export function fitCharacterVoiceContexts(contexts: CharacterVoiceContext[], bud
     })
   }));
 
-  const omitted = fit.dropped.map(({value, tokens}) => {
+  const omitted = fit.dropped.flatMap(({value, tokens}) => {
     const section = contexts[value.context]!.sections[value.section]!;
-    return {
+    if (value.item === 'notice') return [];
+    return [{
       source: section.source,
       detail: value.item === null ? '' : section.items![value.item]!.text.replace(/^- /, ''),
       tokens
-    };
+    }];
   });
-  return {contexts: fitted, omitted, budgetTokens: fit.budgetTokens, usedTokens: fit.usedTokens};
+  fit.kept.forEach(({value, tokens}) => {
+    if (typeof value.item !== 'number' || keptFactNotices.has(`${value.context}:${value.section}`)) return;
+    const section = contexts[value.context]!.sections[value.section]!;
+    const item = section.items![value.item]!;
+    omitted.push({source: section.source, detail: item.text.replace(/^- /, ''), tokens});
+  });
+  const usedTokens = fitted.reduce(
+    (total, context) =>
+      total +
+      context.sections.reduce(
+        (contextTotal, section) =>
+          contextTotal + estimateTextTokens(`[Source: ${section.source}]\n${section.content}\n\n`),
+        0
+      ),
+    0
+  );
+  return {contexts: fitted, omitted, budgetTokens: Math.max(0, Math.floor(budgetTokens)), usedTokens};
 }
 
 /**

@@ -13,6 +13,7 @@ import {
   isSummarized,
   shouldOfferSummary,
   summarizableExchanges,
+  validateCharacterLabSummaryText,
   type CharacterLabSummary,
   dropShownVersion,
   exchangeVersionCount,
@@ -284,17 +285,23 @@ export function CharacterLabDialog({
       return;
     }
     const covered = summarizable;
+    const summaryBeforeRun = summary?.text ?? null;
     const request = buildSummaryRequest({characterName: context.name, previousSummary: summary?.text ?? null, exchanges: covered});
     setError(null);
     try {
       const service = new LLMService(lab.aiConfig);
       budget.spend('character-lab');
       const result = await modelRun.run(service, {...request, maxTokens, cache: false});
-      const text = result.answer.trim();
-      if (!text || result.stopped) {
+      if (!result.answer.trim() || result.stopped) {
         setError(result.stopped ? 'Summary stopped; the earlier turns are still sent in full.' : 'The model returned no summary.');
         return;
       }
+      const currentSummary = sessionSummaries.get(transcriptKey(projectId, entityId))?.text ?? null;
+      if (currentSummary !== summaryBeforeRun) {
+        setError('The summary changed while the model was working, so its replacement was not used. Try again when your edit is finished.');
+        return;
+      }
+      const text = validateCharacterLabSummaryText(result.answer.trim());
       updateSummary({
         text,
         coversThroughId: covered[covered.length - 1]!.id,
@@ -431,7 +438,15 @@ export function CharacterLabDialog({
                 busy={modelRun.isRunning}
                 disabledReason={canGenerate ? null : 'Not available right now.'}
                 onSummarize={() => void summarize()}
-                onEdit={(text) => summary && updateSummary({...summary, text, edited: true})}
+                onEdit={(text) => {
+                  if (!summary) return;
+                  try {
+                    updateSummary({...summary, text: validateCharacterLabSummaryText(text), edited: true});
+                    setError(null);
+                  } catch (editError) {
+                    setError(describeError(editError, 'The summary is too long.'));
+                  }
+                }}
                 onRemove={() => updateSummary(null)}
               />
               <ModelRunProgress run={modelRun} />

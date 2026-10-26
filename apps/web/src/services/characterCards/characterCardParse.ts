@@ -11,6 +11,8 @@ import {z} from 'zod';
 
 export const MAX_CARD_FILE_BYTES = 20 * 1024 * 1024;
 export const MAX_CARD_JSON_CHARS = 2_000_000;
+/** A raw UTF-8 JSON character can take four bytes; compressed PNG text may never expand beyond this. */
+export const MAX_CARD_DECOMPRESSED_BYTES = MAX_CARD_JSON_CHARS * 4;
 export const MAX_CARD_FIELD_CHARS = 50_000;
 export const MAX_CARD_NAME_CHARS = 200;
 export const MAX_LOREBOOK_ENTRIES = 200;
@@ -194,7 +196,33 @@ async function inflate(bytes: Uint8Array): Promise<Uint8Array> {
     throw new CharacterCardError('This PNG stores its card compressed, which this app cannot read here.');
   }
   const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_CARD_DECOMPRESSED_BYTES) {
+        await reader.cancel();
+        throw new CharacterCardError('The compressed character data expands beyond the safe import limit.');
+      }
+      chunks.push(value);
+    }
+  } catch (error) {
+    if (error instanceof CharacterCardError) throw error;
+    throw new CharacterCardError('The compressed character data in this PNG is damaged and cannot be read.');
+  } finally {
+    reader.releaseLock();
+  }
+  const inflated = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    inflated.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return inflated;
 }
 
 const latin1 = (bytes: Uint8Array) => Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');

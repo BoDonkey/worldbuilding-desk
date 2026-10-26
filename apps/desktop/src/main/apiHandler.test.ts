@@ -1,5 +1,5 @@
-import {describe, expect, it} from 'vitest';
-import {validatePayload} from './apiHandler';
+import {describe, expect, it, vi} from 'vitest';
+import {readDesktopLocalServerContext, validatePayload} from './apiHandler';
 
 const base = () => ({
   providerId: 'anthropic',
@@ -65,5 +65,22 @@ describe('validatePayload', () => {
     expect(() =>
       validatePayload({...base(), request: {...base().request, maxTokens: 0}})
     ).toThrow(/maxTokens/);
+  });
+});
+
+describe('readDesktopLocalServerContext', () => {
+  it('reads context through the main process and keeps the loopback address policy', async () => {
+    const fetchImpl = vi.fn(async (url: string) => ({
+      ok: url === 'http://localhost:5001/props',
+      json: async () => ({default_generation_settings: {n_ctx: 16384}})
+    })) as unknown as typeof fetch;
+    await expect(
+      readDesktopLocalServerContext({baseUrl: 'http://localhost:5001/v1'}, {fetchImpl})
+    ).resolves.toBe(16384);
+    expect(fetchImpl).toHaveBeenCalledWith('http://localhost:5001/props', {signal: undefined});
+    await expect(readDesktopLocalServerContext({baseUrl: 'http://example.com/v1'}, {fetchImpl})).rejects.toThrow(
+      /must run on this computer/
+    );
+    await expect(readDesktopLocalServerContext({baseUrl: 7}, {fetchImpl})).rejects.toThrow(/must be a string/);
   });
 });

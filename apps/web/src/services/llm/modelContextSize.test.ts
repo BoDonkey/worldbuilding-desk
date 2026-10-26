@@ -74,6 +74,20 @@ describe('resolveModelContextSize', () => {
     });
   });
 
+  it('uses the desktop main-process probe instead of renderer fetch', async () => {
+    const fetchMock = vi.fn();
+    const llmLocalContextSize = vi.fn(async () => 32768);
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', {electronAPI: {llmLocalContextSize}});
+    expect(
+      await resolveModelContextSize(
+        config('local-openai', {'local-openai': {baseUrl: 'http://localhost:1234/v1'}})
+      )
+    ).toEqual({tokens: 32768, source: 'reported'});
+    expect(llmLocalContextSize).toHaveBeenCalledWith({baseUrl: 'http://localhost:1234/v1'});
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('asks once for the same model within half a minute', async () => {
     const fetchMock = vi.fn(async () => json({models: [{name: 'm', context_length: 8192}]}));
     vi.stubGlobal('fetch', fetchMock);

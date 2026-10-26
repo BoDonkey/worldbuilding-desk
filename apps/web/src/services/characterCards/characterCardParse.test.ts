@@ -4,6 +4,7 @@ import {
   CharacterCardError,
   MAX_CARD_FIELD_CHARS,
   MAX_CARD_FILE_BYTES,
+  MAX_CARD_DECOMPRESSED_BYTES,
   MAX_LOREBOOK_ENTRIES,
   parseCharacterCard,
   readCharacterCardFile
@@ -162,6 +163,12 @@ describe('readCharacterCardFile', () => {
     expect((await readCharacterCardFile(png(compressed))).name).toBe('Itxt');
     const ztxt = chunk('zTXt', concat(latin1Bytes('ccv3'), Uint8Array.of(0, 0), await deflate(encoder.encode(base64Json(v3({name: 'Ztxt'}))))));
     expect((await readCharacterCardFile(png(ztxt))).name).toBe('Ztxt');
+  });
+
+  it('stops inflating compressed card data at the safe output limit', async () => {
+    const bomb = await deflate(encoder.encode('x'.repeat(MAX_CARD_DECOMPRESSED_BYTES + 1)));
+    const ztxt = chunk('zTXt', concat(latin1Bytes('chara'), Uint8Array.of(0, 0), bomb));
+    expect(await reason(png(ztxt))).toBe('The compressed character data expands beyond the safe import limit.');
   });
 
   it('refuses empty, oversized, unknown, damaged, and card-less files with a reason', async () => {

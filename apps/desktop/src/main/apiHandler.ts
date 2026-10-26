@@ -8,7 +8,13 @@ import {
 } from './providers/ProviderRegistry';
 import {isProviderId, resolveProviderBaseUrl, type ProviderId} from './endpointPolicy';
 import {resolveOllamaRequestModel} from './ollamaModelPolicy';
-import {MAX_LOCAL_REPLY_TOKENS, MIN_LOCAL_REPLY_TOKENS, resolveLocalServerRequestModel} from './localServerPolicy';
+import {
+  localServerApiBase,
+  MAX_LOCAL_REPLY_TOKENS,
+  MIN_LOCAL_REPLY_TOKENS,
+  readLocalServerContextSize,
+  resolveLocalServerRequestModel
+} from './localServerPolicy';
 import {
   isHostedProviderId,
   type HostedProviderId,
@@ -31,6 +37,20 @@ const PROVIDER_LABELS: Record<HostedProviderId, string> = {
   openai: 'OpenAI',
   gemini: 'Gemini'
 };
+
+/** Read-only renderer request for the same local context probe used by desktop completions. */
+export async function readDesktopLocalServerContext(
+  payload: unknown,
+  options: {fetchImpl?: typeof fetch} = {}
+): Promise<number | null> {
+  if (!payload || typeof payload !== 'object') throw new Error('Context-size payload must be an object');
+  const baseUrl = (payload as {baseUrl?: unknown}).baseUrl;
+  if (baseUrl !== undefined && typeof baseUrl !== 'string') {
+    throw new Error('Context-size baseUrl must be a string if provided');
+  }
+  const resolved = resolveProviderBaseUrl('local-openai', baseUrl);
+  return (await readLocalServerContextSize(localServerApiBase(resolved), options)) ?? null;
+}
 
 export function validatePayload(payload: unknown): asserts payload is LLMPayload {
   if (!payload || typeof payload !== 'object') {
@@ -215,6 +235,8 @@ async function resolveCredentials(vault: ProviderKeyVault, payload: LLMPayload, 
 const activeStreams = new Map<string, AbortController>();
 
 export function setupAPIHandlers(vault: ProviderKeyVault) {
+  ipcMain.handle('llm:local-context-size', (_event, payload: unknown) => readDesktopLocalServerContext(payload));
+
   ipcMain.handle('provider-keys:status', () => vault.status());
 
   ipcMain.handle('provider-keys:set', async (_event, provider: unknown, key: unknown) => {
