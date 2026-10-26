@@ -1032,6 +1032,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.15c project-vault verification and copy passed full main Web CI in
+  [run 40317006961](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40317006961),
+  including all three Cypress shards, `cypress-smoke`, and packaged Electron
+  tests on macOS and Windows without retries. Coverage: 16 CI-policy tests,
+  file-size gate, lint with the existing warning, 1310 web + 47 engine + 12 UI
+  + 38 desktop unit tests, both builds, project-vault Cypress 3/3, and a local
+  packaged macOS profile scan 1/1. The parallel PR run lost Cypress's Electron
+  renderer late in `post-merge-smoke`; the identical main shard passed, and
+  Cypress memory reclamation was then enabled and verified on the focused
+  smoke at 18/18 instead of adding retries.
 - Slice 5.15b project vault UX and derived data passed full remote Web CI,
   including `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
   [run 40196961910](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40196961910)

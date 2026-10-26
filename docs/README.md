@@ -77,11 +77,6 @@ Other files:
   requiring author approval, and carries provisional unscheduled slices; fold
   accepted IA into the blueprint and approved work into the roadmap, then
   archive it.
-- `docs/project-vault-plan.md` — active working plan for roadmap slice 5.15
-  (password-protected project vaults): the storage-seam design, key hierarchy,
-  migration discipline, threat boundary, and the 5.15a–5.15c split. The
-  roadmap remains authoritative for requirements and status; archive the plan
-  when 5.15c closes.
 - `docs/corkboard-improvement.md` and `docs/corkboard-scenes-plan.md` — dated
   (2026-09-12) planning prompt and the resulting proposal for one-click
   Chapter Card ↔ scene linking (shared link UI, create linked scene,
@@ -129,6 +124,9 @@ the full-length originals behind the 2026-08-01 consolidation:
 - `stat-peek-plan.md` — completed plan for Slices 4.46–4.48 (character
   snapshot service, stat peek, pinned stat panel); durable behavior lives in
   `docs/product-blueprint.md`.
+- `project-vault-plan.md` and `next-prompt-5.15c.md` — completed Slice 5.15
+  vault design and its final verification handoff; durable behavior lives in
+  `PROJECT_STATUS.md` and the roadmap records the completed slices.
 - `architecture-review-2026-10-17.md` — latest dated code health and
   architecture review (persistence ownership, domain logic in large hooks,
   the size-freeze blind spot, route form state, browser storage, and an
