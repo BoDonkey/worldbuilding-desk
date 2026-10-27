@@ -1117,19 +1117,17 @@ function WorkspaceRoute() {
       ) ?? null
     : null;
   const toolbarActions = useMemo(
-    () => [
+    () => showGameSystems ? [
       {
-        id: 'insert-status-block',
-        label: 'Insert Status Block',
+        id: 'insert-status-block', label: 'Insert Status Block',
         onClick: () => setStatBlockModalOpen(true)
       },
       {
-        id: 'refresh-placeholders',
-        label: 'Refresh Placeholders',
+        id: 'refresh-placeholders', label: 'Refresh Placeholders',
         onClick: handleRefreshStatTemplates
       }
-    ],
-    [handleRefreshStatTemplates, setStatBlockModalOpen]
+    ] : [],
+    [handleRefreshStatTemplates, setStatBlockModalOpen, showGameSystems]
   );
 
   const {
@@ -1397,7 +1395,7 @@ function WorkspaceRoute() {
               className={`${styles.reviewIndicator} ${styles[`reviewIndicator_${reviewReadiness.state}`]}`}
               onClick={() => openContextDrawer('review')}
               title={reviewReadiness.detail}
-              aria-label={`Open review drawer: ${reviewReadiness.detail}`}
+              aria-label={`Open review drawer, ${reviewReadiness.label}: ${reviewReadiness.detail}`}
             >
               <span className={styles.reviewIndicatorDot} />
               <span>{reviewReadiness.label}</span>

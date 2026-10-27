@@ -110,6 +110,7 @@ function MenuBar({editor, customButtons, actionButtons}: MenuBarProps) {
       <div className='button-group'>
         <select
           className='toolbar-select'
+          aria-label='Block style'
           value={activeBlockStyle}
           onChange={(event) => {
             const value = event.target.value;
@@ -154,6 +155,7 @@ function MenuBar({editor, customButtons, actionButtons}: MenuBarProps) {
 
         <select
           className='toolbar-select'
+          aria-label='Text style'
           value={activeInlineStyle}
           onChange={(event) => {
             const value = event.target.value;
@@ -217,6 +219,7 @@ function MenuBar({editor, customButtons, actionButtons}: MenuBarProps) {
         {customButtons.length > 0 && (
           <select
             className='toolbar-select'
+            aria-label='Character style'
             value={activeCustomStyle}
             onChange={(event) => {
               const value = event.target.value;
@@ -340,7 +343,8 @@ function TipTapEditor({
 
     editorProps: {
       attributes: {
-        class: 'tiptap-editor'
+        class: 'tiptap-editor',
+        'aria-label': 'Scene manuscript'
       },
       handleClick(_view, _pos, event) {
         if (!(event.target instanceof HTMLElement)) {

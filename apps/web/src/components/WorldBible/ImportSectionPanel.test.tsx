@@ -18,10 +18,13 @@ const characters: EntityCategory = {
   ]
 };
 
-const buildDraft = (detectedSections: WorldBibleImportSectionDraft[]): WorldBibleImportDraft => ({
+const buildDraft = (
+  detectedSections: WorldBibleImportSectionDraft[],
+  name = 'Sheet'
+): WorldBibleImportDraft => ({
   id: 'draft',
   fileName: 'sheet.md',
-  name: 'Sheet',
+  name,
   text: '',
   preview: '',
   categoryId: 'characters',
@@ -33,12 +36,13 @@ const buildDraft = (detectedSections: WorldBibleImportSectionDraft[]): WorldBibl
 
 const renderPanel = (
   detectedSections: WorldBibleImportSectionDraft[],
-  plannedNewFieldLabels: string[] = []
+  plannedNewFieldLabels: string[] = [],
+  name = 'Sheet'
 ) => {
   const onUpdateSectionDestination = vi.fn();
   render(
     <ImportSectionPanel
-      draft={buildDraft(detectedSections)}
+      draft={buildDraft(detectedSections, name)}
       category={characters}
       plannedNewFieldLabels={plannedNewFieldLabels}
       isApplyingImports={false}
@@ -117,11 +121,47 @@ describe('ImportSectionPanel', () => {
 
     expect(
       screen.getByText(
-        'Adds a Traits field to Characters and fills it here. Other records get the field empty.'
+        'Adds a new field named Traits to Characters and fills it here. Other records get the field empty.'
       )
     ).toBeInTheDocument();
     const agePicker = screen.getByRole('combobox', {name: 'Destination for Age'});
     expect(within(agePicker).queryByRole('option', {name: 'New field: Age'})).toBeNull();
     expect(within(agePicker).getByRole('option', {name: 'New field: Traits'})).toBeInTheDocument();
+  });
+
+  it('suggests a record-free label and lets the author edit and validate it', () => {
+    const {onUpdateSectionDestination} = renderPanel(
+      [{
+        id: 'academics',
+        title: 'Leo Muller-Sarkesian Academic Background',
+        content: 'Studied abroad.',
+        action: 'new-field',
+        newFieldLabel: 'Academic Background'
+      }],
+      [],
+      'Leo Muller-Sarkesian'
+    );
+
+    const input = screen.getByLabelText('New field name');
+    expect(input).toHaveValue('Academic Background');
+    fireEvent.change(input, {target: {value: 'Education'}});
+    expect(onUpdateSectionDestination).toHaveBeenLastCalledWith('draft', 'academics', {
+      action: 'new-field',
+      newFieldLabel: 'Education'
+    });
+  });
+
+  it('shows an inline error for an empty planned field name', () => {
+    renderPanel([{
+      id: 'academics',
+      title: 'Academic Background',
+      content: 'Studied abroad.',
+      action: 'new-field',
+      newFieldLabel: ''
+    }]);
+
+    const input = screen.getByLabelText('New field name');
+    expect(screen.getByText('Enter a name for the new field.')).toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-invalid', 'true');
   });
 });

@@ -2,6 +2,11 @@ const {defineConfig} = require('cypress');
 
 module.exports = defineConfig({
   allowCypressEnv: false,
+  // The broad smoke specs exercise many IndexedDB-backed workflows in one
+  // renderer. Reclaim browser memory between tests so CI does not lose the
+  // Electron renderer late in a no-retry shard.
+  experimentalMemoryManagement: true,
+  numTestsKeptInMemory: 0,
   e2e: {
     // Keep test discovery explicit so new specs have a predictable location.
     specPattern: 'cypress/e2e/**/*.cy.ts',

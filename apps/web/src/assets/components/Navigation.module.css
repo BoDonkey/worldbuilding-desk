@@ -85,7 +85,19 @@
 .moreButton {
   font: inherit;
   background: transparent;
+  color: var(--color-text-primary);
+  transition: none;
   cursor: pointer;
+}
+
+.moreButton.active {
+  background: var(--color-accent-hover);
+  color: var(--color-on-accent);
+}
+
+.moreButton.active .icon,
+.moreButton.active .label {
+  color: var(--color-on-accent);
 }
 
 .secondaryMenu {
@@ -235,7 +247,7 @@
 
 .shortcutHint {
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 2px 6px;

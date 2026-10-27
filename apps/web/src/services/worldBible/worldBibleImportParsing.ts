@@ -124,6 +124,49 @@ export const slugifyFieldKey = (value: string): string =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') ||
   crypto.randomUUID();
 
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Removes an exact record name from the start or end of an imported heading.
+ * Punctuation and a possessive may connect the name to the useful label, but
+ * partial-name matches never shorten the author's heading.
+ */
+export const suggestImportFieldLabel = (title: string, recordName: string): string => {
+  const normalizedTitle = title.replace(/\s+/g, ' ').trim();
+  const normalizedName = recordName.replace(/\s+/g, ' ').trim();
+  if (!normalizedName) return normalizedTitle;
+
+  const name = escapeRegExp(normalizedName);
+  const possessive = "(?:['’]s)?";
+  const separator = '(?:\\s*[-–—:|]\\s*|\\s+)';
+  const withoutPrefix = normalizedTitle.replace(
+    new RegExp(`^${name}${possessive}${separator}`, 'i'),
+    ''
+  );
+  const withoutName = withoutPrefix === normalizedTitle
+    ? normalizedTitle.replace(
+        new RegExp(`${separator}${name}${possessive}$`, 'i'),
+        ''
+      )
+    : withoutPrefix;
+  const candidate = withoutName.replace(/^[-–—:|\s]+|[-–—:|\s]+$/g, '').trim();
+  return /[\p{L}\p{N}]/u.test(candidate) ? candidate : normalizedTitle;
+};
+
+export const getImportFieldLabelError = (label: string): string | null => {
+  const trimmed = label.trim();
+  if (!trimmed) return 'Enter a name for the new field.';
+  if (trimmed.length > 80) return 'Keep the new field name to 80 characters or fewer.';
+  if ([...trimmed].some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint <= 0x1f || codePoint === 0x7f;
+  })) {
+    return 'Remove control characters from the new field name.';
+  }
+  return null;
+};
+
 const COMMON_REUSABLE_SECTION_LABELS = new Set([
   'abilities',
   'appearance',
@@ -162,11 +205,16 @@ const classifyImportSection = (
   category: EntityCategory,
   recordName: string
 ): ImportSectionDestination => {
+  const suggestedLabel = suggestImportFieldLabel(title, recordName);
   const matchingField = getImportFieldOptions(category).find((field) =>
-    isExistingFieldMatch(field, title)
+    isExistingFieldMatch(field, title) || isExistingFieldMatch(field, suggestedLabel)
   );
   if (matchingField) {
     return {action: 'existing-field', fieldKey: matchingField.key};
+  }
+
+  if (suggestedLabel !== title.trim()) {
+    return {action: 'new-field', newFieldLabel: suggestedLabel};
   }
 
   const normalizedTitle = slugifyFieldKey(title).replace(/_/g, ' ');
@@ -208,7 +256,7 @@ export const getImportFieldOptions = (category: EntityCategory): CategoryField[]
   category.fieldSchema.filter(canMapImportField);
 
 export const getNewFieldLabel = (section: WorldBibleImportSectionDraft): string =>
-  section.newFieldLabel?.trim() || section.title;
+  section.newFieldLabel === undefined ? section.title : section.newFieldLabel.trim();
 
 /** The existing field a section fills, or null when it has none. */
 export const resolveImportSectionField = (

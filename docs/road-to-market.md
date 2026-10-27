@@ -228,7 +228,7 @@ run when a result was reused or coverage was focused.
    4.57 → 4.58 → 4.59;
    3.18 after 4.66; 3.22 → 3.23a → 3.23b; 3.23a → 3.23c;
    3.23a–3.23c before 5.15; 3.24a → 3.24b, both high priority; 4.67 → 4.68; 4.69 → 4.70;
-   5.14 before 5.15; 5.15a → 5.15b → 5.15c; 5.15c → 5.16 → 6.1;
+   5.14 before 5.15; 5.15a → 5.15b → 5.15c; 5.15c → 5.16 → 5.17 → 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -413,10 +413,11 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 5.10 | Author-facing vocabulary sweep | 5 | XS | Done `69e6559` — string-layer only, behavior-preserving; retires `Shodh`/`RAG`/`Rubber-Duck` from rendered UI including the review's named "Inherit RAG data"/"Inherit memories" inconsistency; source-scanning test guards against regression; lint with 1 baseline warning; 500 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 72/73 ([review](archive/ux-ai-review-2026-08-29.md) §A3) |
 | 5.12 | App-shell toast viewport + status live region | 5 | S | Done `7f303f7` — one app-shell toast viewport (polite, auto-dismiss, repeats replaced) fed by a `RouteFeedback` bridge in all nine routes plus Workspace (errors-as-toast, resolver notice as an action toast); errors elsewhere stay inline as `InlineAlert`; one shared status live region via `useStatusAnnouncement` wired to autosave, review, extraction, migration, and AI streaming; `aria-invalid` on three more validated fields; split recorded in the blueprint; lint with 1 baseline warning; 529 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 75/77 full run (one assertion updated to `role="alert"`, one pre-existing hydration race in `post-merge-smoke`), 18/18 + 2/2 in isolation ([review](archive/ux-ai-review-2026-08-29.md) §A5, §A6) |
 | 5.14 | Optional encrypted backups | 5 | S | Done `7669198` — author-approved exception to the Phase 5 gate (2026-10-25), as for 5.3. Export Backup offers a plain `.zip` (default) or an encrypted `.sagabackup`: versioned JSON envelope around the backup zip, PBKDF2-SHA256 600k → AES-256-GCM with the header authenticated, NFC passphrase of 8+ characters typed twice, never stored. Import/Validate detect it by content and read nothing until the passphrase opens it; wrong passphrase keeps the dialog open; newer envelope asks for an update; plain backups unchanged. Smoke 1 step 7. Lint baseline; 1284 web + 47 engine + 12 UI + 37 desktop tests; builds; Cypress 164/164; Electron E2E 14/14 including an encrypted round trip on disk; Web CI [run 40186887061](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40186887061) green on macOS and Windows |
-| 5.15a | Project vaults: vault core | 5 | M | Done `f4bd848` — author-approved exception to the Phase 5 gate (2026-10-25), extended from 5.3/5.14; 5.15 split into 5.15a–5.15c, plan `docs/project-vault-plan.md`. `openDb()` and the rulesets database return a wrapped connection that seals protected projects' records on write and opens them on read (per-project 256-bit data key wrapped by PBKDF2-SHA256 600k; synchronous AES-256-GCM from `@noble/ciphers` 2.4.0 so sealing works inside transactions; bound to database, store, project, and id); cursors refused; locked projects read back sealed with a **Locked project** placeholder and refuse writes; every vault locks on reload. Enable/disable rewrite each database in one transaction verified before and after writing, with compensation for the rulesets database and no plaintext backup; passphrase change re-wraps only the key. Not reachable from the UI. Found: zone-affinity ids embed the zone-name slug (moved to 5.15b). 14 new tests; two planted regressions caught; lint baseline; 1298 web + 47 engine + 12 UI + 37 desktop tests; builds; Cypress 164/164; Web CI [run 40194139403](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40194139403) green including Desktop E2E on macOS and Windows |
+| 5.15a | Project vaults: vault core | 5 | M | Done `f4bd848` — author-approved exception to the Phase 5 gate (2026-10-25), extended from 5.3/5.14; 5.15 split into 5.15a–5.15c, archived plan `docs/archive/project-vault-plan.md`. `openDb()` and the rulesets database return a wrapped connection that seals protected projects' records on write and opens them on read (per-project 256-bit data key wrapped by PBKDF2-SHA256 600k; synchronous AES-256-GCM from `@noble/ciphers` 2.4.0 so sealing works inside transactions; bound to database, store, project, and id); cursors refused; locked projects read back sealed with a **Locked project** placeholder and refuse writes; every vault locks on reload. Enable/disable rewrite each database in one transaction verified before and after writing, with compensation for the rulesets database and no plaintext backup; passphrase change re-wraps only the key. Not reachable from the UI. Found: zone-affinity ids embed the zone-name slug (moved to 5.15b). 14 new tests; two planted regressions caught; lint baseline; 1298 web + 47 engine + 12 UI + 37 desktop tests; builds; Cypress 164/164; Web CI [run 40194139403](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40194139403) green including Desktop E2E on macOS and Windows |
 | 5.15b | Project vaults: UX + derived data | 5 | L | Done `84b70bb` — same gate exception as 5.15a. Projects page protect (no-recovery acknowledgment) / unlock and open / lock / change passphrase / remove protection; palette **Lock Project**; a locked project shows only its label; locks on restart and when another project opens, never persisted as the open project; lock reloads the page. Retrieval and memory stores go through `openDerivedRecordStore` (memory only while protected, dropped on lock, rebuilt after unlock; old `rag-*`/`shodh-memory-*` databases deleted on enable); content browser-storage keys go through `projectBrowserStorage`; protected backups default to encrypted; zone-affinity records get random ids (project schema 8, also on import). Fixed a race where a Source Note saved before the RAG service loaded was not indexed. Second-tab broadcast gap accepted (one desktop window). 8 new unit tests incl. a planted-phrase scan of every database and both browser storages; new `project-vault.cy.ts` (3); two planted regressions caught; lint baseline; 1306 web + 47 engine + 12 UI + 37 desktop tests; builds; Cypress 167/167 local; Web CI [run 40196961910](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40196961910) green including Desktop E2E on macOS and Windows after rerunning two pre-existing flakes also seen on main (`ai-scene-revision` AI tab, seed `cy.then()` timeout) |
-| 5.15c | Project vaults: verification + copy | 5 | M | WIP |
-| 5.16 | First-release dogfood polish | 5 | M | — |
+| 5.15c | Project vaults: verification + copy | 5 | M | Done `a1b9621` — migrated the legacy first-mechanics draft before sealing; packaged Electron profile test plants text across primary/derived IndexedDB and local/session storage, proves every live app-owned store clean after protection, then scans the closed profile and records the reclaimable LevelDB-fragment limit; privacy/help and smoke copy state that protection is not secure deletion. Lint baseline; 1310 web + 47 engine + 12 UI + 38 desktop tests; builds; file-size/CI-policy gates; project-vault Cypress 3/3; packaged macOS scan 1/1; full main Web CI [run 40317006961](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40317006961) green without retries, including all Cypress shards, `cypress-smoke`, and packaged macOS/Windows. PR #83's parallel group 1 lost its Electron renderer under memory pressure; main passed the same shard, and `2f62711` enables Cypress memory reclamation (focused smoke 18/18) rather than hiding the flake with retries. Plan archived at `docs/archive/project-vault-plan.md`. |
+| 5.16 | First-release dogfood polish | 5 | M | Done `9b242c1` — WCAG A/AA scans cover Getting Started, Workspace/Settings, and destructive dialogs in both themes; dark soft-accent, toast, editor labels, and nav-transition contrast fixed with shared tokens. Every detected local model stays selectable in a scrollable list. New/ordinary projects offer General Fiction + LitRPG only, existing Game projects remain compatible, and mechanics toolbar actions follow game-system capability. First-run My First Project/Chapter One contract is covered. Character imports strip exact record names from proposed headings and expose validated editable new-field labels. Lint baseline; 1,316 web + 47 engine + 12 UI + 38 desktop tests; web/desktop builds; file-size/CI-policy gates; Cypress 176/176 without retries. Second dogfood findings promoted to 5.17. |
+| 5.17 | Writing-flow stability + assistant continuity | 5 | L | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -2341,7 +2342,8 @@ KoboldCPP.
   phrases do not remain in app-owned persistence, and packaged macOS/Windows
   smoke coverage. Update the privacy/help copy only after these checks pass.
   Split on 2026-10-25 into 5.15a (vault core), 5.15b (UX and derived data),
-  and 5.15c (verification and copy). Plan: `docs/project-vault-plan.md`.
+  and 5.15c (verification and copy). Archived plan:
+  `docs/archive/project-vault-plan.md`.
 - **5.16 First-release dogfood polish.** Close the bounded usability and
   accessibility findings from the first packaged-app dogfood pass before the
   beta build; do not broaden this into a general redesign.
@@ -2381,6 +2383,32 @@ KoboldCPP.
   compatibility case; all detected local models remain selectable; character
   import creates the edited field name and never the record-prefixed label;
   applicable full verification tier green before 6.1.
+- **5.17 Writing-flow stability + assistant continuity.** Close the second
+  packaged-app dogfood pass before beta, prioritizing interruptions to the
+  author's writing flow over additive conveniences.
+  - Reproduce and fix manuscript scroll-to-top and visible text jitter during
+    deletion/autosave. Preserve the selection, editor scroll position, and
+    rendered text geometry across persistence updates; verify sustained typing,
+    backward deletion, and autosave in a long scene.
+  - Keep assistant conversation history as one coherent session when the
+    author answers a question or chooses among options. The expanded reply view
+    must allow the author to continue that conversation without closing it.
+  - Saving or copying assistant advice to Source Notes must offer the useful
+    conversation context—not only the latest assistant message—including the
+    author's question and the displayed reply/version, without silently saving
+    other discarded alternatives.
+  - Let writing-coach replies create a new Source Note directly through the
+    same author-reviewed path. Scene context cards must either be dismissible
+    or navigate to the exact Source Note or World Bible record they represent;
+    never imply a link when the source cannot be resolved.
+
+  Acceptance: regression coverage demonstrates stable cursor and scroll during
+  repeated autosaves in a long scene; no layout jitter is visible in a timed
+  browser check; follow-up answers retain the preceding options and question in
+  the request; conversation can continue from the expanded reply; saved Source
+  Notes contain the author-approved contextual transcript; each resolvable
+  context card opens its source and every card can be dismissed; applicable
+  full verification tier green before 6.1.
 ## Phase 6 — Beta, RC, Launch
 
 - **6.1 Beta.** Signed, auto-updating build to a 10–30 author cohort

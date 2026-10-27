@@ -62,6 +62,24 @@ describe('AI provider setup UX', () => {
     cy.contains('No story text ever leaves your computer').should('not.exist');
   });
 
+  it('keeps every detected local model selectable when the server reports more than six', () => {
+    const models = Array.from({length: 9}, (_, index) => ({id: `local-model-${index + 1}`}));
+    cy.intercept('GET', 'http://localhost:5001/v1/models', {
+      statusCode: 200,
+      body: {data: models}
+    });
+    cy.intercept('POST', 'http://localhost:5001/v1/chat/completions', {
+      statusCode: 200,
+      body: {choices: [{message: {content: 'OK'}, finish_reason: 'stop'}]}
+    });
+
+    cy.contains('label', 'Provider').parent().find('select').select('Local server (OpenAI-compatible)');
+    cy.contains('button', 'Test connection').click();
+    cy.get('button').filter(':contains("Use local-model-")').should('have.length', 9);
+    cy.contains('button', 'Use local-model-9').focus().should('have.focus').click();
+    cy.contains('label', /^Model/).parent().find('input').should('have.value', 'local-model-9');
+  });
+
   it('reports a missing key without making a network call', () => {
     cy.contains('label', 'Provider').parent().find('select').select('Anthropic (Claude)');
     cy.contains('button', 'Test connection').click();

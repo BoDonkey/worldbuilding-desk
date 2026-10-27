@@ -4,11 +4,28 @@ import type {
   ProjectSettings
 } from './entityTypes';
 
-export const PROJECT_MODE_OPTIONS: Array<{value: ProjectMode; label: string}> = [
+const PROJECT_MODE_OPTIONS: Array<{value: ProjectMode; label: string}> = [
   {value: 'litrpg', label: 'LitRPG Author'},
   {value: 'game', label: 'Game Simulation'},
   {value: 'general', label: 'General Fiction'}
 ];
+
+const FIRST_RELEASE_PROJECT_MODE_OPTIONS = PROJECT_MODE_OPTIONS.filter(
+  (option) => option.value !== 'game'
+);
+
+/**
+ * New and ordinary projects expose the two supported first-release modes.
+ * A legacy Game Simulation project keeps its current value visible until the
+ * author explicitly changes it; its persisted contract and data stay intact.
+ */
+export function getVisibleProjectModeOptions(
+  currentMode?: ProjectMode
+): Array<{value: ProjectMode; label: string}> {
+  return currentMode === 'game'
+    ? PROJECT_MODE_OPTIONS
+    : FIRST_RELEASE_PROJECT_MODE_OPTIONS;
+}
 
 export const DEFAULT_FEATURE_TOGGLES_BY_MODE: Record<
   ProjectMode,

@@ -1,3 +1,8 @@
+# Archived 5.15c handoff prompt
+
+> **Archived 2026-10-26.** Slice 5.15c is complete. See `PROJECT_STATUS.md`
+> for current application truth and `docs/road-to-market.md` for active work.
+
 Please finish roadmap slice 5.15 (password-protected project vaults) by doing
 5.15c (verification and copy). Follow AGENTS.md: read docs/README.md,
 PROJECT_STATUS.md, and docs/road-to-market.md, then claim 5.15c on the status

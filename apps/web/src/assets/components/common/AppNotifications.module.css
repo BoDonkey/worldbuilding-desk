@@ -26,7 +26,7 @@
 .toastSuccess {
   border: 1px solid var(--color-success-soft-border);
   background-color: var(--color-success-soft-bg);
-  color: var(--color-success);
+  color: var(--color-success-soft-text);
 }
 
 .toastInfo {
@@ -38,7 +38,7 @@
 .toastError {
   border: 1px solid var(--color-error-soft-border);
   background-color: var(--color-error-soft-bg);
-  color: var(--color-error);
+  color: var(--color-error-soft-text);
 }
 
 .toastMessage {

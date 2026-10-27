@@ -217,6 +217,24 @@ const section = (
 });
 
 describe('import heading destinations', () => {
+  it('strips only the exact record name when suggesting a new field label', () => {
+    const [prefixed, possessive, suffixed, partial] = classifyImportSections(
+      [
+        section('Leo Muller-Sarkesian Academic Background', 'One.'),
+        section("Leo Muller-Sarkesian’s Academic Background", 'Two.'),
+        section('Academic Background — Leo Muller-Sarkesian', 'Three.'),
+        section('Leo Academic Background', 'Four.')
+      ],
+      characters,
+      'Leo Muller-Sarkesian'
+    );
+
+    expect(prefixed).toMatchObject({action: 'new-field', newFieldLabel: 'Academic Background'});
+    expect(possessive).toMatchObject({action: 'new-field', newFieldLabel: 'Academic Background'});
+    expect(suffixed).toMatchObject({action: 'new-field', newFieldLabel: 'Academic Background'});
+    expect(partial).toMatchObject({action: 'record-section'});
+  });
+
   it('classifies a heading that matches a field to that field key', () => {
     const [age] = classifyImportSections([section('Age', '41')], characters, 'Mira');
 

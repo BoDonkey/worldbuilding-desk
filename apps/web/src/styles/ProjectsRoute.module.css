@@ -259,7 +259,7 @@
 }
 
 .activeBadge {
-  color: var(--color-success);
+  color: var(--button-primary-text);
   font-weight: 700;
   font-size: 0.86rem;
 }
@@ -310,13 +310,15 @@
 }
 
 .backupButton {
-  background: var(--color-success-soft-bg);
-  color: var(--color-success-soft-text);
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
 }
 
 .dangerButton {
-  background: var(--color-error-soft-bg);
-  color: var(--color-error);
+  border-color: var(--button-danger-border);
+  background: var(--button-danger-bg);
+  color: var(--button-danger-text);
 }
 
 @media (max-width: 980px) {

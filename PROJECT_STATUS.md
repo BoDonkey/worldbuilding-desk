@@ -333,8 +333,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   discoverable without promoting systems into the writing-first primary nav.
 - A brand-new install now lands directly in a draft-ready Workspace instead of
   an empty Projects screen: a one-time, one-scene blank project is created
-  automatically (general fiction, no provider or ruleset setup required) the
-  first time the app has no projects at all. A dismissible "Getting started"
+  automatically as **My First Project** (General Fiction, empty **Chapter
+  One**, no provider or ruleset setup required) the first time the app has no
+  projects at all. A dismissible "Getting started"
   panel — shown only on that project, never on projects the author already
   had — walks through write → capture canon → review, and offers a bundled,
   read-only-in-spirit sample project ("The Emberglass Key", trimmed from the
@@ -345,6 +346,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   reachable directly from Projects at any time. Dismissal persists per
   project; the automatic first-project creation is a true one-time check,
   never re-triggered by later deleting all projects.
+- First-release project creation and ordinary-project Settings offer only
+  **General Fiction** and **LitRPG**. Existing Game Simulation projects remain
+  openable and keep their current mode and data until the author changes mode.
+  Workspace status-block actions are hidden when game systems are off and
+  return when the author deliberately enables that capability.
+- Representative Getting Started, Workspace, Settings, and destructive-dialog
+  surfaces now run automated WCAG A/AA scans in both themes. Editor controls
+  have accessible names, dark soft-accent text meets contrast, toast/nav
+  colors use shared theme tokens, and transient nav color transitions no
+  longer dip below contrast requirements.
 - AI provider setup in Settings is now a short Setup section (provider,
   data-flow disclosure, model, the one API key field the selected provider
   actually needs, Test connection) plus a collapsed Advanced section
@@ -358,6 +369,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   while a hosted provider receives the necessary text under its own terms,
   only when invoked. The assistant's "provider not configured" notice now
   links directly to Settings instead of leaving the author to find it.
+  Every model reported by Ollama or a local OpenAI-compatible server remains
+  available in a keyboard-focusable, scrollable result list; manual model
+  entry remains available and no model is selected silently.
 - Internal codenames and ML jargon are retired from rendered UI: "Shodh
   memories" reads as "Project memory," "RAG documents"/"Inherit RAG data"
   read as "Indexed context"/"Inherit indexed context," and the canon
@@ -480,6 +494,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   created by one import in a batch becomes a normal field choice for the
   rest; renaming an entry keeps chosen destinations. Characters show the
   category's custom fields on Canon, saved or not.
+- Character import suggestions deterministically strip the exact record name
+  (including possessive and separator variants) from a heading when a useful
+  label remains. A **New field** destination exposes an editable, validated
+  field name before import; blank, control-character, and overlong labels are
+  refused, while duplicate choices stay in the normal reconciliation flow.
 - The World Bible import preview states that nothing is saved until a draft
   is imported and shows a waiting / imported / failed count. Imported drafts
   stay listed as **Imported** with an **Open** action; failed drafts show the
@@ -1032,6 +1051,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.15c project-vault verification and copy passed full main Web CI in
+  [run 40317006961](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40317006961),
+  including all three Cypress shards, `cypress-smoke`, and packaged Electron
+  tests on macOS and Windows without retries. Coverage: 16 CI-policy tests,
+  file-size gate, lint with the existing warning, 1310 web + 47 engine + 12 UI
+  + 38 desktop unit tests, both builds, project-vault Cypress 3/3, and a local
+  packaged macOS profile scan 1/1. The parallel PR run lost Cypress's Electron
+  renderer late in `post-merge-smoke`; the identical main shard passed, and
+  Cypress memory reclamation was then enabled and verified on the focused
+  smoke at 18/18 instead of adding retries.
 - Slice 5.15b project vault UX and derived data passed full remote Web CI,
   including `cypress-smoke` and `Desktop E2E` on macOS and Windows, in
   [run 40196961910](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40196961910)

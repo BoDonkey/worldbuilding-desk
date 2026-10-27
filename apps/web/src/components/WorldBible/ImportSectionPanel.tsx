@@ -6,8 +6,10 @@ import type {
 } from '../../hooks/useWorldBibleImports';
 import {
   getImportFieldOptions,
+  getImportFieldLabelError,
   getNewFieldLabel,
-  resolveImportSectionField
+  resolveImportSectionField,
+  suggestImportFieldLabel
 } from '../../services/worldBible/worldBibleImportParsing';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
 
@@ -55,7 +57,7 @@ const describeDestination = (
     case 'ignore':
       return 'Not imported.';
     case 'new-field':
-      return `Adds a ${getNewFieldLabel(section)} field to ${categoryName} and fills it here. Other records get the field empty.`;
+      return `Adds a new field named ${getNewFieldLabel(section)} to ${categoryName} and fills it here. Other records get the field empty.`;
     case 'existing-field': {
       const field = category ? resolveImportSectionField(category, section) : null;
       return field
@@ -100,7 +102,8 @@ export function ImportSectionPanel({
   const categoryName = category?.name ?? 'Category';
   const draftNewFieldLabels = draft.detectedSections
     .filter((section) => section.action === 'new-field')
-    .map(getNewFieldLabel);
+    .map(getNewFieldLabel)
+    .filter((label) => !getImportFieldLabelError(label));
 
   return (
     <div className={styles.importSectionMapping}>
@@ -128,17 +131,24 @@ export function ImportSectionPanel({
       </div>
       <div className={styles.importSectionList}>
         {draft.detectedSections.map((section) => {
-          const newFieldLabels = [section.title];
+          const suggestedFieldLabel = suggestImportFieldLabel(section.title, draft.name);
+          const suggestedLabelExists = fieldOptions.some((field) =>
+            sameLabel(field.label, suggestedFieldLabel)
+          );
+          const newFieldLabels = suggestedLabelExists ? [] : [suggestedFieldLabel];
           [...draftNewFieldLabels, ...plannedNewFieldLabels].forEach((label) => {
             const exists = fieldOptions.some((field) => sameLabel(field.label, label));
             if (!exists && !newFieldLabels.some((known) => sameLabel(known, label))) {
               newFieldLabels.push(label);
             }
           });
-          const ownTitleIsField = fieldOptions.some((field) => sameLabel(field.label, section.title));
-          const visibleNewFieldLabels = ownTitleIsField
-            ? newFieldLabels.slice(1)
-            : newFieldLabels;
+          const visibleNewFieldLabels = newFieldLabels;
+          const newFieldLabel = section.newFieldLabel ?? suggestedFieldLabel;
+          const newFieldLabelError = section.action === 'new-field'
+            ? getImportFieldLabelError(newFieldLabel)
+            : null;
+          const newFieldInputId = `import-new-field-${draft.id}-${section.id}`;
+          const newFieldErrorId = `${newFieldInputId}-error`;
           return (
             <div key={section.id} className={styles.importSectionItem}>
               <div>
@@ -180,6 +190,31 @@ export function ImportSectionPanel({
                 )}
                 <option value={SKIP_VALUE}>Skip</option>
               </select>
+              {section.action === 'new-field' && (
+                <div>
+                  <label htmlFor={newFieldInputId}>New field name</label>
+                  <input
+                    id={newFieldInputId}
+                    type='text'
+                    value={newFieldLabel}
+                    maxLength={80}
+                    disabled={isApplyingImports || !(draft.useDetectedSections ?? false)}
+                    aria-invalid={newFieldLabelError ? true : undefined}
+                    aria-describedby={newFieldLabelError ? newFieldErrorId : undefined}
+                    onChange={(event) =>
+                      onUpdateSectionDestination(draft.id, section.id, {
+                        action: 'new-field',
+                        newFieldLabel: event.target.value
+                      })
+                    }
+                  />
+                  {newFieldLabelError && (
+                    <span id={newFieldErrorId} className={styles.importError}>
+                      {newFieldLabelError}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

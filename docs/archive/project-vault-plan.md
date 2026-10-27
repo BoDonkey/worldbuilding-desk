@@ -1,9 +1,9 @@
 # Project vaults plan (slice 5.15)
 
-Status: working plan for roadmap slice 5.15, split into 5.15a–5.15c on
-2026-10-25. The roadmap's 5.15 entry (Phase 5) is the requirement and its
-status board is authoritative for progress; this file records the design and
-the split. Archive it when 5.15c closes.
+> **Archived 2026-10-26.** Slices 5.15a–5.15c are complete. Durable product
+> truth lives in `PROJECT_STATUS.md`; requirements and execution status live
+> in `docs/road-to-market.md`. This file preserves the implementation design
+> and historical split.
 
 ## Design
 
