@@ -1,4 +1,4 @@
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import type {ComponentProps} from 'react';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
@@ -641,6 +641,81 @@ describe('AIAssistant factual lookup integration', () => {
         {role: 'assistant', content: 'Which entrance? 1) the kitchen 2) the roof'},
         {role: 'user', content: 'Option 1'}
       ]);
+    });
+
+    it('continues the conversation from the expanded reply without closing it', async () => {
+      mocks.search.mockResolvedValue([]);
+      mocks.stream
+        .mockReturnValueOnce('Which entrance? 1) the kitchen 2) the roof')
+        .mockReturnValueOnce('Through the kitchen, then.');
+      renderAssistant({
+        projectId: 'project-reader-follow-up',
+        aiConfig: {...hostedSettings, inspectorSettings: {...hostedSettings.inspectorSettings!, maxConsultationsPerDay: 10}},
+        showWritingCoach: false
+      });
+      await screen.findByText('Project context ready.');
+      const composer = screen.getByRole('textbox');
+      fireEvent.change(composer, {target: {value: 'How should Mira enter the tavern?'}});
+      fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+      await screen.findByText(/Which entrance\?/);
+      fireEvent.change(composer, {target: {value: 'An unsent draft'}});
+      fireEvent.click(screen.getByRole('button', {name: 'Expand reply in a reading view'}));
+
+      const dialog = screen.getByRole('dialog', {name: 'Assistant reply'});
+      expect(dialog).toHaveTextContent('You asked: How should Mira enter the tavern?');
+      fireEvent.change(screen.getByLabelText('Continue the conversation'), {target: {value: 'Option 1'}});
+      fireEvent.click(within(dialog).getByRole('button', {name: 'Send'}));
+
+      await waitFor(() => expect(dialog).toHaveTextContent('Through the kitchen, then.'));
+      expect(screen.getByRole('dialog', {name: 'Assistant reply'})).toBe(dialog);
+      expect(dialog).toHaveTextContent('You asked: Option 1');
+      expect(screen.getByLabelText('Continue the conversation')).toHaveValue('');
+      expect(composer).toHaveValue('An unsent draft');
+      const answer = (mocks.stream.mock.calls[1] as unknown as [{messages: Array<{role: string; content: string}>}])[0];
+      expect(answer.messages.map((message) => message.content)).toEqual([
+        'How should Mira enter the tavern?',
+        'Which entrance? 1) the kitchen 2) the roof',
+        'Option 1'
+      ]);
+    });
+
+    it('offers the question and the shown reply for a Source Note, not the reply alone', async () => {
+      mocks.search.mockResolvedValue([]);
+      mocks.stream.mockReturnValueOnce('<think>hidden</think>A harbor smuggler started it.');
+      const onCaptureSourceNote = vi.fn();
+      renderAssistant({
+        projectId: 'project-capture-transcript',
+        aiConfig: hostedSettings,
+        showWritingCoach: false,
+        onCaptureSourceNote
+      });
+      await screen.findByText('Project context ready.');
+      fireEvent.change(screen.getByRole('textbox'), {target: {value: 'Brainstorm who might have started the rumor.'}});
+      fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+      await screen.findByText('A harbor smuggler started it.');
+      fireEvent.click(screen.getByRole('button', {name: 'Save as Source Note'}));
+
+      expect(onCaptureSourceNote).toHaveBeenCalledWith(
+        'Question: Brainstorm who might have started the rumor.\n\nAnswer:\nA harbor smuggler started it.'
+      );
+    });
+
+    it('lets a writing-coach reply become a Source Note through the same review', async () => {
+      const onCaptureSourceNote = vi.fn();
+      renderAssistant({
+        projectId: 'project-coach-capture',
+        aiConfig: hostedSettings,
+        sceneText: 'Sera waits beside the locked harbor gate.',
+        onCaptureSourceNote
+      });
+      await screen.findByText('Project context ready.');
+      fireEvent.click(screen.getByRole('button', {name: 'Ask the writing coach'}));
+      await screen.findByText('This should not be used.');
+      fireEvent.click(screen.getByRole('button', {name: 'Save as Source Note'}));
+
+      expect(onCaptureSourceNote).toHaveBeenCalledWith(
+        'Question: Ask the writing coach about the current scene.\n\nAnswer:\nThis should not be used.'
+      );
     });
   });
 });

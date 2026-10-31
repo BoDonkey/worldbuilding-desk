@@ -418,3 +418,52 @@
   padding: 0.1rem 0.45rem;
   font-size: 0.72rem;
 }
+
+.readerQuestion {
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--color-accent);
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+}
+
+.readerPending {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.readerComposer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.readerComposer label {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.readerComposer textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  resize: vertical;
+  font: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+}
+
+.readerComposer textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 0.2rem color-mix(in oklab, var(--color-accent) 25%, transparent);
+}
+
+.readerComposer .readerActions {
+  justify-content: flex-end;
+}

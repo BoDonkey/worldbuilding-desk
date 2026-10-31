@@ -74,6 +74,7 @@ import {CraftCitationList} from '../CraftCitationList';
 import {AssistantReplyReader} from './AssistantReplyReader';
 import {AssistantContextSources} from './AssistantContextSources';
 import {getContextSourceRefs, getContextSourceSummaries} from '../../services/assistant/contextSources';
+import {buildLatestReplyTranscript, getReaderTurn, type ReplyReaderSelection} from '../../services/assistant/conversationTranscript';
 import {describeError} from '../../services/errors';
 import {useStatusAnnouncement} from '../../hooks/useStatusAnnouncement';
 import {
@@ -158,7 +159,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   // The request behind the latest model reply, so the author can ask for another version (4.73).
   const [versionRequest, setVersionRequest] = useState<Omit<LLMRequest, 'signal'> | null>(null);
   const [versionError, setVersionError] = useState<string | null>(null);
-  const [readingIndex, setReadingIndex] = useState<number | null>(null);
+  const [readingIndex, setReadingIndex] = useState<ReplyReaderSelection>(null);
   const aiProvider = aiConfig?.provider;
   const requestPolicy = useAssistantRequestPolicy({
     projectId,
@@ -346,7 +347,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     [context?.id, context?.type, memoryCache, projectId]
   );
 
-  const handleSendPrompt = useCallback(async (promptText: string) => {
+  const handleSendPrompt = useCallback(async (promptText: string, {keepInput = false} = {}) => {
     if (!promptText.trim()) return;
     if (sendBlockedReason) return;
     if (contextStatus !== 'ready') {
@@ -383,7 +384,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setMessages((prev) => [...prev.map(keepShownReply), displayedUserMessage]);
     setVersionRequest(null);
     setVersionError(null);
-    setInput('');
+    if (!keepInput) setInput('');
     setIsStreaming(true);
     announceStatus('Assistant is responding.');
     scrollMessagesToBottom();
@@ -651,12 +652,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     }
   };
 
+  // The author's question with the reply shown, reviewed and edited before saving (5.17).
   const handleCaptureSourceNote = () => {
-    const lastAssistantMessage = getLastAssistantMessage();
-    if (lastAssistantMessage && onCaptureSourceNote) {
-      onCaptureSourceNote(stripAssistantThinking(lastAssistantMessage.content));
-    }
+    const transcript = buildLatestReplyTranscript(messages);
+    if (transcript && onCaptureSourceNote) onCaptureSourceNote(transcript);
   };
+  const readerTurn = getReaderTurn(messages, readingIndex);
+  const readerReply = readerTurn?.replyIndex == null ? null : messages[readerTurn.replyIndex];
 
   const coachEvidence = selectedText || sceneText?.trim() || '';
   const coachScope: WritingCoachScope = selectedText ? 'selection' : 'scene';
@@ -907,12 +909,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           </div>
         ))}
       </div>
-      {readingIndex !== null && messages[readingIndex]?.role === 'assistant' && (
+      {readerTurn && (
         <AssistantReplyReader
-          content={messages[readingIndex].content}
-          craftCitations={messages[readingIndex].craftCitations}
-          isStreaming={isStreaming && readingIndex === messages.length - 1}
+          content={readerTurn.reply}
+          question={readerTurn.question}
+          craftCitations={readerReply?.craftCitations}
+          isStreaming={isStreaming && (!readerReply || readerTurn.replyIndex === messages.length - 1)}
           onClose={() => setReadingIndex(null)}
+          onFollowUp={(text) => {
+            setReadingIndex('latest');
+            void handleSendPrompt(text, {keepInput: true});
+          }}
+          followUpBlockedReason={
+            contextStatus === 'ready' ? sendBlockedReason
+              : contextStatus === 'error' ? 'Project context is unavailable.' : 'Project context is still loading.'
+          }
         />
       )}
 
