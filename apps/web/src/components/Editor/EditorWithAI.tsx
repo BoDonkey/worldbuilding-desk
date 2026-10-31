@@ -48,6 +48,11 @@ import {
 } from '../../services/workspace/currentSceneFind';
 import type {AITextProvenance} from '../../services/editor/aiTextProvenance';
 import {useAITextControls} from '../../hooks/useAITextControls';
+import {
+  clearSavedEditorScrollTop,
+  readSavedEditorScrollTop,
+  writeSavedEditorScrollTop
+} from '../../services/editor/editorScrollStore';
 
 interface AIContextType {
   type: 'document';
@@ -125,49 +130,7 @@ interface SelectionBubbleState {
   matchRecord?: {name: string; html: string; lore: LoreInspectorRecord};
 }
 
-declare global {
-  interface Window {
-    __wbdEditorScrollPositions?: Record<string, number>;
-  }
-}
-
-const editorScrollPositions = new Map<string, number>();
 const REVIEW_FOCUS_TOP_OFFSET = 120;
-
-const getWindowEditorScrollStore = () => {
-  if (typeof window === 'undefined') return null;
-  window.__wbdEditorScrollPositions ??= {};
-  return window.__wbdEditorScrollPositions;
-};
-
-const readSavedEditorScrollTop = (scrollKey: string) => {
-  const store = getWindowEditorScrollStore();
-  const candidates = [
-    editorScrollPositions.get(scrollKey),
-    store?.[scrollKey]
-  ];
-
-  return candidates.find(
-    (candidate): candidate is number =>
-      typeof candidate === 'number' && Number.isFinite(candidate) && candidate > 0
-  ) ?? 0;
-};
-
-const writeSavedEditorScrollTop = (scrollKey: string, scrollTop: number) => {
-  if (!Number.isFinite(scrollTop)) return;
-  editorScrollPositions.set(scrollKey, scrollTop);
-  const store = getWindowEditorScrollStore();
-  if (!store) return;
-  store[scrollKey] = scrollTop;
-};
-
-const clearSavedEditorScrollTop = (scrollKey: string) => {
-  editorScrollPositions.set(scrollKey, 0);
-  const store = getWindowEditorScrollStore();
-  if (store) {
-    store[scrollKey] = 0;
-  }
-};
 
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   projectId,
@@ -533,7 +496,14 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       scrollElement.removeEventListener('pointerdown', markUserInterrupted);
       scrollElement.removeEventListener('keydown', markUserInterrupted);
     };
-  }, [documentId, editorReadyToken, editorScrollKey, focusQuery, hasContent, resetScrollToken]);
+  }, [
+    documentId,
+    editorReadyToken,
+    editorScrollKey,
+    focusQuery,
+    hasContent,
+    resetScrollToken
+  ]);
 
   useEffect(() => {
     if (!resetScrollToken) return;
