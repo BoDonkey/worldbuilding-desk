@@ -32,7 +32,8 @@ commit hash. Refactor slices are strictly behavior-preserving.
   coherent piece (a hook, service, or component with its own tests) into its
   own file. Never get under the limit by reformatting, joining lines, or
   deleting comments. Run `--update` only to record a file that shrank.
-- **Docs:** update `PROJECT_STATUS.md` when application truth changes; keep
+- **Docs:** update `PROJECT_STATUS.md` (and `docs/status-writing-workspace.md`
+  for Workspace behavior) when application truth changes; keep
   completed-work diaries out of the roadmap; archive superseded docs to
   `docs/archive/` with a banner instead of leaving them active-looking. Do
   not create new parallel roadmaps or spec forks.
