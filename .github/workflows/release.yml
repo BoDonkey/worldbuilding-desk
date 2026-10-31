@@ -1,0 +1,66 @@
+name: Release
+
+# Slice 5.1: pushing a tag like v0.2.0 builds installers and the update
+# manifests electron-updater reads (latest*.yml) and uploads them to a DRAFT
+# GitHub release. Installed apps never see a draft; an update reaches authors
+# only when someone reviews the draft and publishes it.
+# Builds are unsigned until Slice 5.2; macOS then opens the release page
+# instead of installing in place.
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tag matches the desktop app version
+        run: |
+          expected="v$(node -p "require('./apps/desktop/package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match apps/desktop/package.json ($expected)." >&2
+            exit 1
+          fi
+
+  build:
+    needs: version
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            targets: --mac --x64 --arm64
+          - os: windows-latest
+            targets: --win
+          - os: ubuntu-latest
+            targets: --linux
+    runs-on: ${{ matrix.os }}
+    name: Build (${{ matrix.os }})
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the app
+        run: pnpm build:web && pnpm build:desktop
+      - name: Package and upload to the draft release
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm exec electron-builder ${{ matrix.targets }} --publish always

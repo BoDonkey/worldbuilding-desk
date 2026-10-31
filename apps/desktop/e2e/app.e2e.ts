@@ -21,7 +21,8 @@ test('loads the bundled renderer from disk under its Content-Security-Policy', a
     'onLLMChunk',
     'onLLMComplete',
     'onLLMError',
-    'providerKeys'
+    'providerKeys',
+    'updates'
   ]);
 
   expect(desktop.rendererErrors).toEqual([]);

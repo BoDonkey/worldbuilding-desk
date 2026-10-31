@@ -2218,6 +2218,9 @@ KoboldCPP.
   update-from-previous-version.
 - **5.2 Code signing + notarization.** Apple Developer ID + notarization for
   macOS; OV/EV or Azure Trusted Signing for Windows. Wire into CI packaging.
+  Then let signed macOS builds install updates in place (5.1 leaves macOS
+  on the release page) and set the Windows `publisherName` so downloaded
+  updates are signature-checked.
 - **5.3 Packaged-app validation.** Playwright Electron E2E covering the LLM
   streaming IPC path (highest-payoff single test); packaged checks for file
   operations, external-link policy, provider diagnostics; both platforms.
