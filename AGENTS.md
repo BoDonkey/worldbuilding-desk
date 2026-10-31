@@ -26,6 +26,12 @@ commit hash. Refactor slices are strictly behavior-preserving.
 - **Architecture boundaries:** `docs/architecture-review.md`. Domain logic
   lives in services/hooks, not route components; no new direct persistence
   paths; keep the Electron IPC surface narrow.
+- **File size:** `pnpm check:file-sizes` fails when a source file passes
+  1,000 lines or a file already over that grows past its baseline in
+  `scripts/file-size-baseline.json`. When a change hits the limit, move a
+  coherent piece (a hook, service, or component with its own tests) into its
+  own file. Never get under the limit by reformatting, joining lines, or
+  deleting comments. Run `--update` only to record a file that shrank.
 - **Docs:** update `PROJECT_STATUS.md` when application truth changes; keep
   completed-work diaries out of the roadmap; archive superseded docs to
   `docs/archive/` with a banner instead of leaving them active-looking. Do
