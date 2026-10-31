@@ -1,8 +1,10 @@
 import {app, BrowserWindow, safeStorage, session, shell} from 'electron';
 import {autoUpdater} from 'electron-updater';
+import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {setupAPIHandlers} from './apiHandler';
+import {resolveDataFolder, testAppDataFolder} from './dataFolder';
 import {openExternalIfSafe} from './externalLinks';
 import {ProviderKeyVault} from './providerKeyVault';
 import {setupUpdateHandlers, testUpdateFeedUrl} from './updateIpc';
@@ -12,6 +14,22 @@ import {buildDevContentSecurityPolicy, isRendererNavigation} from './windowPolic
 const isDevelopment = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 let mainWindow: BrowserWindow | null = null;
+
+/** Settles the data folder before anything opens it; `--user-data-dir` wins. */
+function useSagaSpineDataFolder() {
+  if (app.commandLine.hasSwitch('user-data-dir')) return;
+  const appData = testAppDataFolder(process.env.SAGASPINE_TEST_APP_DATA) ?? app.getPath('appData');
+  try {
+    const choice = resolveDataFolder({appData, fs});
+    if (choice.outcome === 'moved' || choice.outcome === 'kept-legacy') {
+      console.log(`Data folder ${choice.outcome}: ${choice.directory}`, choice.setAside ?? '');
+    }
+    app.setPath('userData', choice.directory);
+  } catch (error) {
+    console.error('Could not prepare the SagaSpine data folder; using the default.', error);
+  }
+}
+useSagaSpineDataFolder();
 /** Startup checks wait so they never slow the first window. */
 const STARTUP_UPDATE_CHECK_DELAY_MS = 8_000;
 
