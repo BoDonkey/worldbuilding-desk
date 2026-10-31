@@ -165,7 +165,7 @@
   max-height: 100%;
   background: linear-gradient(
     180deg,
-    color-mix(in oklab, var(--color-bg-secondary) 92%, var(--color-on-accent)) 0%,
+    color-mix(in oklab, var(--color-bg-secondary) 92%, var(--color-surface-lift)) 0%,
     var(--color-bg-secondary) 100%
   );
   border: 1px solid var(--color-border);

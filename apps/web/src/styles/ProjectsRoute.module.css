@@ -9,7 +9,7 @@
 .helpPanel {
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: color-mix(in oklab, var(--color-bg-secondary) 88%, var(--color-on-accent));
+  background: color-mix(in oklab, var(--color-bg-secondary) 88%, var(--color-surface-lift));
   padding: 0.8rem 0.95rem;
 }
 
