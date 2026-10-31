@@ -18,6 +18,8 @@ const STARTUP_UPDATE_CHECK_DELAY_MS = 8_000;
 function createUpdateController(): UpdateController {
   const feedUrl = testUpdateFeedUrl(process.env.SAGASPINE_TEST_UPDATE_FEED);
   if (feedUrl) autoUpdater.setFeedURL({provider: 'generic', url: feedUrl});
+  // SagaSpine ships full NSIS installers, never the web installer that fetches its payload later.
+  autoUpdater.disableWebInstaller = true;
   // Linux updates only as an AppImage; other unpackaged runs have nothing to update.
   const supported = app.isPackaged && (process.platform !== 'linux' || Boolean(process.env.APPIMAGE));
   return new UpdateController({

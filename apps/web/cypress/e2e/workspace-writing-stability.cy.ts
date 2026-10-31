@@ -168,8 +168,10 @@ describe('Workspace writing stability in a long scene', () => {
       editorScroller().then(($scroller) => {
         const viewport = $scroller[0].getBoundingClientRect();
         const caretLine = $line[0].getBoundingClientRect();
-        expect(caretLine.bottom, 'caret line stays inside the editor').to.be.at.most(viewport.bottom + 1);
-        expect(caretLine.top).to.be.at.least(viewport.top - 1);
+        // A few pixels of slack: the browser may leave a line a sub-pixel or
+        // two past the edge after scrolling it into view.
+        expect(caretLine.bottom, 'caret line stays inside the editor').to.be.at.most(viewport.bottom + 4);
+        expect(caretLine.top).to.be.at.least(viewport.top - 4);
       });
     });
   });

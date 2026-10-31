@@ -63,10 +63,15 @@ export interface Desktop {
   relaunch(): Promise<void>;
 }
 
-export const test = base.extend<{desktop: Desktop}>({
-  // eslint-disable-next-line no-empty-pattern -- Playwright requires an object pattern here.
-  desktop: async ({}, use, testInfo) => {
+export const test = base.extend<{desktop: Desktop; updateQuestionAnswered: boolean}>({
+  // Most tests start as an author who already answered the one-time update
+  // question (5.1), so its card does not cover the controls they use.
+  updateQuestionAnswered: [true, {option: true}],
+  desktop: async ({updateQuestionAnswered}, use, testInfo) => {
     const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sagaspine-e2e-'));
+    if (updateQuestionAnswered) {
+      fs.writeFileSync(path.join(userDataDir, 'update-preferences.json'), JSON.stringify({checkAutomatically: false}));
+    }
     const desktop = {rendererErrors: [], userDataDir} as unknown as Desktop;
     const open = async () => {
       const launched = await launch(userDataDir);
