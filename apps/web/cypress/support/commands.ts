@@ -387,6 +387,36 @@ Cypress.Commands.add('setSeededProjectProvider', (provider: 'anthropic' | 'ollam
   );
 });
 
+// Writes records into one store of the app's database. The write can wait
+// behind the app's own transactions on a busy machine, so it gets a longer
+// limit than Cypress's 4s default, and a blocked open fails with a reason.
+Cypress.Commands.add('putIndexedDbRecords', (storeName: string, records: Array<{id: string}>) => {
+  return cy.window({log: false}).then({timeout: 20_000}, (win) =>
+    new Cypress.Promise<void>((resolve, reject) => {
+      const request = win.indexedDB.open(DB_NAME, DB_VERSION);
+      request.onerror = () => reject(request.error);
+      request.onblocked = () => reject(new Error(`Opening ${DB_NAME} for ${storeName} was blocked.`));
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction([storeName], 'readwrite');
+        records.forEach((record) => tx.objectStore(storeName).put(record));
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+        tx.onabort = () => {
+          db.close();
+          reject(tx.error ?? new Error(`Writing to ${storeName} was aborted.`));
+        };
+      };
+    })
+  );
+});
+
 declare global {
   namespace Cypress {
     interface Chainable {
@@ -396,6 +426,8 @@ declare global {
       ensureSettingsSectionOpen(sectionTitle: string): Chainable<void>;
       // Switches the seeded smoke project's AI provider in IndexedDB; reload afterwards.
       setSeededProjectProvider(provider: 'anthropic' | 'ollama' | 'local-openai'): Chainable<void>;
+      // Puts records into one IndexedDB store of the app database.
+      putIndexedDbRecords<T extends {id: string}>(storeName: string, records: T[]): Chainable<void>;
     }
   }
 }

@@ -42,35 +42,8 @@ function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
   );
 }
 
-function putRecords<T extends {id: string}>(
-  storeName: string,
-  records: T[]
-): Cypress.Chainable<void> {
-  return cy.window().then(
-    (win) =>
-      new Cypress.Promise<void>((resolve, reject) => {
-        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
-        openRequest.onerror = () => reject(openRequest.error);
-        openRequest.onsuccess = () => {
-          const db = openRequest.result;
-          const tx = db.transaction([storeName], 'readwrite');
-          const store = tx.objectStore(storeName);
-          records.forEach((record) => store.put(record));
-          tx.oncomplete = () => {
-            db.close();
-            resolve();
-          };
-          tx.onerror = () => {
-            db.close();
-            reject(tx.error);
-          };
-        };
-      })
-  );
-}
-
 function seedUnusedSolutionCandidate(): Cypress.Chainable<void> {
-  return putRecords('characters', [
+  return cy.putIndexedDbRecords('characters', [
     {
       id: 'character-odessa',
       projectId: 'cypress-project-1',
@@ -80,7 +53,7 @@ function seedUnusedSolutionCandidate(): Cypress.Chainable<void> {
       updatedAt: 1
     }
   ]).then(() =>
-    putRecords('canonical_facts', [
+    cy.putIndexedDbRecords('canonical_facts', [
       {
         id: 'fact-odessa-teleport',
         projectId: 'cypress-project-1',
@@ -93,7 +66,7 @@ function seedUnusedSolutionCandidate(): Cypress.Chainable<void> {
       }
     ])
   ).then(() =>
-    putRecords('writingDocuments', [
+    cy.putIndexedDbRecords('writingDocuments', [
       {
         id: 'scene-odessa-1',
         projectId: 'cypress-project-1',
