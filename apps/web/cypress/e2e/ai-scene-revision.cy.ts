@@ -65,7 +65,11 @@ describe('Reviewed assistant scene revisions', () => {
       ]));
     });
     // Narrow viewport: the context drawer is itself an Escape-closable panel.
+    // Reload at that size so the click never lands mid-way through the
+    // wide-to-narrow layout switch (a CI flake on a slow runner).
     cy.viewport(1000, 900);
+    cy.reload();
+    cy.get('.tiptap[contenteditable="true"]').should('contain.text', 'Alpha content');
     cy.contains('button', 'Context').click();
     cy.contains('button', /^AI$/).click();
     cy.contains('button', 'Expand').click();
