@@ -46,6 +46,12 @@ SagaSpine is a desktop writing environment for fiction authors. The current prod
   Project retrieval and the writing coach's query embeddings both use it in
   packaged builds; dev and Cypress keep the lexical/fallback paths. The
   installer is about 45 MB larger.
+- The desktop app keeps its data (projects, settings, saved keys) in a
+  `SagaSpine` folder: `~/Library/Application Support/SagaSpine`,
+  `%APPDATA%\SagaSpine`, or `~/.config/SagaSpine` (Slice 5.2). Earlier builds
+  used a folder named `desktop`; the first launch moves it in one rename, and
+  sets aside (never deletes) any unrelated folder already named `SagaSpine`.
+  If the move fails, the app keeps using `desktop` and tries again next launch.
 - Update checks (Slice 5.1) are the desktop app's only network contact
   outside author-invoked AI requests. The installed app asks once whether to
   check GitHub Releases automatically at startup and never checks before that

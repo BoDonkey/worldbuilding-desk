@@ -28,7 +28,13 @@ export function packagedExecutable(): string | undefined {
   return found;
 }
 
-async function launch(userDataDir: string): Promise<{app: ElectronApplication; page: Page}> {
+/**
+ * Starts the app on `userDataDir`, or, with `appData` instead, on the data
+ * folder the app picks itself inside that app-data folder.
+ */
+export async function launchDesktop(
+  profile: {userDataDir: string} | {appData: string}
+): Promise<{app: ElectronApplication; page: Page}> {
   const executablePath = packagedExecutable();
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
@@ -37,11 +43,10 @@ async function launch(userDataDir: string): Promise<{app: ElectronApplication; p
   // Set by some editors' terminals; it makes Electron start as plain Node.
   delete env.ELECTRON_RUN_AS_NODE;
   delete env.VITE_DEV_SERVER_URL;
-  const app = await _electron.launch({
-    executablePath,
-    args: [...(executablePath ? [] : [path.join(desktopRoot, 'dist', 'main', 'main.js')]), `--user-data-dir=${userDataDir}`],
-    env
-  });
+  const args = executablePath ? [] : [path.join(desktopRoot, 'dist', 'main', 'main.js')];
+  if ('userDataDir' in profile) args.push(`--user-data-dir=${profile.userDataDir}`);
+  else env.SAGASPINE_TEST_APP_DATA = profile.appData;
+  const app = await _electron.launch({executablePath, args, env});
   // The search model ships with the app; block its old download hosts so a
   // regression that fetches it again cannot pass by reaching the network.
   await app.context().route(/^https:\/\/([a-z0-9-]+\.)*(huggingface\.co|hf\.co|jsdelivr\.net)\//, (route) => route.abort());
@@ -74,7 +79,7 @@ export const test = base.extend<{desktop: Desktop; updateQuestionAnswered: boole
     }
     const desktop = {rendererErrors: [], userDataDir} as unknown as Desktop;
     const open = async () => {
-      const launched = await launch(userDataDir);
+      const launched = await launchDesktop({userDataDir});
       desktop.app = launched.app;
       desktop.page = launched.page;
       desktop.page.on('console', (message) => {
