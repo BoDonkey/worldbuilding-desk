@@ -11,6 +11,8 @@ its replacement.
 Read in this order:
 
 1. `PROJECT_STATUS.md` (repo root) — what is true in the current application.
+   Writing Workspace detail lives in `docs/status-writing-workspace.md`, which
+   is part of it.
 2. `docs/road-to-market.md` — the single active roadmap and slice plan, from
    trust validation through beta and launch. Its status board is authoritative
    for open work.
