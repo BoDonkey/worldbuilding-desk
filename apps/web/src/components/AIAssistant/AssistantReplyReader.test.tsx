@@ -78,4 +78,29 @@ describe('AssistantReplyReader', () => {
     await waitFor(() => expect(mocks.copyText).toHaveBeenCalledWith(REPLY));
     expect(mocks.pushAppToast).toHaveBeenCalledWith({message: 'Reply copied.'});
   });
+
+  it('copies the question with the reply when it has one (5.17)', async () => {
+    render(<AssistantReplyReader content='Through the kitchen.' question='Which way in?' isStreaming={false} onClose={vi.fn()} />);
+    expect(screen.getByTestId('assistant-reply-reader-body')).toHaveTextContent('You asked: Which way in?');
+    fireEvent.click(screen.getByRole('button', {name: 'Copy with question'}));
+
+    await waitFor(() =>
+      expect(mocks.copyText).toHaveBeenCalledWith('Question: Which way in?\n\nAnswer:\nThrough the kitchen.')
+    );
+    expect(mocks.pushAppToast).toHaveBeenCalledWith({message: 'Question and reply copied.'});
+  });
+
+  it('holds a follow-up while one cannot be sent, and says why (5.17)', () => {
+    const onFollowUp = vi.fn();
+    const {rerender} = render(
+      <AssistantReplyReader content='Advice.' isStreaming={false} onClose={vi.fn()} onFollowUp={onFollowUp} followUpBlockedReason='Budget reached for today.' />
+    );
+    fireEvent.change(screen.getByLabelText('Continue the conversation'), {target: {value: 'And then?'}});
+    expect(screen.getByRole('button', {name: 'Send'})).toBeDisabled();
+    expect(screen.getByText('Budget reached for today.')).toBeInTheDocument();
+
+    rerender(<AssistantReplyReader content='Advice.' isStreaming={false} onClose={vi.fn()} onFollowUp={onFollowUp} />);
+    fireEvent.keyDown(screen.getByLabelText('Continue the conversation'), {key: 'Enter'});
+    expect(onFollowUp).toHaveBeenCalledWith('And then?');
+  });
 });

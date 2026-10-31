@@ -309,9 +309,51 @@ describe('Ask your project', () => {
     cy.contains('A harbor smuggler could have started the rumor.').should('be.visible');
     cy.contains('button', 'Save as Source Note').click();
     cy.contains('strong', 'Save as draft Source Note').should('be.visible');
+    // The author reviews the question with the reply, and can edit it (5.17).
+    cy.get('textarea[id]').filter(':visible').last()
+      .should('contain.value', 'Question: Brainstorm who started the rumor about Sera.')
+      .and('contain.value', 'A harbor smuggler could have started the rumor.')
+      .type(' Check the dock ledgers.');
     cy.contains('button', 'Confirm action').click();
     cy.contains('as a draft Source Note').should('be.visible');
     cy.visit('/lore');
-    cy.contains('A harbor smuggler could have started the rumor.').should('exist');
+    cy.contains('Question: Brainstorm who started the rumor about Sera.').should('exist');
+    cy.window().then((win) => new Cypress.Promise<string[]>((resolve, reject) => {
+      const request = win.indexedDB.open(DB_NAME);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const all = request.result.transaction('lore_documents').objectStore('lore_documents').getAll();
+        all.onsuccess = () => {
+          request.result.close();
+          resolve((all.result as Array<{content: string}>).map((note) => note.content));
+        };
+      };
+    })).should('include',
+      'Question: Brainstorm who started the rumor about Sera.\n\nAnswer:\nA harbor smuggler could have started the rumor. Check the dock ledgers.');
+  });
+
+  it('continues the conversation from the expanded reply (5.17)', () => {
+    let calls = 0;
+    const bodies: string[] = [];
+    cy.intercept('POST', ANTHROPIC_STREAM, (request) => {
+      calls += 1;
+      bodies.push(JSON.stringify(request.body));
+      request.reply(anthropicReply(calls === 1 ? 'Two suspects: 1) the harbor smuggler 2) the archivist' : 'The archivist had the motive.'));
+    });
+    cy.visit('/ask');
+    ask('Brainstorm who started the rumor about Sera.');
+    cy.contains('Two suspects').should('be.visible');
+    cy.contains('button', 'Expand').click();
+    cy.get('[role="dialog"]').within(() => {
+      cy.contains('You asked: Brainstorm who started the rumor about Sera.').should('be.visible');
+      cy.contains('label', 'Continue the conversation').click();
+      cy.focused().type('Option 2{enter}');
+      cy.contains('The archivist had the motive.').should('be.visible');
+      cy.contains('You asked: Option 2').should('be.visible');
+    });
+    cy.then(() => {
+      expect(bodies[1], 'the answer carries the offered options').to.contain('1) the harbor smuggler 2) the archivist');
+      expect(bodies[1]).to.contain('Brainstorm who started the rumor about Sera.');
+    });
   });
 });

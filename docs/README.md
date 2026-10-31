@@ -124,6 +124,9 @@ the full-length originals behind the 2026-08-01 consolidation:
 - `stat-peek-plan.md` — completed plan for Slices 4.46–4.48 (character
   snapshot service, stat peek, pinned stat panel); durable behavior lives in
   `docs/product-blueprint.md`.
+- `next-prompt-5.17.md` — completed Slice 5.17 handoff (writing-flow
+  stability + assistant continuity); durable behavior lives in
+  `PROJECT_STATUS.md`.
 - `project-vault-plan.md` and `next-prompt-5.15c.md` — completed Slice 5.15
   vault design and its final verification handoff; durable behavior lives in
   `PROJECT_STATUS.md` and the roadmap records the completed slices.

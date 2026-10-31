@@ -301,3 +301,23 @@ describe('import heading destinations', () => {
     expect(reconcileImportSectionDestinations(sections, characters, 'Mira')).toBe(sections);
   });
 });
+
+describe('getPlannedNewFieldLabels (5.17)', () => {
+  it('shares valid planned names per category and leaves out emptied ones', async () => {
+    const {getPlannedNewFieldLabels} = await import('./worldBibleImportParsing');
+    const draft = (detectedSections: WorldBibleImportSectionDraft[]) => ({
+      categoryId: 'characters',
+      include: true,
+      useDetectedSections: true,
+      detectedSections
+    });
+    const planned = getPlannedNewFieldLabels([
+      draft([
+        {id: 'a', title: 'Education', content: 'x', action: 'new-field', newFieldLabel: '   '},
+        {id: 'b', title: 'Traits', content: 'x', action: 'new-field'}
+      ]),
+      draft([{id: 'c', title: 'traits', content: 'x', action: 'new-field', newFieldLabel: 'TRAITS'}])
+    ]);
+    expect(planned.get('characters')).toEqual(['Traits']);
+  });
+});

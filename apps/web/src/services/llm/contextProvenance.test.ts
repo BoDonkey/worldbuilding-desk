@@ -85,4 +85,16 @@ describe('context provenance labels', () => {
     expect(prompt).toContain('Treat accepted canon and accepted canon facts');
     expect(prompt).toContain('Treat Source Notes as evidence and background material');
   });
+
+  it('names the record a Source Note or World Bible chunk came from, and no record for others', () => {
+    expect(buildRagContextChunk(makeResult('lore', 'lore:note-7', 'Salt Roads')).sourceRef).toEqual({
+      kind: 'source-note',
+      id: 'note-7'
+    });
+    expect(buildRagContextChunk(makeResult('worldbible', 'entity-3', 'Mira')).sourceRef).toEqual({
+      kind: 'world-bible',
+      id: 'entity-3'
+    });
+    expect(buildRagContextChunk(makeResult('canon_fact', 'fact-1', 'Mira')).sourceRef).toBeUndefined();
+  });
 });

@@ -4,12 +4,15 @@ import type {LLMMessage} from '../services/llm/types';
 import type {CraftCitation} from '../services/craft/types';
 import type {AITextProvenance} from '../services/editor/aiTextProvenance';
 import {keepShownReply} from '../services/assistant/replyVersions';
+import {isAssistantContextSourceRef, type AssistantContextSourceRef} from '../services/assistant/contextSources';
 import type {PromptBreakdown} from '../services/llm/contextBudget';
 import type {ModelContextSize} from '../services/llm/modelContextSize';
 import {projectBrowserStorage, type ProjectBrowserStorage} from '../services/storage';
 
 export type AssistantChatMessage = LLMMessage & {
   contextSources?: string[];
+  /** The Source Note or World Bible record behind a source label, when there is one (5.17). */
+  contextSourceRefs?: AssistantContextSourceRef[];
   /** Context left out to fit the model's context (Slice 4.71). */
   leftOutSources?: string[];
   /** What filled the prompt, estimated, and the model's context then (Slice 4.72). */
@@ -52,6 +55,8 @@ const isAssistantChatMessage = (value: unknown): value is AssistantChatMessage =
     (message.contextSources === undefined ||
       (Array.isArray(message.contextSources) &&
         message.contextSources.every((source) => typeof source === 'string'))) &&
+    (message.contextSourceRefs === undefined ||
+      (Array.isArray(message.contextSourceRefs) && message.contextSourceRefs.every(isAssistantContextSourceRef))) &&
     (message.leftOutSources === undefined ||
       (Array.isArray(message.leftOutSources) &&
         message.leftOutSources.every((source) => typeof source === 'string'))) &&

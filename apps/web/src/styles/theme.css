@@ -9,6 +9,8 @@
   --color-accent: #2563eb;
   --color-accent-hover: #1d4ed8;
   --color-on-accent: #ffffff;
+  /* Mixed into a background to lift a raised surface; not a text color. */
+  --color-surface-lift: #ffffff;
   --color-success: #16a34a;
   --color-warning: #ea580c;
   --color-error: #dc2626;
@@ -89,6 +91,8 @@
   --color-accent: #3b82f6;
   --color-accent-hover: #60a5fa;
   --color-on-accent: #08111f;
+  /* Mid grey, not white: a lifted surface keeps secondary text above 4.5:1. */
+  --color-surface-lift: #808080;
   --color-success: #22c55e;
   --color-warning: #f97316;
   --color-error: #ef4444;

@@ -1,6 +1,6 @@
 # SagaSpine Project Status
 
-**Last Updated:** October 26, 2026
+**Last Updated:** October 31, 2026
 
 ## Project Overview
 
@@ -294,6 +294,26 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   formatted through the sanitized Source Note renderer, its craft
   references, and Copy/Close. Display only: stored messages are unchanged.
   Escape closes just the reading view, not the narrow-viewport drawer.
+- Assistant conversations stay one session (Slice 5.17). Each request sends
+  earlier question/answer turns as the author saw them: only the reply
+  version shown, never discarded alternatives, with model thinking removed,
+  newest turns first within a quarter of the model's context (512–6,000
+  tokens). Answering "Option 1" therefore reaches the model with the
+  question and the options it offered. The reading view shows the question
+  a reply answered, has **Copy with question**, and has its own composer: a
+  follow-up stays in the same conversation, the view follows the new reply,
+  and the main draft is kept.
+- **Save as Source Note** (chat and inline coach) offers the author's
+  question plus the reply shown as an editable transcript; only the text the
+  author confirms is saved, as a draft Source Note. Cards under **Sources
+  used** and **Left out** can each be dismissed (display only), and a card
+  from a Source Note or World Bible record offers **Open** to that exact
+  record only when it still exists in the project.
+- Writing stays put during autosave (Slice 5.17): scroll restore runs only
+  when a scene opens, the editor is ready, or a reset is asked for, never on
+  each edit, and the editor ignores late echoes of text it already emitted,
+  so typing, deletion, and autosave in a long scene keep the caret, scroll,
+  and text in place.
 - To give the assistant a passage, the author selects it and chooses **Ask
   AI about this** (selection menu or right-click). While that passage is the
   assistant's context it stays marked in the editor, even after focus moves

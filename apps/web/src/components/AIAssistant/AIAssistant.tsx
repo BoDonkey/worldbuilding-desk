@@ -9,7 +9,7 @@ import type {
 } from '../../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../../services/shodh/getShodhService';
 import {SHODH_MEMORIES_EVENT} from '../../services/shodh/shodhEvents';
-import type {LLMContextChunk, LLMMessage, LLMRequest} from '../../services/llm/types';
+import type {LLMMessage, LLMRequest} from '../../services/llm/types';
 import type {AssistantChatMessage} from '../../hooks/useAssistantConversation';
 import {useAssistantConversation} from '../../hooks/useAssistantConversation';
 import {
@@ -18,6 +18,7 @@ import {
 } from '../../services/llm/contextProvenance';
 import {PromptManager} from '../../services/prompts/PromptManager';
 import {buildUnverifiedFactualAnswer} from '../../services/assistant/factualQuestionBoundary';
+import {assistantHistoryBudget, buildAssistantHistory} from '../../services/assistant/conversationHistory';
 import {
   buildSubjectClarification,
   describeResolvedSubject,
@@ -49,8 +50,7 @@ import {
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
-import {buildPromptBreakdown, fitContextChunks, sectionTokenLabel} from '../../services/llm/contextBudget';
-import {PromptTokenSummary} from '../common/PromptTokenSummary';
+import {buildPromptBreakdown, fitContextChunks} from '../../services/llm/contextBudget';
 import {ReplyVersionControls} from '../common/ReplyVersionControls';
 import {
   dropShownReply,
@@ -72,6 +72,9 @@ import {
 } from '../../services/coach/writingCoachConsultation';
 import {CraftCitationList} from '../CraftCitationList';
 import {AssistantReplyReader} from './AssistantReplyReader';
+import {AssistantContextSources} from './AssistantContextSources';
+import {getContextSourceRefs, getContextSourceSummaries} from '../../services/assistant/contextSources';
+import {buildLatestReplyTranscript, getReaderTurn, type ReplyReaderSelection} from '../../services/assistant/conversationTranscript';
 import {describeError} from '../../services/errors';
 import {useStatusAnnouncement} from '../../hooks/useStatusAnnouncement';
 import {
@@ -126,16 +129,6 @@ interface AIAssistantProps {
   onClearContext?: () => void;
 }
 
-const getContextSourceSummaries = (chunks: LLMContextChunk[]): string[] =>
-  Array.from(
-    new Map(
-      chunks
-        .map((chunk) => chunk.source.trim())
-        .filter(Boolean)
-        .map((source) => [source.toLowerCase(), source])
-    ).values()
-  );
-
 export const AIAssistant: React.FC<AIAssistantProps> = ({
   projectId,
   aiConfig,
@@ -166,7 +159,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   // The request behind the latest model reply, so the author can ask for another version (4.73).
   const [versionRequest, setVersionRequest] = useState<Omit<LLMRequest, 'signal'> | null>(null);
   const [versionError, setVersionError] = useState<string | null>(null);
-  const [readingIndex, setReadingIndex] = useState<number | null>(null);
+  const [readingIndex, setReadingIndex] = useState<ReplyReaderSelection>(null);
   const aiProvider = aiConfig?.provider;
   const requestPolicy = useAssistantRequestPolicy({
     projectId,
@@ -354,7 +347,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     [context?.id, context?.type, memoryCache, projectId]
   );
 
-  const handleSendPrompt = useCallback(async (promptText: string) => {
+  const handleSendPrompt = useCallback(async (promptText: string, {keepInput = false} = {}) => {
     if (!promptText.trim()) return;
     if (sendBlockedReason) return;
     if (contextStatus !== 'ready') {
@@ -391,7 +384,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setMessages((prev) => [...prev.map(keepShownReply), displayedUserMessage]);
     setVersionRequest(null);
     setVersionError(null);
-    setInput('');
+    if (!keepInput) setInput('');
     setIsStreaming(true);
     announceStatus('Assistant is responding.');
     scrollMessagesToBottom();
@@ -458,7 +451,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                   findPendingProposalsForQuestion(factualPrompt, pendingProposals.proposals)
                 )
               : directSavedFact.content),
-            contextSources: getContextSourceSummaries(directChunks)
+            contextSources: getContextSourceSummaries(directChunks),
+            contextSourceRefs: getContextSourceRefs(directChunks)
           }
         ]);
         scrollMessagesToBottom();
@@ -481,7 +475,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                   findPendingProposalsForQuestion(factualPrompt, pendingProposals.proposals)
                 )
               : unverified.content),
-            contextSources: getContextSourceSummaries(reviewedChunks)
+            contextSources: getContextSourceSummaries(reviewedChunks),
+            contextSourceRefs: getContextSourceRefs(reviewedChunks)
           }
         ]);
         scrollMessagesToBottom();
@@ -517,18 +512,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const replyTokens = resolveResponseTokenLimit(aiProvider, consultationMaxTokens);
       // Fit the context to the model (Slice 4.71); the author's selection goes first.
       const modelContext = await resolveModelContextSize(aiConfig);
+      // Earlier turns as shown, so an answer to the assistant's question keeps its options (5.17).
+      const requestMessages = [...buildAssistantHistory(messages, assistantHistoryBudget(modelContext.tokens)).messages, requestUserMessage];
       const budgeted = fitContextChunks({
         chunks: contextChunks,
         contextTokens: modelContext.tokens,
-        fixedText: [composedPrompt, requestUserMessage.content],
+        fixedText: [composedPrompt, ...requestMessages.map((message) => message.content)],
         replyTokens,
         sectionOf: (chunk) => (chunk === selectionChunk ? 'author-selection' : undefined)
       });
       const contextSources = getContextSourceSummaries(budgeted.kept);
+      const contextSourceRefs = getContextSourceRefs([...budgeted.kept, ...budgeted.dropped]);
       const leftOutSources = getContextSourceSummaries(budgeted.dropped);
       const promptBreakdown = buildPromptBreakdown({
         instructions: composedPrompt,
-        messages: [requestUserMessage],
+        messages: requestMessages,
         sections: budgeted.kept
       });
 
@@ -542,6 +540,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           role: 'assistant',
           content: '',
           contextSources,
+          contextSourceRefs,
           ...(leftOutSources.length > 0 ? {leftOutSources} : {}),
           promptBreakdown,
           modelContext,
@@ -551,7 +550,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       scrollMessagesToBottom();
 
       const modelRequest = {
-        messages: [requestUserMessage],
+        messages: requestMessages,
         context: budgeted.kept,
         systemPrompt: composedPrompt,
         model: consultationModel?.trim() || undefined,
@@ -568,7 +567,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             {
               ...(prev[prev.length - 1]?.role === 'assistant'
                 ? prev[prev.length - 1]
-                : {role: 'assistant' as const, contextSources, provenance: replyProvenance}),
+                : {role: 'assistant' as const, contextSources, contextSourceRefs, provenance: replyProvenance}),
               content: assistantMessage
             }
           ]);
@@ -581,7 +580,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           {
             ...(prev[prev.length - 1]?.role === 'assistant'
               ? prev[prev.length - 1]
-              : {role: 'assistant' as const, contextSources, provenance: replyProvenance}),
+              : {role: 'assistant' as const, contextSources, contextSourceRefs, provenance: replyProvenance}),
             content: outcome.message
           }
         ]);
@@ -653,12 +652,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     }
   };
 
+  // The author's question with the reply shown, reviewed and edited before saving (5.17).
   const handleCaptureSourceNote = () => {
-    const lastAssistantMessage = getLastAssistantMessage();
-    if (lastAssistantMessage && onCaptureSourceNote) {
-      onCaptureSourceNote(stripAssistantThinking(lastAssistantMessage.content));
-    }
+    const transcript = buildLatestReplyTranscript(messages);
+    if (transcript && onCaptureSourceNote) onCaptureSourceNote(transcript);
   };
+  const readerTurn = getReaderTurn(messages, readingIndex);
+  const readerReply = readerTurn?.replyIndex == null ? null : messages[readerTurn.replyIndex];
 
   const coachEvidence = selectedText || sceneText?.trim() || '';
   const coachScope: WritingCoachScope = selectedText ? 'selection' : 'scene';
@@ -865,31 +865,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         {messages.map((msg, i) => (
           <div key={i} className={styles[msg.role]}>
             <div className={styles.messageContent}>{msg.content}</div>
-            {msg.role === 'assistant' && msg.contextSources?.length ? (
-              <details className={styles.contextSources}>
-                <summary>Sources used</summary>
-                <ul>
-                  {msg.contextSources.map((source) => (
-                    <li key={source}>
-                      {source} <small>{sectionTokenLabel(msg.promptBreakdown, source)}</small>
-                    </li>
-                  ))}
-                </ul>
-                {msg.promptBreakdown && (
-                  <PromptTokenSummary breakdown={msg.promptBreakdown} size={msg.modelContext ?? null} />
-                )}
-              </details>
-            ) : null}
-            {msg.role === 'assistant' && msg.leftOutSources?.length ? (
-              <details className={styles.contextSources}>
-                <summary>Left out to fit the model’s context</summary>
-                <ul>
-                  {msg.leftOutSources.map((source) => (
-                    <li key={source}>{source}</li>
-                  ))}
-                </ul>
-              </details>
-            ) : null}
+            {msg.role === 'assistant' && (
+              <AssistantContextSources
+                projectId={projectId}
+                sources={msg.contextSources}
+                sourceRefs={msg.contextSourceRefs}
+                leftOutSources={msg.leftOutSources}
+                promptBreakdown={msg.promptBreakdown}
+                modelContext={msg.modelContext}
+              />
+            )}
             {msg.role === 'assistant' && msg.craftCitations?.length ? (
               <details className={styles.contextSources}>
                 <summary>Craft reference material (not your canon)</summary>
@@ -924,12 +909,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           </div>
         ))}
       </div>
-      {readingIndex !== null && messages[readingIndex]?.role === 'assistant' && (
+      {readerTurn && (
         <AssistantReplyReader
-          content={messages[readingIndex].content}
-          craftCitations={messages[readingIndex].craftCitations}
-          isStreaming={isStreaming && readingIndex === messages.length - 1}
+          content={readerTurn.reply}
+          question={readerTurn.question}
+          craftCitations={readerReply?.craftCitations}
+          isStreaming={isStreaming && (!readerReply || readerTurn.replyIndex === messages.length - 1)}
           onClose={() => setReadingIndex(null)}
+          onFollowUp={(text) => {
+            setReadingIndex('latest');
+            void handleSendPrompt(text, {keepInput: true});
+          }}
+          followUpBlockedReason={
+            contextStatus === 'ready' ? sendBlockedReason
+              : contextStatus === 'error' ? 'Project context is unavailable.' : 'Project context is still loading.'
+          }
         />
       )}
 

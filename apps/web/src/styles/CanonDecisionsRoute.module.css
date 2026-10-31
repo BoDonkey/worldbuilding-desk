@@ -57,7 +57,7 @@
 .emptyPanel {
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: color-mix(in oklab, var(--color-bg-secondary) 90%, var(--color-on-accent));
+  background: color-mix(in oklab, var(--color-bg-secondary) 90%, var(--color-surface-lift));
   padding: 1rem;
 }
 
@@ -73,7 +73,7 @@
 .clusterCard {
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: color-mix(in oklab, var(--color-bg-secondary) 92%, var(--color-on-accent));
+  background: color-mix(in oklab, var(--color-bg-secondary) 92%, var(--color-surface-lift));
   padding: 1rem;
 }
 

@@ -283,6 +283,17 @@ interface TipTapEditorProps {
   extensions?: Extension[];
 }
 
+const MAX_REMEMBERED_EMITS = 50;
+
+/** Remembers recent emitted HTML, oldest dropped first. */
+function rememberEmittedHtml(emitted: Set<string>, html: string) {
+  emitted.delete(html);
+  emitted.add(html);
+  if (emitted.size > MAX_REMEMBERED_EMITS) {
+    emitted.delete(emitted.values().next().value as string);
+  }
+}
+
 function TipTapEditor({
   content = '',
   onChange,
@@ -307,7 +318,9 @@ function TipTapEditor({
   onTypingActivity,
   inlineHighlightsMode = 'visible'
 }: TipTapEditorProps) {
-  const isInternalUpdate = useRef(false);
+  // HTML this editor emitted since the last external sync. A content prop that
+  // matches one is an echo of our own typing (possibly late), never a change.
+  const emittedHtml = useRef<Set<string>>(new Set());
   const onEditorReadyRef = useRef(onEditorReady);
   const normalizedContent = serializeStatBlockTokensAsChipHtml(
     content || '<p></p>',
@@ -325,20 +338,17 @@ function TipTapEditor({
     shouldRerenderOnTransaction: false,
 
     onUpdate({editor}) {
-      isInternalUpdate.current = true;
       onTypingActivity?.();
+      const html = editor.getHTML();
+      rememberEmittedHtml(emittedHtml.current, html);
 
       if (onChange) {
-        onChange(editor.getHTML());
+        onChange(html);
       }
 
       if (onWordCountChange) {
         onWordCountChange(getWordCount(editor));
       }
-
-      setTimeout(() => {
-        isInternalUpdate.current = false;
-      }, 0);
     },
 
     editorProps: {
@@ -449,16 +459,18 @@ function TipTapEditor({
 
   // keep external content in sync
   useEffect(() => {
-    if (!editor || isInternalUpdate.current) return;
+    if (!editor) return;
 
     const current = editor.getHTML();
     const next = content || '<p></p>';
+    if (emittedHtml.current.has(next)) return;
     const normalizedNext = serializeStatBlockTokensAsChipHtml(
       next,
       presentStatBlockToken
     );
 
     if (current !== next && current !== normalizedNext) {
+      emittedHtml.current.clear();
       editor.commands.setContent(next, {emitUpdate: false});
       onWordCountChange?.(getWordCount(editor));
     }
