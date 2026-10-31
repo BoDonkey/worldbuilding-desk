@@ -36,6 +36,14 @@ SagaSpine is a desktop writing environment for fiction authors. The current prod
   loopback address. Ollama cloud models and remote addresses for either are
   blocked, and anything unverified is disclosed and budgeted as remote.
 - There is no diagnostic telemetry or automatic crash-report upload.
+- Update checks (Slice 5.1) are the desktop app's only network contact
+  outside author-invoked AI requests. The installed app asks once whether to
+  check GitHub Releases automatically at startup and never checks before that
+  answer; Settings → Updates changes it or checks by hand. A check sends no
+  project data, and downloads and installs wait for the author. Windows and
+  Linux AppImage install in place; macOS opens the release page until signed
+  builds (5.2). Releases upload as drafts and reach authors only when
+  published (`docs/release-process.md`).
 
 Under the hood, the app still includes rich systems for world data, rules, character state, AI assistance, and consistency review. The difference in the current direction is presentation: those systems are support infrastructure, not the primary surface.
 

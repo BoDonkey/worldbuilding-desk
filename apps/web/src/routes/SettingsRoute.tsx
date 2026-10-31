@@ -15,6 +15,7 @@ import {
 import {CharacterStyleList} from '../components/CharacterStyleList';
 import {AISettings} from '../components/Settings/AISettings';
 import {DiagnosticsPanel} from '../components/Settings/DiagnosticsPanel';
+import {UpdatesSettings} from '../components/Settings/UpdatesSettings';
 import {FontSizeControl} from '../components/Settings/FontSizeControl';
 import {EditorAppearanceControl} from '../components/Settings/EditorAppearanceControl';
 import {
@@ -359,6 +360,12 @@ function SettingsRoute() {
             onSettingsChange={handleAISettingsChange}
           />
         </SettingsSection>
+
+        {window.electronAPI?.updates && (
+          <SettingsSection title='Updates'>
+            <UpdatesSettings />
+          </SettingsSection>
+        )}
 
         <SettingsSection title='Diagnostics'>
           <DiagnosticsPanel secrets={configuredApiKeys} />

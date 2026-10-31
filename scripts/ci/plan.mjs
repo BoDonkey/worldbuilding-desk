@@ -80,7 +80,7 @@ export function assertResults(needs) {
     throw new Error('Non-application changes cannot request or reuse application checks.');
   }
   const runApplication = application === 'true' && verified !== 'true';
-  for (const job of ['web-verify', 'desktop-verify', 'desktop-e2e', 'cypress-run']) {
+  for (const job of ['web-verify', 'desktop-verify', 'desktop-e2e', 'desktop-update', 'cypress-run']) {
     const required = job === 'web-verify' ? application === 'true'
       : runApplication && (job !== 'cypress-run' || mode !== 'none');
     const expected = required ? 'success' : 'skipped';

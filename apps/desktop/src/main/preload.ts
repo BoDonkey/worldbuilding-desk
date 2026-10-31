@@ -18,6 +18,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     set: (provider: string, key: string) => ipcRenderer.invoke('provider-keys:set', provider, key),
     clear: (provider: string) => ipcRenderer.invoke('provider-keys:clear', provider)
   },
+  updates: {
+    get: () => ipcRenderer.invoke('updates:get'),
+    check: () => ipcRenderer.invoke('updates:check'),
+    download: () => ipcRenderer.invoke('updates:download'),
+    install: () => ipcRenderer.invoke('updates:install'),
+    setCheckAutomatically: (value: boolean) => ipcRenderer.invoke('updates:set-check-automatically', value),
+    openReleasePage: () => ipcRenderer.invoke('updates:open-release-page'),
+    onChange: (callback: Listener<unknown>) => subscribe('updates:changed', callback)
+  },
   onLLMChunk: (callback: Listener<{requestId: string; text: string}>) =>
     subscribe('llm:stream:chunk', callback),
   onLLMComplete: (callback: Listener<{requestId: string}>) =>

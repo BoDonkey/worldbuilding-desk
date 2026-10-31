@@ -91,6 +91,8 @@ Other files:
   quiet, opt-in per-project AI scene drafts, provenance marking of every AI
   text insert, and the AI text report (Slices 4.50–4.52, all landed).
   Durable rules are in the blueprint and domain model.
+- `docs/release-process.md` — how a desktop release is tagged, built as a
+  draft, reviewed, and published, and what installed apps do with it.
 - `docs/portable-data-schema.md` — public, versioned Markdown/CSV interchange
   contract for the human-readable project export and Markdown-folder import;
   full-fidelity restore remains the project backup ZIP.

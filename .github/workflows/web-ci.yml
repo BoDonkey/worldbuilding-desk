@@ -188,6 +188,61 @@ jobs:
           path: apps/desktop/e2e-results
           if-no-files-found: ignore
 
+  # Update from the previous version (slice 5.1): installs an older NSIS build,
+  # then updates it through the app from a local copy of the newer release.
+  desktop-update:
+    needs: changes
+    if: ${{ always() && (needs.changes.result != 'success' || (needs.changes.outputs.application == 'true' && needs.changes.outputs.verified != 'true')) }}
+    runs-on: windows-latest
+    name: Desktop update (windows-latest)
+    steps:
+      - name: Reject failed planning
+        if: ${{ needs.changes.result != 'success' }}
+        run: exit 1
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the app
+        run: pnpm build:web && pnpm build:desktop
+      - name: Package the previous and next versions (unsigned)
+        working-directory: apps/desktop
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          pnpm exec electron-builder --win nsis --publish never -c.extraMetadata.version=0.0.1 -c.directories.output=release-from
+          pnpm exec electron-builder --win nsis --publish never -c.extraMetadata.version=0.0.2 -c.directories.output=release-to
+          ls release-from release-to
+      - name: Install the previous version
+        working-directory: apps/desktop
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem release-from -Filter '*.exe' | Select-Object -First 1
+          Start-Process $installer.FullName -ArgumentList '/S' -Wait
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'SagaSpine.exe' | Select-Object -First 1
+          if (-not $exe) { throw 'SagaSpine.exe was not installed' }
+          (Get-Item $exe.FullName).VersionInfo | Format-List ProductVersion, FileVersion
+          "E2E_UPDATE_EXECUTABLE=$($exe.FullName)" >> $env:GITHUB_ENV
+      - name: Update through the app without retries
+        working-directory: apps/desktop
+        env:
+          E2E_UPDATE_FEED_DIR: ${{ github.workspace }}/apps/desktop/release-to
+          E2E_UPDATE_TO_VERSION: 0.0.2
+        run: pnpm e2e e2e/update-install.e2e.ts
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-update-windows
+          path: apps/desktop/e2e-results
+          if-no-files-found: ignore
+
   cypress-run:
     needs: changes
     if: ${{ needs.changes.outputs.application == 'true' && needs.changes.outputs.mode != 'none' && needs.changes.outputs.verified != 'true' }}
@@ -236,7 +291,7 @@ jobs:
   # planning, tooling, fast checks, or any selected browser group.
   cypress-smoke:
     if: ${{ always() }}
-    needs: [changes, tooling-verify, web-verify, desktop-verify, desktop-e2e, cypress-run]
+    needs: [changes, tooling-verify, web-verify, desktop-verify, desktop-e2e, desktop-update, cypress-run]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
