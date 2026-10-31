@@ -197,7 +197,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     id: 'privacy',
     title: 'Where your data goes',
     summary: 'What stays on this computer, and exactly when anything leaves it.',
-    keywords: ['privacy', 'data', 'local', 'telemetry', 'training', 'passphrase', 'protect', 'lock', 'encrypt', 'network', 'offline', 'updates', 'ollama cloud'],
+    keywords: ['privacy', 'data', 'local', 'telemetry', 'training', 'passphrase', 'protect', 'lock', 'encrypt', 'network', 'offline', 'updates', 'ollama cloud', 'search model'],
     blocks: [
       {
         kind: 'list',
@@ -221,14 +221,11 @@ export const HELP_TOPICS: HelpTopic[] = [
       },
       {
         kind: 'paragraph',
-        text: 'Two kinds of network contact carry no project text:'
+        text: 'The only other network contact is the update check, and it carries no project text. The app asks once whether to check for updates automatically, and never checks before you answer. A check asks GitHub whether a newer version exists. Change this in **Settings → Updates**.'
       },
       {
-        kind: 'list',
-        items: [
-          '**Search model download.** When a project first needs it, SagaSpine downloads a small search model from Hugging Face (and its runtime from jsDelivr). It uses the model on this computer to find related passages. If the download fails, a simpler built-in search is used instead.',
-          '**Update checks.** The app asks once whether to check for updates automatically, and never checks before you answer. A check asks GitHub whether a newer version exists. Change this in **Settings → Updates**.'
-        ]
+        kind: 'paragraph',
+        text: 'The search model SagaSpine uses to find related passages ships with the app and runs on this computer, so it never needs a download.'
       }
     ],
     links: [

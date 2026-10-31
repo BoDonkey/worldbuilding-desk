@@ -1,0 +1,22 @@
+SagaSpine search model: third-party notices
+
+SagaSpine ships a small text-embedding model so it can find related passages
+on your computer without downloading anything.
+
+all-MiniLM-L6-v2 (ONNX conversion)
+  Files: models/Xenova/all-MiniLM-L6-v2/
+  Source: https://huggingface.co/Xenova/all-MiniLM-L6-v2
+          (revision 751bff37182d3f1213fa05d7196b954e230abad9)
+  Converted from: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
+  License: Apache License 2.0 (LICENSE-Apache-2.0.txt)
+  Shipped unmodified.
+
+ONNX Runtime Web (WebAssembly runtime)
+  Files: models/onnxruntime/
+  Source: https://github.com/microsoft/onnxruntime
+  Copyright (c) Microsoft Corporation
+  License: MIT (LICENSE-onnxruntime.txt)
+
+Transformers.js, which loads the model, is part of the application bundle.
+  Source: https://github.com/huggingface/transformers.js
+  License: Apache License 2.0 (LICENSE-Apache-2.0.txt)

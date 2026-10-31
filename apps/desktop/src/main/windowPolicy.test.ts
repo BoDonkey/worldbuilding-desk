@@ -19,13 +19,15 @@ describe('isRendererNavigation', () => {
 });
 
 describe('buildDevContentSecurityPolicy', () => {
-  it('limits connections to the dev server, loopback, and embedding-model hosts', () => {
+  it('limits connections to the dev server and loopback', () => {
     const policy = buildDevContentSecurityPolicy('http://localhost:5173');
     const connect = policy.split('; ').find((directive) => directive.startsWith('connect-src')) ?? '';
 
     expect(connect).toContain('ws://localhost:5173');
     expect(connect).toContain('http://127.0.0.1:*');
     expect(connect).not.toMatch(/anthropic|openai|googleapis/);
+    // The search model ships with the app; no download host is allowed.
+    expect(policy).not.toMatch(/huggingface|hf\.co|jsdelivr/);
     expect(policy).toContain("object-src 'none'");
     expect(policy).toContain("frame-ancestors 'none'");
   });

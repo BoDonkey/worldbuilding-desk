@@ -2,6 +2,7 @@ import type {DBSchema, IDBPDatabase} from 'idb';
 import {openDerivedRecordStore, type DerivedRecordStore} from '../storage';
 import type {DocumentChunk, RAGDiagnostics, RAGDocumentDiagnostic, RAGSearchResult} from './types';
 import {getLexicalSearchScore} from '../retrieval/lexicalSearch';
+import {loadBundledEmbeddingPipeline} from '../embeddings/bundledEmbeddingModel';
 
 export {getLexicalSearchScore} from '../retrieval/lexicalSearch';
 
@@ -215,14 +216,10 @@ export class RAGService implements RAGProvider {
           return createFallbackEmbeddingPipeline();
         }
         try {
-          const transformers = await import('@huggingface/transformers');
-          return await transformers.pipeline(
-            'feature-extraction',
-            'Xenova/all-MiniLM-L6-v2'
-          );
+          return (await loadBundledEmbeddingPipeline()) as EmbeddingPipeline;
         } catch {
           console.warn(
-            'Falling back to lightweight local embeddings because transformer model loading failed.'
+            'Falling back to lightweight local embeddings because the bundled search model did not load.'
           );
           return createFallbackEmbeddingPipeline();
         }

@@ -24,18 +24,19 @@ export function isRendererNavigation(target: string, rendererUrl: string): boole
  * uses a websocket for hot reload, so this is looser than the packaged
  * policy (a meta tag added by the web build), but it still keeps the renderer
  * from loading code or sending requests anywhere other than its own origin,
- * loopback (Ollama), and the embedding-model hosts.
+ * and loopback (Ollama). The search model ships with the app, so no download
+ * host is allowed.
  */
 export function buildDevContentSecurityPolicy(devServerUrl: string): string {
   const origin = new URL(devServerUrl).origin;
   const websocket = origin.replace(/^http/, 'ws');
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net`,
+    `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
-    `connect-src 'self' ${websocket} http://localhost:* http://127.0.0.1:* https://huggingface.co https://*.huggingface.co https://*.hf.co https://cdn.jsdelivr.net`,
+    `connect-src 'self' ${websocket} http://localhost:* http://127.0.0.1:*`,
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",

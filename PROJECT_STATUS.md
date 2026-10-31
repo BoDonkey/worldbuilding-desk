@@ -36,12 +36,18 @@ SagaSpine is a desktop writing environment for fiction authors. The current prod
   loopback address. Ollama cloud models and remote addresses for either are
   blocked, and anything unverified is disclosed and budgeted as remote.
 - There is no diagnostic telemetry or automatic crash-report upload.
-- Outside author-invoked AI requests, the app makes two kinds of network
-  contact, neither carrying project text: the packaged app downloads the
-  `Xenova/all-MiniLM-L6-v2` search (embedding) model from Hugging Face and its
-  runtime from jsDelivr when project retrieval first needs it, without asking
-  (on failure it uses the built-in fallback embedding; found during 5.8), and
-  update checks (Slice 5.1). The installed app asks once whether to
+- The search (embedding) model, `Xenova/all-MiniLM-L6-v2` (Apache-2.0) at a
+  pinned revision, and its ONNX Runtime Web WebAssembly files (MIT) ship in
+  the app under `renderer/models/` with their licenses and a notice. The
+  web build fetches them by checksum (`apps/web/scripts/prepare-embedding-model.mjs`,
+  manifest in `apps/web/embedding-model/`); at run time transformers.js may
+  load only those files, and the renderer CSP allows no download host. Earlier
+  builds downloaded the model from Hugging Face on first use (found in 5.8).
+  Project retrieval and the writing coach's query embeddings both use it in
+  packaged builds; dev and Cypress keep the lexical/fallback paths. The
+  installer is about 45 MB larger.
+- Update checks (Slice 5.1) are the desktop app's only network contact
+  outside author-invoked AI requests. The installed app asks once whether to
   check GitHub Releases automatically at startup and never checks before that
   answer; Settings → Updates changes it or checks by hand. A check sends no
   project data, and downloads and installs wait for the author. Windows and

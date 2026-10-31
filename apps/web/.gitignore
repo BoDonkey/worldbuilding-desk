@@ -27,3 +27,6 @@ dist-ssr
 cypress/downloads/
 cypress/screenshots/
 cypress/videos/
+
+# Search model and runtime, fetched by scripts/prepare-embedding-model.mjs
+public/models/

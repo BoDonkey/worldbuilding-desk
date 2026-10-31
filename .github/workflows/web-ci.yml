@@ -110,6 +110,12 @@ jobs:
           pnpm --filter @worldbuilding-desk/rules-engine test
           pnpm --filter @worldbuilding-desk/rules-ui test
 
+      - name: Cache the bundled search model
+        if: ${{ needs.changes.outputs.verified != 'true' }}
+        uses: actions/cache@v6
+        with:
+          path: apps/web/public/models/Xenova
+          key: embedding-model-${{ runner.os }}-${{ hashFiles('apps/web/embedding-model/manifest.json') }}
       - name: Build web
         if: ${{ needs.changes.outputs.verified != 'true' }}
         run: pnpm --filter web build
@@ -172,6 +178,11 @@ jobs:
           node-version: 22.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Cache the bundled search model
+        uses: actions/cache@v6
+        with:
+          path: apps/web/public/models/Xenova
+          key: embedding-model-${{ runner.os }}-${{ hashFiles('apps/web/embedding-model/manifest.json') }}
       - name: Build and package the app (unsigned)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -208,6 +219,11 @@ jobs:
           node-version: 22.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Cache the bundled search model
+        uses: actions/cache@v6
+        with:
+          path: apps/web/public/models/Xenova
+          key: embedding-model-${{ runner.os }}-${{ hashFiles('apps/web/embedding-model/manifest.json') }}
       - name: Build the app
         run: pnpm build:web && pnpm build:desktop
       - name: Package the previous and next versions (unsigned)
