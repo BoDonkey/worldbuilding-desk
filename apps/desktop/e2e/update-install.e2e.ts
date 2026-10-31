@@ -23,7 +23,7 @@ test.skip(!executable || process.platform !== 'win32', 'Runs in the Windows Desk
 test.setTimeout(300_000);
 
 const installedVersion = () =>
-  execFileSync('powershell', ['-NoProfile', '-Command', `(Get-Item '${executable}').VersionInfo.ProductVersion`], {
+  execFileSync('powershell', ['-NoProfile', '-Command', `(Get-Item '${executable}').VersionInfo.FileVersion`], {
     encoding: 'utf8'
   }).trim();
 
@@ -83,8 +83,13 @@ test('updates an installed SagaSpine to the next version and keeps the project',
     await expect(updated.page.locator('.tiptap[contenteditable="true"]')).toContainText('The tide went out at four bells');
     await updated.app.close();
   } finally {
+    // Cleanup must not hide the test's own failure.
     stopRunningApps();
     await feed.close();
-    fs.rmSync(userDataDir, {recursive: true, force: true});
+    try {
+      fs.rmSync(userDataDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 500});
+    } catch (error) {
+      console.warn('Could not remove the test profile.', error);
+    }
   }
 });

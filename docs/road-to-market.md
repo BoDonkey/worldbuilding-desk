@@ -2221,6 +2221,12 @@ KoboldCPP.
   Then let signed macOS builds install updates in place (5.1 leaves macOS
   on the release page) and set the Windows `publisherName` so downloaded
   updates are signature-checked.
+  Also fix the packaged app's identity before beta (found in 5.1): the
+  packaged `package.json` has no `productName`, so Electron names the app
+  `desktop`, which is the author's data folder (`Application Support/desktop`,
+  `%APPDATA%\desktop`) and the Windows install folder
+  (`Programs\desktop`). Renaming it moves the data folder, so it needs a
+  one-time migration of the existing folder, covered by a packaged test.
 - **5.3 Packaged-app validation.** Playwright Electron E2E covering the LLM
   streaming IPC path (highest-payoff single test); packaged checks for file
   operations, external-link policy, provider diagnostics; both platforms.

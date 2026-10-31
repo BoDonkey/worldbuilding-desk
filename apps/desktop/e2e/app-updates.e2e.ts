@@ -11,6 +11,7 @@ const manifestRequests = (feed: FakeUpdateFeed) => feed.requests.filter((path) =
 let feed: FakeUpdateFeed;
 
 test.skip(!packagedExecutable(), 'Updates run only in the packaged app (E2E_APP=packaged).');
+test.use({updateQuestionAnswered: false});
 
 test.beforeAll(async () => {
   feed = await startFakeUpdateFeed('99.0.0');
@@ -56,7 +57,7 @@ test('asks before contacting the update server, and checks only on request when 
   expect(feed.requests.some((path) => !path.endsWith('.yml')), 'nothing downloaded without asking').toBe(false);
 });
 
-test('checks at startup once allowed, and downloads the update only when asked', async ({desktop}) => {
+test('checks at startup once allowed, and offers the update without downloading it', async ({desktop}) => {
   await desktop.page.getByRole('button', {name: 'Check automatically', exact: true}).click();
   await desktop.relaunch();
   const {page} = desktop;
@@ -69,11 +70,10 @@ test('checks at startup once allowed, and downloads the update only when asked',
     // Unsigned macOS builds cannot install in place (5.2); the author gets the release page.
     await expect(card.getByRole('button', {name: 'Open download page'})).toBeVisible();
     await expect(card.getByRole('button', {name: 'Download update'})).toHaveCount(0);
-    return;
+  } else {
+    // Downloading and installing a real build is covered by update-install.e2e.ts
+    // in the Desktop update CI job; a --dir build has no installer metadata.
+    await expect(card.getByRole('button', {name: 'Download update'})).toBeVisible();
   }
-  await card.getByRole('button', {name: 'Download update'}).click();
-  // electron-updater verifies the payload against the manifest's sha512.
-  await expect(card).toContainText('SagaSpine 99.0.0 is ready', {timeout: 30_000});
-  await expect(card.getByRole('button', {name: 'Restart to update'})).toBeVisible();
   expect(desktop.rendererErrors).toEqual([]);
 });
