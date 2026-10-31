@@ -117,7 +117,10 @@ export const Navigation: FC<NavigationProps> = ({
         {to: '/portable-data', label: 'Portable data', icon: 'PD'}
       ]
     });
-    sections.push({label: 'App', items: [{to: '/settings', label: 'Settings', icon: 'ST'}]});
+    sections.push({label: 'App', items: [
+      {to: '/settings', label: 'Settings', icon: 'ST'},
+      {to: '/help', label: 'Help', icon: 'HP'}
+    ]});
     return sections;
   }, [
     capabilities.canUseGameSystems,

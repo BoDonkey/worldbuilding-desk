@@ -76,7 +76,7 @@ interface ProviderDiagnosticsState {
 
 const HOSTED_KEY_FIELDS: Record<HostedProviderId, {label: string; placeholder: string; href: string; site: string}> = {
   anthropic: {label: 'Anthropic API Key (Claude)', placeholder: 'sk-ant-...', href: 'https://console.anthropic.com', site: 'console.anthropic.com'},
-  openai: {label: 'OpenAI API Key (GPT & embeddings)', placeholder: 'sk-...', href: 'https://platform.openai.com', site: 'platform.openai.com'},
+  openai: {label: 'OpenAI API Key (GPT)', placeholder: 'sk-...', href: 'https://platform.openai.com', site: 'platform.openai.com'},
   gemini: {label: 'Gemini API Key', placeholder: 'AIza...', href: 'https://aistudio.google.com/app/apikey', site: 'Google AI Studio'}
 };
 

@@ -36,6 +36,16 @@ SagaSpine is a desktop writing environment for fiction authors. The current prod
   loopback address. Ollama cloud models and remote addresses for either are
   blocked, and anything unverified is disclosed and budgeted as remote.
 - There is no diagnostic telemetry or automatic crash-report upload.
+- The search (embedding) model, `Xenova/all-MiniLM-L6-v2` (Apache-2.0) at a
+  pinned revision, and its ONNX Runtime Web WebAssembly files (MIT) ship in
+  the app under `renderer/models/` with their licenses and a notice. The
+  web build fetches them by checksum (`apps/web/scripts/prepare-embedding-model.mjs`,
+  manifest in `apps/web/embedding-model/`); at run time transformers.js may
+  load only those files, and the renderer CSP allows no download host. Earlier
+  builds downloaded the model from Hugging Face on first use (found in 5.8).
+  Project retrieval and the writing coach's query embeddings both use it in
+  packaged builds; dev and Cypress keep the lexical/fallback paths. The
+  installer is about 45 MB larger.
 - The desktop app keeps its data (projects, settings, saved keys) in a
   `SagaSpine` folder: `~/Library/Application Support/SagaSpine`,
   `%APPDATA%\SagaSpine`, or `~/.config/SagaSpine` (Slice 5.2). Earlier builds
@@ -505,6 +515,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   updates the stored run. The stored run is deliberately not part of project
   backups: snapshots carry accepted canon, not review output, and a restored
   project simply runs review again.
+
+### Help
+- **Help** (More → App, `/help`, command palette **Go to Help**; Slice 5.8)
+  is an offline, in-app page of seven short topics: getting started; World
+  Bible, Source Notes, and canon; reviewing suggestions; importing; backups
+  and exports; setting up AI; and where your data goes. It has a word filter,
+  **Open …** links to each topic's screens, `/help?topic=<id>` deep links,
+  and the portable export README (rendered from the same constant the export
+  writes). Content lives in `apps/web/src/help/helpTopics.ts`; update a
+  topic in the same change as the workflow it describes.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.

@@ -1,6 +1,9 @@
 import type {CraftEmbeddingContract, CraftQueryEmbedder} from './types';
-
-type EmbeddingPipeline = (text: string, options?: Record<string, unknown>) => Promise<unknown>;
+import {
+  BUNDLED_EMBEDDING_MODEL,
+  loadBundledEmbeddingPipeline,
+  type EmbeddingPipeline
+} from '../embeddings/bundledEmbeddingModel';
 
 export function createCraftQueryEmbedder(
   contract: CraftEmbeddingContract
@@ -29,10 +32,16 @@ export function createCraftQueryEmbedder(
   };
 }
 
+/**
+ * The query embedder uses the bundled search model. Dev and Cypress runs keep
+ * the lexical fallback, matching project retrieval there.
+ */
 async function loadPipeline(contract: CraftEmbeddingContract): Promise<EmbeddingPipeline> {
-  const transformers = await import('@huggingface/transformers');
-  return await transformers.pipeline('feature-extraction', contract.model, {
-    revision: contract.version,
-    local_files_only: true
-  }) as EmbeddingPipeline;
+  if (import.meta.env.DEV || (globalThis as {Cypress?: unknown}).Cypress) {
+    throw new Error('Craft embeddings use lexical search in development and tests.');
+  }
+  if (contract.model !== BUNDLED_EMBEDDING_MODEL) {
+    throw new Error(`Craft library expects ${contract.model}, but the app bundles ${BUNDLED_EMBEDDING_MODEL}.`);
+  }
+  return loadBundledEmbeddingPipeline();
 }

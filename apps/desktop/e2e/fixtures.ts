@@ -47,8 +47,8 @@ export async function launchDesktop(
   if ('userDataDir' in profile) args.push(`--user-data-dir=${profile.userDataDir}`);
   else env.SAGASPINE_TEST_APP_DATA = profile.appData;
   const app = await _electron.launch({executablePath, args, env});
-  // Keep runs offline and repeatable: the in-app embedding model and its
-  // runtime normally download on first use, and the app must cope without them.
+  // The search model ships with the app; block its old download hosts so a
+  // regression that fetches it again cannot pass by reaching the network.
   await app.context().route(/^https:\/\/([a-z0-9-]+\.)*(huggingface\.co|hf\.co|jsdelivr\.net)\//, (route) => route.abort());
   const page = await app.firstWindow();
   // The start page renders nothing until first-run setup finishes, then

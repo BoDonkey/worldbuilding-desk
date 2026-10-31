@@ -36,7 +36,7 @@ describe('AISettings hosted response ceiling', () => {
     expect(screen.getByTestId('hosted-response-cost-ceiling')).toHaveTextContent(
       'Input tokens cost extra'
     );
-    expect(screen.getByText('OpenAI API Key (GPT & embeddings)')).toBeInTheDocument();
+    expect(screen.getByText('OpenAI API Key (GPT)')).toBeInTheDocument();
     expect(screen.getByRole('link', {name: 'platform.openai.com'})).toHaveAttribute('href', 'https://platform.openai.com');
   });
 });

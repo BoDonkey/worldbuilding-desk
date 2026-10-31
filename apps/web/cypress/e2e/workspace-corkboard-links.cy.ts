@@ -1,20 +1,3 @@
-import {DB_NAME, DB_VERSION} from '../../src/services/storage/db';
-
-function putRecords<T extends {id: string}>(storeName: string, records: T[]): Cypress.Chainable<void> {
-  return cy.window().then((win) => new Cypress.Promise<void>((resolve, reject) => {
-    const request = win.indexedDB.open(DB_NAME, DB_VERSION);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const db = request.result;
-      const tx = db.transaction([storeName], 'readwrite');
-      records.forEach((record) => tx.objectStore(storeName).put(record));
-      tx.oncomplete = () => {db.close(); resolve();};
-      tx.onerror = () => {db.close(); reject(tx.error);};
-      tx.onabort = () => {db.close(); reject(tx.error);};
-    };
-  }));
-}
-
 describe('Workspace Corkboard scene links', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
@@ -25,7 +8,7 @@ describe('Workspace Corkboard scene links', () => {
   });
 
   it('links the current scene, caps chips, and restores the same links on the route', () => {
-    putRecords('writingDocuments', [{
+    cy.putIndexedDbRecords('writingDocuments', [{
       id: 'scene-delta', projectId: 'cypress-project-1', title: 'Delta Scene',
       content: '<p>Delta content</p>', order: 3, createdAt: 4, updatedAt: 4
     }]);
@@ -77,7 +60,7 @@ describe('Workspace Corkboard scene links', () => {
   });
 
   it('keeps stale scene links explicit and never deletes scenes with a card', () => {
-    putRecords('corkboard_chapter_cards', [{
+    cy.putIndexedDbRecords('corkboard_chapter_cards', [{
       id: 'linked-card', projectId: 'cypress-project-1', title: 'Stale Link Chapter',
       summary: '', status: 'planned', order: 0, sceneIds: ['scene-alpha', 'scene-beta'],
       plotPoints: [], createdAt: 1, updatedAt: 1
@@ -112,7 +95,7 @@ describe('Workspace Corkboard scene links', () => {
   });
 
   it('creates, opens, and restores a linked scene from the quick modal', () => {
-    putRecords('corkboard_chapter_cards', [{
+    cy.putIndexedDbRecords('corkboard_chapter_cards', [{
       id: 'modal-create-card', projectId: 'cypress-project-1', title: 'Modal Chapter',
       summary: 'Planning only', status: 'planned', order: 0, sceneIds: [],
       plotPoints: [], createdAt: 1, updatedAt: 1
@@ -140,7 +123,7 @@ describe('Workspace Corkboard scene links', () => {
   });
 
   it('creates a subsequent linked scene from the dedicated route', () => {
-    putRecords('corkboard_chapter_cards', [{
+    cy.putIndexedDbRecords('corkboard_chapter_cards', [{
       id: 'route-create-card', projectId: 'cypress-project-1', title: 'Route Chapter',
       summary: '', status: 'planned', order: 0, sceneIds: ['scene-alpha'],
       plotPoints: [], createdAt: 1, updatedAt: 1
@@ -160,7 +143,7 @@ describe('Workspace Corkboard scene links', () => {
   });
 
   it('round trips from a scene to its focused chapter card and back', () => {
-    putRecords('corkboard_chapter_cards', [
+    cy.putIndexedDbRecords('corkboard_chapter_cards', [
       {
         id: 'other-card', projectId: 'cypress-project-1', title: 'Other Chapter',
         summary: '', status: 'planned', order: 0, sceneIds: ['scene-alpha'],

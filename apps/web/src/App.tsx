@@ -41,6 +41,7 @@ import RulesetRoute from './routes/RulesetRoute';
 import LoreRoute from './routes/LoreRoute';
 import CanonDecisionsRoute from './routes/CanonDecisionsRoute';
 import AskProjectRoute from './routes/AskProjectRoute';
+import HelpRoute from './routes/HelpRoute';
 import {getAllProjects} from './services/storage';
 import {createFirstRunProject, hasCheckedFirstRun, markFirstRunChecked} from './services/onboarding/firstRun';
 import appShellStyles from './styles/AppShell.module.css';
@@ -206,6 +207,7 @@ function AppRoutes() {
             }
           />
           <Route path='/settings' element={<SettingsRoute />} />
+          <Route path='/help' element={<HelpRoute />} />
           <Route path='*' element={<Navigate to='/' replace />} />
         </Route>
       </Routes>
