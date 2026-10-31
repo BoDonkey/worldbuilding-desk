@@ -69,10 +69,6 @@ Other files:
   Palette, and craft-guided coaching. Slices 4.34–4.34a now implement the route,
   sketches, threads, and Core Idea bridges; the plan holds the original prompts
   and the roadmap holds the revised authoritative boundaries and status.
-- `docs/next-prompt.md` — handoff and recon for roadmap slice 5.17
-  (writing-flow stability + assistant continuity): suspected root causes,
-  code pointers, and file-size constraints. The roadmap remains authoritative
-  for requirements and status; archive it when 5.17 closes.
 - `docs/systems-experience-design-review.md` — dated (2026-09-20),
   non-authoritative working review of the author journey across World Bible
   mechanics entry, Rules, Sheets/State, Mechanics/Compendium, Workspace state
@@ -128,6 +124,9 @@ the full-length originals behind the 2026-08-01 consolidation:
 - `stat-peek-plan.md` — completed plan for Slices 4.46–4.48 (character
   snapshot service, stat peek, pinned stat panel); durable behavior lives in
   `docs/product-blueprint.md`.
+- `next-prompt-5.17.md` — completed Slice 5.17 handoff (writing-flow
+  stability + assistant continuity); durable behavior lives in
+  `PROJECT_STATUS.md`.
 - `project-vault-plan.md` and `next-prompt-5.15c.md` — completed Slice 5.15
   vault design and its final verification handoff; durable behavior lives in
   `PROJECT_STATUS.md` and the roadmap records the completed slices.
