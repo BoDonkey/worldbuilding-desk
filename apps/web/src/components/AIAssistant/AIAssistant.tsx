@@ -18,6 +18,7 @@ import {
 } from '../../services/llm/contextProvenance';
 import {PromptManager} from '../../services/prompts/PromptManager';
 import {buildUnverifiedFactualAnswer} from '../../services/assistant/factualQuestionBoundary';
+import {assistantHistoryBudget, buildAssistantHistory} from '../../services/assistant/conversationHistory';
 import {
   buildSubjectClarification,
   describeResolvedSubject,
@@ -517,10 +518,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const replyTokens = resolveResponseTokenLimit(aiProvider, consultationMaxTokens);
       // Fit the context to the model (Slice 4.71); the author's selection goes first.
       const modelContext = await resolveModelContextSize(aiConfig);
+      // Earlier turns as shown, so an answer to the assistant's question keeps its options (5.17).
+      const requestMessages = [...buildAssistantHistory(messages, assistantHistoryBudget(modelContext.tokens)).messages, requestUserMessage];
       const budgeted = fitContextChunks({
         chunks: contextChunks,
         contextTokens: modelContext.tokens,
-        fixedText: [composedPrompt, requestUserMessage.content],
+        fixedText: [composedPrompt, ...requestMessages.map((message) => message.content)],
         replyTokens,
         sectionOf: (chunk) => (chunk === selectionChunk ? 'author-selection' : undefined)
       });
@@ -528,7 +531,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const leftOutSources = getContextSourceSummaries(budgeted.dropped);
       const promptBreakdown = buildPromptBreakdown({
         instructions: composedPrompt,
-        messages: [requestUserMessage],
+        messages: requestMessages,
         sections: budgeted.kept
       });
 
@@ -551,7 +554,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       scrollMessagesToBottom();
 
       const modelRequest = {
-        messages: [requestUserMessage],
+        messages: requestMessages,
         context: budgeted.kept,
         systemPrompt: composedPrompt,
         model: consultationModel?.trim() || undefined,

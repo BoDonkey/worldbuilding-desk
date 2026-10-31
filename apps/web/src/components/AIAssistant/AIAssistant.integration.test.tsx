@@ -592,6 +592,13 @@ describe('AIAssistant factual lookup integration', () => {
       expect(screen.getByText('First idea.')).toBeInTheDocument();
       expect(screen.queryByText('Version 1 of 2')).not.toBeInTheDocument();
       expect(sessionStorage.getItem('wbd:assistant-conversation:project-versions')).not.toContain('Second idea.');
+      // The follow-up carries the earlier turn as shown, never the discarded version (5.17).
+      const third = (mocks.stream.mock.calls[2] as unknown as [{messages: Array<{role: string; content: string}>}])[0];
+      expect(third.messages).toEqual([
+        {role: 'user', content: 'Brainstorm a harbor scene.'},
+        {role: 'assistant', content: 'First idea.'},
+        {role: 'user', content: 'Brainstorm the next scene.'}
+      ]);
     });
 
     it('applies the consultation budget to another version', async () => {
@@ -606,6 +613,34 @@ describe('AIAssistant factual lookup integration', () => {
       await waitFor(() => expect(mocks.stream).toHaveBeenCalledTimes(1));
       expect(screen.getByText('Only idea.')).toBeInTheDocument();
       expect(screen.queryByText(/Version 2 of 2/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('conversation continuity (5.17)', () => {
+    it('sends the question and the offered options with the author\'s answer', async () => {
+      mocks.search.mockResolvedValue([]);
+      mocks.stream
+        .mockReturnValueOnce('Which entrance? 1) the kitchen 2) the roof')
+        .mockReturnValueOnce('Through the kitchen, then.');
+      renderAssistant({
+        projectId: 'project-continuity',
+        aiConfig: {...hostedSettings, inspectorSettings: {...hostedSettings.inspectorSettings!, maxConsultationsPerDay: 10}},
+        showWritingCoach: false
+      });
+      await screen.findByText('Project context ready.');
+      fireEvent.change(screen.getByRole('textbox'), {target: {value: 'How should Mira enter the tavern?'}});
+      fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+      await screen.findByText(/Which entrance\?/);
+      fireEvent.change(screen.getByRole('textbox'), {target: {value: 'Option 1'}});
+      fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+      await screen.findByText('Through the kitchen, then.');
+
+      const answer = (mocks.stream.mock.calls[1] as unknown as [{messages: Array<{role: string; content: string}>}])[0];
+      expect(answer.messages).toEqual([
+        {role: 'user', content: 'How should Mira enter the tavern?'},
+        {role: 'assistant', content: 'Which entrance? 1) the kitchen 2) the roof'},
+        {role: 'user', content: 'Option 1'}
+      ]);
     });
   });
 });

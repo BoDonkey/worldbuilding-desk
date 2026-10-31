@@ -8,16 +8,7 @@ export type AIAssistantContextType =
   | 'character'
   | 'world-bible';
 
-export const stripAssistantThinking = (content: string): string =>
-  content
-    .replace(
-      /\*?SILENT SYSTEM MESSAGE\*?[\s\S]*?\*?END SYSTEM MESSAGE\*?/gi,
-      ''
-    )
-    .replace(/<think>[\s\S]*?<\/think>/gi, '')
-    .replace(/<think>[\s\S]*$/gi, '')
-    .replace(/^[\s\S]*?<\/think>/i, '')
-    .trimStart();
+export {stripAssistantThinking} from '../../services/assistant/assistantThinking';
 
 const EYE_COLOR_PATTERN =
   /\b(gray|grey|blue|brown|green|hazel|amber|black|violet|red|golden?|silver|white)(?:[- ](gray|grey|blue|brown|green|hazel|amber|black|violet|red|golden?|silver|white))?\s+eyes\b/i;
