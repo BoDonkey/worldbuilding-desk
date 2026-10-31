@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-10-06
+Last updated: 2026-10-31
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -114,6 +114,11 @@ the full-length originals behind the 2026-08-01 consolidation:
 
 - `next-steps-through-2026-08-01.md` and the prior
   `next-steps-through-2026-07-26.md` — roadmap history.
+- `road-to-market-snapshot-2026-10-31.md` — the full roadmap before it was
+  slimmed to open work: completed slice text, the status-board history
+  narrative, and the scope-change log.
+- `verification-log-2026-10-31.md` — the dated verification-run log and old
+  verification notes that `PROJECT_STATUS.md` carried through 2026-10-31.
 - `ui-design-work-slices.md` and `fitness-a-work-slices.md` — full
   self-contained agent prompts for the slices imported into
   `docs/road-to-market.md` Phases 0, 2, and 3.
