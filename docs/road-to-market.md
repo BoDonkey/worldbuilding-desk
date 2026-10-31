@@ -27,7 +27,8 @@ is exactly what beta authors will exercise.
 v1 must include: trustworthy lore→canon→assistant pipeline, the calm
 writing-first shell, one coherent character experience centered in World
 Bible, progressively disclosed optional mechanics, accessible dialogs/nav,
-packaged + signed installers for macOS and Windows, auto-update, storage
+packaged installers for macOS and Windows (signed for macOS at paid
+launch; Windows signing may follow, see 5.2), auto-update, storage
 schema versioning, first-run onboarding with a sample project, trial/license
 gate, a help/docs baseline, and — added 2026-08-29 — the derived story
 dashboard and the writing coach described below, and — added 2026-09-26 —
@@ -402,7 +403,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.74 | Rolling Character Lab summaries | 4 | M | Done `545a7d3` — when a Talk conversation takes about 35% of the model's context and there are complete turns older than the two most recent, the lab offers **Summarize earlier turns**; the summary request sends only those turns (no records or grounding), at most 200 words, as a full model run (provider checks, budget); the summary is an editable box labeled "not canon" ("edited" once changed), the covered turns stay on screen marked Summarized, and the model gets the summary under a not-canon heading in their place while the two latest turns go word for word; extend, edit, or remove it, and Clear conversation clears it; session only, never saved or written to the World Bible, and the prompt total counts it as conversation; 17 planted regressions caught (the spec summarizes two turns so covering too few is visible); lint baseline; 1,276 web + 47 engine + 12 UI + 37 desktop tests; web/desktop builds; file-size gate; Cypress 161/161; `cypress-smoke` green (run 40154739117, PR #77) |
 | 4.75 | Local reply length from server context | 4 | S | Done `4bf1e2a` — the local model server gets `max_tokens` = the reported context (`/props`, else KoboldCPP `/api/extra/true_max_context_length`; checked live on KoboldCPP 1.123.1 at 16,384 and llama.cpp b11669 at 8,192 per slot) minus a high prompt estimate and a 256-token margin, so replies are no longer stopped at KoboldCPP's 2,048-token default; finding: KoboldCPP silently drops the start of a prompt when prompt plus cap exceed the context, so a request with under 512 tokens of room is refused before sending; servers reporting no size (LM Studio, not run) use Advanced → **Maximum reply length** (64–131,072); desktop main process mirrors the rules and validates the setting; also fixed the intermittent Compendium route unit test (a ProjectsRoute load finishing after unmount cleared the next test's active project); live checks through the web provider and desktop adapters on both servers; 12 planted regressions caught; lint baseline; 1,186 web + 47 engine + 12 UI + 37 desktop tests; web/desktop builds; file-size gate; Cypress 154/154; `cypress-smoke` green (run 40145816555, PR #71) |
 | 5.1 | Auto-update decision + implementation | 5 | M | Done `c1c4f33` + `7357671` + `4efa1d1` + `a56e5dd` — author-approved exception to the Phase 5 gate (2026-10-31); release-blocking 1.1 findings must still be fixed before the first update ships. electron-updater from GitHub Releases: the app asks once whether to check automatically and never contacts the server before that answer (a check sends no project data); downloads and installs wait for the author; Settings → Updates checks by hand. Windows/Linux AppImage install in place; macOS opens the release page until signed builds (5.2). `release.yml` builds a `v*` tag (must match the desktop version) into a draft release that reaches authors only when published (`docs/release-process.md`). Packaged Playwright covers no contact before answering or after declining, manual and startup checks, and the offered download on macOS and Windows; a new required Windows job installs 0.0.1 with NSIS, updates to 0.0.2 through Settings, and reopens the same profile with the sample project intact. Found: the packaged app is named `desktop` (its data folder), recorded under 5.2. Lint baseline; 1,354 web + 47 engine + 12 UI + 48 desktop tests; builds; file-size/CI-policy gates; Web CI green on PR #87 including Cypress, Desktop E2E on macOS/Windows, and Desktop update. |
-| 5.2 | Code signing + notarization, both platforms | 5 | M | — |
+| 5.2 | Code signing + notarization, both platforms | 5 | M | In progress (author-approved exception to the Phase 5 gate, 2026-10-31) — data folder moved to `SagaSpine` with a one-time migration and packaged test; builds stay unsigned through the beta by author decision; signing (macOS first) before paid launch |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | Done `9d748f4` + `613a8e3` + `88eb908` + `5ad6a77` — author-approved exception to the Phase 5 gate (2026-10-25); 5.1 stays gated. Desktop routes live in the hash under `file://` (hash router, not an `app://` protocol, so the storage origin is unchanged); reload no longer blanks the window. `apps/desktop/e2e`: 13 Playwright Electron tests against the unsigned `--dir` app (CSP startup, reload/restart, bridge surface, local-server Test connection from the main process, chunked IPC streaming, Stop aborts the main-process request, failed reply, IPC refusal of renderer keys/remote addresses, link and navigation guards, backup zip to disk and back), offline. New `Desktop E2E` job on macOS + Windows, required by `cypress-smoke`. Found and fixed: Windows CRLF checkouts failed the web prebuild digest checks (`.gitattributes` LF). Lint baseline; 1276 web + 47 engine + 12 UI + 37 desktop tests; builds; Cypress 161/161; Web CI [run 40185198414](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/40185198414) green including both Desktop E2E jobs |
 | 5.4 | Progressive first-run onboarding + sample project | 5 | L | Done `a5644b1` — one-time blank-project auto-create lands a fresh install in Workspace immediately, no provider/ruleset setup first; dismissible getting-started guide shown only on first-run/sample projects; bundled sample project trimmed from `fixtures/trust-dogfood/` to one self-contained factual conflict the author resolves via the real extraction/canon-decision pipeline, reachable from the guide or Projects; lint with 1 baseline warning; 485 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 66/67 (one confirmed-unrelated pre-existing flake) |
 | 5.5 | AI provider setup UX hardening | 5 | M | Done `1c15774` — real per-provider Test connection (single-token completion for hosted providers, reachability/model check for Ollama) with plain-language results; two-tier Setup/Advanced split (per-provider key field, budget/policy/base-URL controls behind an explicit toggle, not a nested `<details>`); 3 author-facing relabels; on-device/hosted data-flow disclosure; actionable not-configured link; lint with 1 baseline warning; 496 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 73/73 ([review](archive/ux-ai-review-2026-08-29.md) §A2) |
@@ -2216,17 +2217,28 @@ KoboldCPP.
 - **5.1 Auto-update.** Decide Squirrel / electron-updater / manual (this
   affects main-process structure and signing), implement, and test
   update-from-previous-version.
-- **5.2 Code signing + notarization.** Apple Developer ID + notarization for
-  macOS; OV/EV or Azure Trusted Signing for Windows. Wire into CI packaging.
-  Then let signed macOS builds install updates in place (5.1 leaves macOS
-  on the release page) and set the Windows `publisherName` so downloaded
-  updates are signature-checked.
-  Also fix the packaged app's identity before beta (found in 5.1): the
-  packaged `package.json` has no `productName`, so Electron names the app
-  `desktop`, which is the author's data folder (`Application Support/desktop`,
-  `%APPDATA%\desktop`) and the Windows install folder
-  (`Programs\desktop`). Renaming it moves the data folder, so it needs a
-  one-time migration of the existing folder, covered by a packaged test.
+- **5.2 Code signing + notarization.** Author decision (2026-10-31): builds
+  stay **unsigned through the beta (6.1)**, and each release page carries the
+  "first launch" steps in `docs/release-process.md`. Signing lands before
+  the paid launch, macOS first: Apple Developer ID + notarization, then let
+  signed macOS builds install updates in place (5.1 leaves macOS on the
+  release page). Windows signing may follow the paid launch; the likely
+  route is Azure Artifact Signing (US/Canada individuals, no hardware token,
+  works in CI), with an OV certificate on a cloud-held key as the fallback.
+  When it lands, set the Windows `publisherName` so downloaded updates are
+  signature-checked, and add signing settings only when the CI secrets are
+  present (electron-builder's Azure setting forces signing when it is in the
+  config). Unsigned costs: Windows shows "Unknown publisher" and SmartScreen
+  "Run anyway", and every new version starts with no SmartScreen reputation;
+  macOS blocks the first open (Privacy & Security → Open Anyway) and can
+  report a downloaded app as damaged.
+  Data folder (found in 5.1, done ahead of signing): the packaged app is
+  named `desktop`, which was the author's data folder. The main process now
+  uses a `SagaSpine` data folder and moves the old `desktop` folder there in
+  one rename on first launch (`dataFolder.ts`, packaged test
+  `data-folder.e2e.ts`). The Electron app name stays `desktop` so keys saved
+  with the system keychain still decrypt; renaming it, and the Windows
+  install folder, would need its own migration.
 - **5.3 Packaged-app validation.** Playwright Electron E2E covering the LLM
   streaming IPC path (highest-payoff single test); packaged checks for file
   operations, external-link policy, provider diagnostics; both platforms.
