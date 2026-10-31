@@ -36,8 +36,12 @@ SagaSpine is a desktop writing environment for fiction authors. The current prod
   loopback address. Ollama cloud models and remote addresses for either are
   blocked, and anything unverified is disclosed and budgeted as remote.
 - There is no diagnostic telemetry or automatic crash-report upload.
-- Update checks (Slice 5.1) are the desktop app's only network contact
-  outside author-invoked AI requests. The installed app asks once whether to
+- Outside author-invoked AI requests, the app makes two kinds of network
+  contact, neither carrying project text: the packaged app downloads the
+  `Xenova/all-MiniLM-L6-v2` search (embedding) model from Hugging Face and its
+  runtime from jsDelivr when project retrieval first needs it, without asking
+  (on failure it uses the built-in fallback embedding; found during 5.8), and
+  update checks (Slice 5.1). The installed app asks once whether to
   check GitHub Releases automatically at startup and never checks before that
   answer; Settings → Updates changes it or checks by hand. A check sends no
   project data, and downloads and installs wait for the author. Windows and
@@ -499,6 +503,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   updates the stored run. The stored run is deliberately not part of project
   backups: snapshots carry accepted canon, not review output, and a restored
   project simply runs review again.
+
+### Help
+- **Help** (More → App, `/help`, command palette **Go to Help**; Slice 5.8)
+  is an offline, in-app page of seven short topics: getting started; World
+  Bible, Source Notes, and canon; reviewing suggestions; importing; backups
+  and exports; setting up AI; and where your data goes. It has a word filter,
+  **Open …** links to each topic's screens, `/help?topic=<id>` deep links,
+  and the portable export README (rendered from the same constant the export
+  writes). Content lives in `apps/web/src/help/helpTopics.ts`; update a
+  topic in the same change as the workflow it describes.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.

@@ -65,6 +65,11 @@ describe('Accessibility baseline', () => {
       cy.visit('/settings');
       cy.contains('h1', 'Settings').should('be.visible');
       checkPageAccessibility();
+
+      cy.visit('/help');
+      cy.contains('h1', 'Help').should('be.visible');
+      cy.contains('summary', 'Portable export format').click();
+      checkPageAccessibility();
     });
 
     it(`scans a destructive confirmation dialog in ${theme} mode`, () => {

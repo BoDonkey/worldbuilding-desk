@@ -71,6 +71,13 @@ export const createAppCommands = ({
       section: 'Navigation',
       keywords: ['settings', 'preferences', 'configuration'],
       run: () => navigate('/settings')
+    },
+    {
+      id: 'nav-help',
+      label: 'Go to Help',
+      section: 'Navigation',
+      keywords: ['help', 'guide', 'how to', 'privacy', 'backup', 'docs'],
+      run: () => navigate('/help')
     }
   ];
 

@@ -1,0 +1,140 @@
+.page {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.search {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.search input {
+  width: 100%;
+  max-width: 28rem;
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.topicList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.6rem;
+}
+
+.topicButton {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+}
+
+.topicButtonTitle {
+  font-weight: 700;
+}
+
+.topicButtonSummary {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.topic {
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel);
+  scroll-margin-top: 1rem;
+}
+
+.topicTitle {
+  margin: 0 0 0.5rem;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+}
+
+.topicTitle:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.topicBody {
+  color: var(--color-text-primary);
+  line-height: 1.55;
+  max-width: 72ch;
+}
+
+.topicBody p,
+.topicBody ul,
+.topicBody ol {
+  margin: 0 0 0.65rem;
+}
+
+.topicBody li + li {
+  margin-top: 0.35rem;
+}
+
+.topicLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.topicLink {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--color-accent-soft-border);
+  border-radius: 999px;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.topicLink:hover {
+  border-color: var(--color-accent);
+}
+
+.topicLink:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.format {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+}
+
+.format summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.format p {
+  color: var(--color-text-secondary);
+}
+
+.formatText {
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: var(--editor-pre-bg);
+  color: var(--editor-pre-text);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
