@@ -202,6 +202,9 @@ export function useWorkspaceDrawerFocus(params: {
     };
   }, [captureWorkspaceScroll]);
 
+  // Restore once the scene's text has loaded, never on edits: re-running per
+  // keystroke snapped the manuscript back to a stale snapshot (5.17).
+  const hasContent = content.length > 0;
   useLayoutEffect(() => {
     if (!workspaceScrollSnapshotKey || focusQuery?.trim()) return;
     const snapshot = workspaceScrollSnapshots.get(workspaceScrollSnapshotKey) ?? {
@@ -257,7 +260,7 @@ export function useWorkspaceDrawerFocus(params: {
       root?.removeEventListener('pointerdown', markUserInterrupted);
       root?.removeEventListener('keydown', markUserInterrupted);
     };
-  }, [content, focusQuery, workspaceScrollSnapshotKey]);
+  }, [hasContent, focusQuery, workspaceScrollSnapshotKey]);
 
   return {
     workspaceRootRef,

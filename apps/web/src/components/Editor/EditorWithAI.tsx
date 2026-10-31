@@ -463,6 +463,9 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, [editorScrollKey]);
 
+  // Restore once a scene's text has loaded, never on edits: re-running per
+  // keystroke snapped the scene to its stale saved position (5.17).
+  const hasContent = content.length > 0;
   useEffect(() => {
     const scrollElement = editorScrollRef.current;
     if (!scrollElement || focusQuery?.trim()) return;
@@ -530,14 +533,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       scrollElement.removeEventListener('pointerdown', markUserInterrupted);
       scrollElement.removeEventListener('keydown', markUserInterrupted);
     };
-  }, [
-    documentId,
-    editorReadyToken,
-    editorScrollKey,
-    focusQuery,
-    content,
-    resetScrollToken
-  ]);
+  }, [documentId, editorReadyToken, editorScrollKey, focusQuery, hasContent, resetScrollToken]);
 
   useEffect(() => {
     if (!resetScrollToken) return;
