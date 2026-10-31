@@ -27,8 +27,11 @@ const getDestinationValue = (
   switch (section.action) {
     case 'ignore':
       return SKIP_VALUE;
-    case 'new-field':
-      return `${NEW_PREFIX}${getNewFieldLabel(section)}`;
+    case 'new-field': {
+      // A name matching an existing field fills that field; show it as chosen.
+      const field = category ? resolveImportSectionField(category, section) : null;
+      return field ? `${FIELD_PREFIX}${field.key}` : `${NEW_PREFIX}${getNewFieldLabel(section)}`;
+    }
     case 'existing-field': {
       const field = category ? resolveImportSectionField(category, section) : null;
       return field ? `${FIELD_PREFIX}${field.key}` : KEEP_VALUE;
@@ -56,8 +59,13 @@ const describeDestination = (
   switch (section.action) {
     case 'ignore':
       return 'Not imported.';
-    case 'new-field':
+    case 'new-field': {
+      const field = category ? resolveImportSectionField(category, section) : null;
+      if (field) {
+        return `${field.label} already exists in ${categoryName}, so this fills the ${field.label} field. No new field is added.`;
+      }
       return `Adds a new field named ${getNewFieldLabel(section)} to ${categoryName} and fills it here. Other records get the field empty.`;
+    }
     case 'existing-field': {
       const field = category ? resolveImportSectionField(category, section) : null;
       return field

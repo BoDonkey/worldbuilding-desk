@@ -4,7 +4,6 @@ import type {EntityCategory, Project, ProjectSettings, WorldEntity} from '../../
 import type {
   ImportMode,
   JsonImportConflictResolution,
-  WorldBibleImportDraft,
   useWorldBibleImports
 } from '../../hooks/useWorldBibleImports';
 import type {useWorldBibleAuthoringAssistant} from '../../hooks/useWorldBibleAuthoringAssistant';
@@ -12,28 +11,8 @@ import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
 import {ImportDraftCard} from './ImportDraftCard';
 import {ImportDocumentPreviewDialog} from './ImportDocumentPreviewDialog';
-import {getNewFieldLabel} from '../../services/worldBible/worldBibleImportParsing';
+import {getPlannedNewFieldLabels} from '../../services/worldBible/worldBibleImportParsing';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
-
-/** New-field labels planned by drafts still waiting, per category, so one import can reuse another's. */
-const getPlannedNewFieldLabels = (drafts: WorldBibleImportDraft[]): Map<string, string[]> => {
-  const byCategory = new Map<string, string[]>();
-  drafts.forEach((draft) => {
-    if (!draft.include || draft.parseError || draft.status === 'imported' || !draft.useDetectedSections) {
-      return;
-    }
-    const labels = byCategory.get(draft.categoryId) ?? [];
-    draft.detectedSections?.forEach((section) => {
-      if (section.action !== 'new-field') return;
-      const label = getNewFieldLabel(section);
-      if (!labels.some((known) => known.toLowerCase() === label.toLowerCase())) {
-        labels.push(label);
-      }
-    });
-    byCategory.set(draft.categoryId, labels);
-  });
-  return byCategory;
-};
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 

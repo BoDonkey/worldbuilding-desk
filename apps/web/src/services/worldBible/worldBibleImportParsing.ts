@@ -258,6 +258,39 @@ export const getImportFieldOptions = (category: EntityCategory): CategoryField[]
 export const getNewFieldLabel = (section: WorldBibleImportSectionDraft): string =>
   section.newFieldLabel === undefined ? section.title : section.newFieldLabel.trim();
 
+/**
+ * Valid new-field names planned by included drafts, per category, so every
+ * draft can offer them. Invalid names (such as an emptied one) are left out.
+ */
+export const getPlannedNewFieldLabels = (
+  drafts: ReadonlyArray<{
+    categoryId: string;
+    include: boolean;
+    parseError?: string;
+    status?: string;
+    useDetectedSections?: boolean;
+    detectedSections?: WorldBibleImportSectionDraft[];
+  }>
+): Map<string, string[]> => {
+  const byCategory = new Map<string, string[]>();
+  drafts.forEach((draft) => {
+    if (!draft.include || draft.parseError || draft.status === 'imported' || !draft.useDetectedSections) {
+      return;
+    }
+    const labels = byCategory.get(draft.categoryId) ?? [];
+    draft.detectedSections?.forEach((section) => {
+      if (section.action !== 'new-field') return;
+      const label = getNewFieldLabel(section);
+      if (getImportFieldLabelError(label)) return;
+      if (!labels.some((known) => known.toLowerCase() === label.toLowerCase())) {
+        labels.push(label);
+      }
+    });
+    byCategory.set(draft.categoryId, labels);
+  });
+  return byCategory;
+};
+
 /** The existing field a section fills, or null when it has none. */
 export const resolveImportSectionField = (
   category: EntityCategory,

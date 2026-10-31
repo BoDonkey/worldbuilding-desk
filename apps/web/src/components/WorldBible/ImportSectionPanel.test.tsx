@@ -164,4 +164,20 @@ describe('ImportSectionPanel', () => {
     expect(screen.getByText('Enter a name for the new field.')).toBeInTheDocument();
     expect(input).toHaveAttribute('aria-invalid', 'true');
   });
+
+  it('says a new field name matching an existing field fills that field (5.17)', () => {
+    renderPanel([{
+      id: 'years',
+      title: 'Years',
+      content: '41',
+      action: 'new-field',
+      newFieldLabel: ' age! '
+    }]);
+
+    const picker = screen.getByRole('combobox', {name: 'Destination for Years'});
+    expect(picker).toHaveValue('field:age');
+    expect(screen.getByText('Age already exists in Characters, so this fills the Age field. No new field is added.')).toBeInTheDocument();
+    expect(screen.queryByText(/Adds a new field named/)).toBeNull();
+    expect(screen.getByLabelText('New field name')).toHaveValue(' age! ');
+  });
 });
