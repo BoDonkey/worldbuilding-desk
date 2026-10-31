@@ -10,6 +10,15 @@ const wcagRules: AxeOptions = {
 };
 
 function checkPageAccessibility() {
+  // Measure settled colors: axe can otherwise sample a control mid-transition
+  // on a slow first load and report an in-between shade.
+  cy.document().then((doc) => {
+    if (doc.getElementById('a11y-no-motion')) return;
+    const style = doc.createElement('style');
+    style.id = 'a11y-no-motion';
+    style.textContent = '*, *::before, *::after { transition: none !important; animation: none !important; }';
+    doc.head.appendChild(style);
+  });
   cy.injectAxe();
   cy.checkA11y(undefined, wcagRules, (violations) => {
     const details = violations.map((violation) => {
