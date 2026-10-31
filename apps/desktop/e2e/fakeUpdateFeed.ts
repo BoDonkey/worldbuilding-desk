@@ -58,14 +58,19 @@ export async function startFakeUpdateFeed(version: string): Promise<FakeUpdateFe
 
 /** Serves a real electron-builder output folder (installer, latest.yml, blockmap) over loopback. */
 export async function serveReleaseFolder(directory: string): Promise<FakeUpdateFeed> {
-  const {createReadStream, existsSync, statSync} = await import('node:fs');
+  const fs = await import('node:fs');
+  const {createReadStream, existsSync, statSync} = fs;
   const nodePath = await import('node:path');
   const requests: string[] = [];
   const server = http.createServer((request, response) => {
     const name = decodeURIComponent(new URL(request.url ?? '/', 'http://127.0.0.1').pathname.slice(1));
     requests.push(name);
-    const file = nodePath.join(directory, nodePath.basename(name));
-    if (!name || name.includes('/') || !existsSync(file) || !statSync(file).isFile()) {
+    // GitHub stores "SagaSpine Setup 1.0.exe" as "SagaSpine-Setup-1.0.exe", and
+    // latest.yml names the dashed form; match local files the same way.
+    const {readdirSync} = fs;
+    const local = readdirSync(directory).find((entry) => entry === name || entry.replace(/ /g, '-') === name);
+    const file = local ? nodePath.join(directory, local) : '';
+    if (!name || name.includes('/') || !file || !existsSync(file) || !statSync(file).isFile()) {
       response.writeHead(404);
       response.end();
       return;

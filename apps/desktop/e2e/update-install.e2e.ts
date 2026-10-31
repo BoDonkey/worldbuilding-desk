@@ -41,6 +41,8 @@ async function launch(userDataDir: string, feedUrl: string): Promise<{app: Elect
   delete env.ELECTRON_RUN_AS_NODE;
   env.SAGASPINE_TEST_UPDATE_FEED = feedUrl;
   const app = await _electron.launch({executablePath: executable, args: [`--user-data-dir=${userDataDir}`], env});
+  // The main process logs update failures; show them with the test output.
+  app.process().stderr?.on('data', (chunk) => process.stderr.write(`[app] ${chunk}`));
   await app.context().route(/^https:\/\/([a-z0-9-]+\.)*(huggingface\.co|hf\.co|jsdelivr\.net)\//, (route) => route.abort());
   const page = await app.firstWindow();
   await page.waitForURL(/#\/(workspace|projects)$/, {timeout: 60_000});
@@ -63,8 +65,10 @@ test('updates an installed SagaSpine to the next version and keeps the project',
     await first.page.getByRole('button', {name: 'Check for updates'}).click();
     await expect(first.page.getByRole('status').filter({hasText: `SagaSpine ${toVersion} is available`})).toBeVisible();
     await first.page.getByRole('button', {name: 'Download update'}).first().click();
+    const failed = first.page.getByRole('status').filter({hasText: 'could not be downloaded'});
     const restart = first.page.getByRole('button', {name: 'Restart to update'}).first();
-    await expect(restart).toBeVisible({timeout: 120_000});
+    await expect(restart.or(failed)).toBeVisible({timeout: 120_000});
+    await expect(failed, `download failed; feed requests: ${feed.requests.join(', ')}`).toHaveCount(0);
     const closed = first.app.waitForEvent('close');
     await restart.click();
     await closed;
