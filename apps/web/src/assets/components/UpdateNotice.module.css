@@ -1,0 +1,64 @@
+.card {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  /* Above page chrome and the stat panel (1260), below dialogs and toasts (1350). */
+  z-index: 1300;
+  display: grid;
+  gap: 0.45rem;
+  width: min(380px, calc(100vw - 2rem));
+  box-sizing: border-box;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+  color: var(--color-text-primary);
+  box-shadow: var(--button-shadow);
+  font-size: var(--font-size-sm);
+}
+
+.card p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.card .hint {
+  font-size: 0.78rem;
+}
+
+.card progress {
+  flex: 1 1 10rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.button {
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  padding: 0.35rem 0.75rem;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--button-secondary-bg-hover);
+}
+
+.button.primary {
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}

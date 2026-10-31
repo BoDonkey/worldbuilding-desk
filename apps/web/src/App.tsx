@@ -44,6 +44,7 @@ import AskProjectRoute from './routes/AskProjectRoute';
 import {getAllProjects} from './services/storage';
 import {createFirstRunProject, hasCheckedFirstRun, markFirstRunChecked} from './services/onboarding/firstRun';
 import appShellStyles from './styles/AppShell.module.css';
+import {UpdateNotice} from './components/Updates/UpdateNotice';
 
 const routeWindowScrollPositions = new Map<string, number>();
 
@@ -153,6 +154,7 @@ function AppShellLayout() {
         <Outlet />
       </main>
       <StatPinPanel isRailCollapsed={isRailCollapsed} />
+      <UpdateNotice />
       <AppNotifications />
     </div>
   );
