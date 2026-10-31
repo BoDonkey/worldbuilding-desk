@@ -1,7 +1,9 @@
 # Releasing SagaSpine
 
-How a desktop release reaches authors (Slice 5.1). Signing is Slice 5.2;
-until it lands, builds are unsigned.
+How a desktop release reaches authors (Slice 5.1). Builds are unsigned
+through the beta by author decision (Slice 5.2); signing, macOS first, lands
+before the paid launch. Until then, every release page includes the first
+launch steps below.
 
 ## Steps
 
@@ -35,3 +37,19 @@ instead.
   `apps/desktop/src/main/main.ts` as part of 5.2).
 - Packaged-app tests point an app at a local feed with
   `SAGASPINE_TEST_UPDATE_FEED`, which accepts only a loopback HTTP address.
+
+## First launch of an unsigned build
+
+Paste this into the release notes until builds are signed:
+
+> **Opening SagaSpine for the first time.** This build is not yet signed, so
+> your computer will warn you once.
+>
+> - **Windows:** if "Windows protected your PC" appears, click **More info**,
+>   then **Run anyway**.
+> - **macOS:** open SagaSpine once and close the warning. Then open
+>   **System Settings → Privacy & Security**, scroll to Security, click
+>   **Open Anyway** next to SagaSpine, and confirm. If macOS says SagaSpine
+>   "is damaged", move it to Applications and run
+>   `xattr -dr com.apple.quarantine /Applications/SagaSpine.app` in Terminal.
+> - **Linux:** make the AppImage executable (`chmod +x`) and run it.
