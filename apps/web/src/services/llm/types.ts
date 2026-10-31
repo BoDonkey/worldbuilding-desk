@@ -5,10 +5,17 @@ export interface LLMMessage {
   content: string;
 }
 
+/** The project record a context chunk came from, when it has one the author can open. */
+export interface ContextSourceRef {
+  kind: 'source-note' | 'world-bible';
+  id: string;
+}
+
 export interface LLMContextChunk {
   content: string;
   source: string;
   relevance?: number;
+  sourceRef?: ContextSourceRef;
 }
 
 export interface LLMRequest {

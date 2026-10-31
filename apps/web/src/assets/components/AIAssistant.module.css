@@ -161,7 +161,8 @@
 
 .contextSources ul {
   margin: 0.4rem 0 0;
-  padding-left: 1rem;
+  padding-left: 0;
+  list-style: none;
 }
 
 .contextSources li + li {
@@ -398,4 +399,22 @@
     border-radius: 14px 14px 0 0;
     padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
   }
+}
+
+.contextSources .contextSourceCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.contextSourceLabel {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.contextSourceCard button {
+  padding: 0.1rem 0.45rem;
+  font-size: 0.72rem;
 }

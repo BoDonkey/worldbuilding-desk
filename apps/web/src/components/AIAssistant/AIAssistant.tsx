@@ -9,7 +9,7 @@ import type {
 } from '../../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../../services/shodh/getShodhService';
 import {SHODH_MEMORIES_EVENT} from '../../services/shodh/shodhEvents';
-import type {LLMContextChunk, LLMMessage, LLMRequest} from '../../services/llm/types';
+import type {LLMMessage, LLMRequest} from '../../services/llm/types';
 import type {AssistantChatMessage} from '../../hooks/useAssistantConversation';
 import {useAssistantConversation} from '../../hooks/useAssistantConversation';
 import {
@@ -50,8 +50,7 @@ import {
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
-import {buildPromptBreakdown, fitContextChunks, sectionTokenLabel} from '../../services/llm/contextBudget';
-import {PromptTokenSummary} from '../common/PromptTokenSummary';
+import {buildPromptBreakdown, fitContextChunks} from '../../services/llm/contextBudget';
 import {ReplyVersionControls} from '../common/ReplyVersionControls';
 import {
   dropShownReply,
@@ -73,6 +72,8 @@ import {
 } from '../../services/coach/writingCoachConsultation';
 import {CraftCitationList} from '../CraftCitationList';
 import {AssistantReplyReader} from './AssistantReplyReader';
+import {AssistantContextSources} from './AssistantContextSources';
+import {getContextSourceRefs, getContextSourceSummaries} from '../../services/assistant/contextSources';
 import {describeError} from '../../services/errors';
 import {useStatusAnnouncement} from '../../hooks/useStatusAnnouncement';
 import {
@@ -126,16 +127,6 @@ interface AIAssistantProps {
   /** Offered on the Selected text card; returns the assistant to its default scope. */
   onClearContext?: () => void;
 }
-
-const getContextSourceSummaries = (chunks: LLMContextChunk[]): string[] =>
-  Array.from(
-    new Map(
-      chunks
-        .map((chunk) => chunk.source.trim())
-        .filter(Boolean)
-        .map((source) => [source.toLowerCase(), source])
-    ).values()
-  );
 
 export const AIAssistant: React.FC<AIAssistantProps> = ({
   projectId,
@@ -459,7 +450,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                   findPendingProposalsForQuestion(factualPrompt, pendingProposals.proposals)
                 )
               : directSavedFact.content),
-            contextSources: getContextSourceSummaries(directChunks)
+            contextSources: getContextSourceSummaries(directChunks),
+            contextSourceRefs: getContextSourceRefs(directChunks)
           }
         ]);
         scrollMessagesToBottom();
@@ -482,7 +474,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                   findPendingProposalsForQuestion(factualPrompt, pendingProposals.proposals)
                 )
               : unverified.content),
-            contextSources: getContextSourceSummaries(reviewedChunks)
+            contextSources: getContextSourceSummaries(reviewedChunks),
+            contextSourceRefs: getContextSourceRefs(reviewedChunks)
           }
         ]);
         scrollMessagesToBottom();
@@ -528,6 +521,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         sectionOf: (chunk) => (chunk === selectionChunk ? 'author-selection' : undefined)
       });
       const contextSources = getContextSourceSummaries(budgeted.kept);
+      const contextSourceRefs = getContextSourceRefs([...budgeted.kept, ...budgeted.dropped]);
       const leftOutSources = getContextSourceSummaries(budgeted.dropped);
       const promptBreakdown = buildPromptBreakdown({
         instructions: composedPrompt,
@@ -545,6 +539,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           role: 'assistant',
           content: '',
           contextSources,
+          contextSourceRefs,
           ...(leftOutSources.length > 0 ? {leftOutSources} : {}),
           promptBreakdown,
           modelContext,
@@ -571,7 +566,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             {
               ...(prev[prev.length - 1]?.role === 'assistant'
                 ? prev[prev.length - 1]
-                : {role: 'assistant' as const, contextSources, provenance: replyProvenance}),
+                : {role: 'assistant' as const, contextSources, contextSourceRefs, provenance: replyProvenance}),
               content: assistantMessage
             }
           ]);
@@ -584,7 +579,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           {
             ...(prev[prev.length - 1]?.role === 'assistant'
               ? prev[prev.length - 1]
-              : {role: 'assistant' as const, contextSources, provenance: replyProvenance}),
+              : {role: 'assistant' as const, contextSources, contextSourceRefs, provenance: replyProvenance}),
             content: outcome.message
           }
         ]);
@@ -868,31 +863,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         {messages.map((msg, i) => (
           <div key={i} className={styles[msg.role]}>
             <div className={styles.messageContent}>{msg.content}</div>
-            {msg.role === 'assistant' && msg.contextSources?.length ? (
-              <details className={styles.contextSources}>
-                <summary>Sources used</summary>
-                <ul>
-                  {msg.contextSources.map((source) => (
-                    <li key={source}>
-                      {source} <small>{sectionTokenLabel(msg.promptBreakdown, source)}</small>
-                    </li>
-                  ))}
-                </ul>
-                {msg.promptBreakdown && (
-                  <PromptTokenSummary breakdown={msg.promptBreakdown} size={msg.modelContext ?? null} />
-                )}
-              </details>
-            ) : null}
-            {msg.role === 'assistant' && msg.leftOutSources?.length ? (
-              <details className={styles.contextSources}>
-                <summary>Left out to fit the model’s context</summary>
-                <ul>
-                  {msg.leftOutSources.map((source) => (
-                    <li key={source}>{source}</li>
-                  ))}
-                </ul>
-              </details>
-            ) : null}
+            {msg.role === 'assistant' && (
+              <AssistantContextSources
+                projectId={projectId}
+                sources={msg.contextSources}
+                sourceRefs={msg.contextSourceRefs}
+                leftOutSources={msg.leftOutSources}
+                promptBreakdown={msg.promptBreakdown}
+                modelContext={msg.modelContext}
+              />
+            )}
             {msg.role === 'assistant' && msg.craftCitations?.length ? (
               <details className={styles.contextSources}>
                 <summary>Craft reference material (not your canon)</summary>

@@ -1,7 +1,7 @@
 import type {LoreDocumentLink} from '../../entityTypes';
 import {getLoreDocumentLinksByProject} from '../storage';
 import type {RAGSearchResult} from '../rag/types';
-import type {LLMContextChunk} from './types';
+import type {ContextSourceRef, LLMContextChunk} from './types';
 
 export const CONTEXT_TRUST_INSTRUCTIONS = `Context trust rules:
 - Treat accepted canon and accepted canon facts as the strongest source of truth.
@@ -45,14 +45,25 @@ export function getRagContextSource(
   }
 }
 
+/** Source Notes and World Bible records can be opened; other chunk types have no single record. */
+export function getRagContextSourceRef(result: RAGSearchResult): ContextSourceRef | undefined {
+  const {type} = result.chunk.metadata;
+  const id = result.chunk.documentId;
+  if (type === 'lore') return {kind: 'source-note', id: getLoreDocumentIdFromRagDocumentId(id)};
+  if (type === 'worldbible') return {kind: 'world-bible', id};
+  return undefined;
+}
+
 export function buildRagContextChunk(
   result: RAGSearchResult,
   loreLinks: LoreDocumentLink[] = []
 ): LLMContextChunk {
+  const sourceRef = getRagContextSourceRef(result);
   return {
     content: result.chunk.content,
     source: getRagContextSource(result, loreLinks),
-    relevance: result.score
+    relevance: result.score,
+    ...(sourceRef ? {sourceRef} : {})
   };
 }
 
