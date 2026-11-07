@@ -226,12 +226,13 @@ export interface InspectorSettings {
   lowCostModel?: string;
 }
 
-export type PromptToolKind = 'style' | 'tone' | 'persona' | 'instruction';
-
+/**
+ * Standing instructions the author can tick in the assistant. Tools saved
+ * before the type was removed may still carry a `kind`; it is ignored.
+ */
 export interface PromptTool {
   id: string;
   name: string;
-  kind: PromptToolKind;
   content: string;
   enabled: boolean;
 }

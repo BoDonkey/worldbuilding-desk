@@ -12,7 +12,7 @@ describe('HelpRoute', () => {
     renderRoute(<HelpRoute />, '/help');
     expect(await screen.findByRole('heading', {level: 1, name: 'Help'})).toBeInTheDocument();
     const topics = screen.getByRole('navigation', {name: 'Help topics'});
-    expect(topics.querySelectorAll('button')).toHaveLength(7);
+    expect(topics.querySelectorAll('button')).toHaveLength(8);
     expect(screen.getByRole('heading', {level: 2, name: 'Where your data goes'})).toBeInTheDocument();
     expect(screen.getAllByRole('link', {name: 'Open Projects'})[0]).toHaveAttribute('href', '/projects');
   });
@@ -39,8 +39,33 @@ describe('HelpRoute', () => {
     expect(screen.getByRole('heading', {level: 2, name: 'Setting up AI'})).toHaveFocus();
   });
 
-  it('shows the portable export format', async () => {
+  it('starts with topics collapsed and opens the one chosen from the list', async () => {
     renderRoute(<HelpRoute />, '/help');
-    expect(await screen.findByText(/worldbuilding-desk\/portable\//)).toBeInTheDocument();
+    const heading = await screen.findByRole('heading', {level: 2, name: 'Setting up AI'});
+    const topic = heading.closest('details')!;
+    expect(topic).not.toHaveAttribute('open');
+    fireEvent.click(screen.getByRole('button', {name: /Setting up AI/}));
+    expect(topic).toHaveAttribute('open');
+  });
+
+  it('opens matching topics while searching, and expands or collapses all', async () => {
+    renderRoute(<HelpRoute />, '/help');
+    fireEvent.change(await screen.findByLabelText('Search help'), {target: {value: 'sagabackup'}});
+    expect(screen.getByRole('heading', {level: 2, name: 'Backups and exports'}).closest('details')).toHaveAttribute('open');
+    fireEvent.change(screen.getByLabelText('Search help'), {target: {value: ''}});
+    fireEvent.click(screen.getByRole('button', {name: 'Expand all'}));
+    for (const topic of document.querySelectorAll('details')) expect(topic).toHaveAttribute('open');
+    fireEvent.click(screen.getByRole('button', {name: 'Collapse all'}));
+    for (const topic of document.querySelectorAll('details')) expect(topic).not.toHaveAttribute('open');
+  });
+
+  it('shows the portable export format as a readable topic', async () => {
+    renderRoute(<HelpRoute />, '/help?topic=portable-format');
+    const heading = await screen.findByRole('heading', {level: 2, name: 'Portable export format'});
+    const topic = heading.closest('details')!;
+    expect(topic).toHaveAttribute('open');
+    expect(topic.textContent).toMatch(/worldbuilding-desk\/portable\//);
+    expect(topic.textContent).not.toContain('# SagaSpine');
+    expect(topic.querySelector('code')?.textContent).toBe('README.md');
   });
 });

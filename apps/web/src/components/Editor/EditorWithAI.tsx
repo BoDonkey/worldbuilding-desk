@@ -4,7 +4,6 @@ import type {Editor as TipTapEditorInstance} from '@tiptap/react';
 import TipTapEditor from '../TipTapEditor';
 import type {LoreInspectorRecord} from '../../services/workspace/workspaceConsultation';
 import {ContextPopover} from './ContextPopover';
-import {AIExpandMenu} from './extensions/AIExpandMenu';
 import {
   type ConsistencyHighlightIssue
 } from './extensions/ConsistencyHighlightsExtension';
@@ -27,6 +26,7 @@ import {
   type AIContextPassageRange
 } from './extensions/AIContextPassageExtension';
 import {TextSelection} from 'prosemirror-state';
+import {normalizeSelectionSurface, useEditorSelectionMenu} from '../../hooks/useEditorSelectionMenu';
 import type {EditorConfig} from '../../config/editorConfig';
 import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
 import type {StatBlockPreviewData} from '../../hooks/useWorkspaceStatBlocks';
@@ -119,17 +119,6 @@ interface EditorWithAIProps {
   aiContextPassage?: AIContextPassageRange | null;
 }
 
-interface SelectionBubbleState {
-  selectedText: string;
-  from: number;
-  to: number;
-  x: number;
-  y: number;
-  matchType: 'character' | 'entity' | null;
-  matchName?: string;
-  matchRecord?: {name: string; html: string; lore: LoreInspectorRecord};
-}
-
 const REVIEW_FOCUS_TOP_OFFSET = 120;
 
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
@@ -167,9 +156,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   suppressSelectionBubble = false,
   aiContextPassage = null
 }) => {
-  const [selectionBubble, setSelectionBubble] = useState<SelectionBubbleState | null>(
-    null
-  );
   const [editorReadyToken, setEditorReadyToken] = useState(0);
   const [readyEditor, setReadyEditor] = useState<TipTapEditorInstance | null>(null);
   const [lorePopoverRecord, setLorePopoverRecord] = useState<LoreInspectorRecord | null>(null);
@@ -203,7 +189,18 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   );
   const appliedScrollResetKeyRef = useRef<string | null>(null);
 
-  const closeSelectionBubble = useCallback(() => setSelectionBubble(null), []);
+  const {
+    selectionMenu: selectionBubble,
+    selectionMenuRef,
+    setSelectionMenu: setSelectionBubble,
+    closeSelectionMenu: closeSelectionBubble,
+    syncSelectionMenu
+  } = useEditorSelectionMenu({
+    editorRef,
+    editorReadyToken,
+    suppressed: suppressSelectionBubble,
+    quickSnippets: selectionQuickSnippets
+  });
   const closeOtherPopovers = useCallback(() => {
     setLorePopoverAnchor(null);
     setLorePopoverRecord(null);
@@ -300,7 +297,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     return new Map(records.map((entry) => [entry.lore.id, entry.lore]));
   }, [selectionQuickSnippets]);
 
-  // Merge AIExpandMenu with config extensions
+  // Add the workspace editor extensions to the config.
   const mergedConfig = React.useMemo(() => {
     if (!config) {
       return undefined;
@@ -309,7 +306,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       ...config,
       extensions: [
         ...config.extensions,
-        AIExpandMenu,
         createCurrentSceneFindExtension(),
         createReviewFocusFlashExtension(),
         createAIContextPassageExtension(),
@@ -324,29 +320,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       ]
     };
   }, [config]);
-
-  useEffect(() => {
-    const handleAIRequest = (event: Event) => {
-      const customEvent = event as CustomEvent<{
-        selectedText: string;
-        from: number;
-        to: number;
-      }>;
-
-      onOpenAIContext?.({
-        type: 'document',
-        id: documentId,
-        selectedText: customEvent.detail.selectedText,
-        from: customEvent.detail.from,
-        to: customEvent.detail.to
-      });
-    };
-
-    window.addEventListener('ai-expand-request', handleAIRequest);
-    return () => {
-      window.removeEventListener('ai-expand-request', handleAIRequest);
-    };
-  }, [documentId, onOpenAIContext]);
 
   const aiContextFrom = aiContextPassage?.from ?? null;
   const aiContextTo = aiContextPassage?.to ?? null;
@@ -541,17 +514,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, [documentId, editorReadyToken, editorScrollKey, resetScrollToken]);
 
   useEffect(() => {
-    if (!selectionBubble) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setSelectionBubble(null);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectionBubble]);
-
-  useEffect(() => {
     if (!lorePopoverAnchor && !statBlockPopover && !statPeek && !statPeekMenu) return;
     const close = () => {
       setLorePopoverAnchor(null);
@@ -571,50 +533,10 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, [lorePopoverAnchor, setStatPeek, setStatPeekMenu, statBlockPopover, statPeek, statPeekMenu]);
 
-  useEffect(() => {
-    const reposition = () => {
-      const editor = editorRef.current;
-      if (!editor || editor.isDestroyed || !selectionBubble) return;
-      const {from, to} = editor.state.selection;
-      if (from === to) {
-        setSelectionBubble(null);
-        return;
-      }
-      const startCoords = editor.view.coordsAtPos(from);
-      const endCoords = editor.view.coordsAtPos(to);
-      setSelectionBubble((prev) =>
-        prev
-          ? {
-              ...prev,
-              x: (startCoords.left + endCoords.right) / 2,
-              y: Math.max(16, Math.min(startCoords.top, endCoords.top) - 10)
-            }
-          : prev
-      );
-    };
-    window.addEventListener('scroll', reposition, true);
-    window.addEventListener('resize', reposition);
-    return () => {
-      window.removeEventListener('scroll', reposition, true);
-      window.removeEventListener('resize', reposition);
-    };
-  }, [selectionBubble]);
-
-  const normalizeSelectionSurface = useCallback(
-    (input: string): string =>
-      input
-        .trim()
-        .toLowerCase()
-        .replace(/[^\w\s'-]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim(),
-    []
-  );
-
-  const updateSelectionBubble = useCallback(() => {
+  const handleSelectionChange = useCallback(() => {
     const editor = editorRef.current;
     if (!editor) return;
-    const {from, to} = editor.state.selection;
+    const {from} = editor.state.selection;
     const snapshot: EditorTextSnapshot = {text: '', spans: []};
     editor.state.doc.descendants((node, position) => {
       if (!node.isText || !node.text) return;
@@ -632,56 +554,15 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       snapshot,
       anchor: captureStateMutationAnchor(snapshot, position)
     });
-    if (suppressSelectionBubble) {
-      setSelectionBubble(null);
-      return;
-    }
-    if (from === to) {
-      setSelectionBubble(null);
-      return;
-    }
-    const selectedText = editor.state.doc.textBetween(from, to).trim();
-    if (!selectedText) {
-      setSelectionBubble(null);
-      return;
-    }
-    const normalized = normalizeSelectionSurface(selectedText);
-    const characterMatch = normalized
-      ? selectionQuickSnippets?.characters[normalized]
-      : undefined;
-    const entityMatch = normalized ? selectionQuickSnippets?.entities[normalized] : undefined;
-    const matchRecord = characterMatch ?? entityMatch;
-    const startCoords = editor.view.coordsAtPos(from);
-    const endCoords = editor.view.coordsAtPos(to);
-    setSelectionBubble({
-      selectedText,
-      from,
-      to,
-      x: (startCoords.left + endCoords.right) / 2,
-      y: Math.max(16, Math.min(startCoords.top, endCoords.top) - 10),
-      matchType: characterMatch ? 'character' : entityMatch ? 'entity' : null,
-      matchName: matchRecord?.name,
-      matchRecord
-    });
-  }, [
-    normalizeSelectionSurface,
-    onCursorContextChange,
-    selectionQuickSnippets,
-    suppressSelectionBubble
-  ]);
-
-  useEffect(() => {
-    if (suppressSelectionBubble) {
-      setSelectionBubble(null);
-    }
-  }, [suppressSelectionBubble]);
+    syncSelectionMenu();
+  }, [onCursorContextChange, syncSelectionMenu]);
 
   const handleEditorReady = useCallback((editorInstance: TipTapEditorInstance) => {
     editorRef.current = editorInstance;
     setReadyEditor(editorInstance);
     setEditorReadyToken((prev) => prev + 1);
-    updateSelectionBubble();
-  }, [updateSelectionBubble]);
+    handleSelectionChange();
+  }, [handleSelectionChange]);
 
   useEffect(() => {
     const handleFindShortcut = (event: KeyboardEvent) => {
@@ -815,13 +696,13 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
-    editor.on('selectionUpdate', updateSelectionBubble);
-    editor.on('transaction', updateSelectionBubble);
+    editor.on('selectionUpdate', handleSelectionChange);
+    editor.on('transaction', handleSelectionChange);
     return () => {
-      editor.off('selectionUpdate', updateSelectionBubble);
-      editor.off('transaction', updateSelectionBubble);
+      editor.off('selectionUpdate', handleSelectionChange);
+      editor.off('transaction', handleSelectionChange);
     };
-  }, [editorReadyToken, updateSelectionBubble]);
+  }, [editorReadyToken, handleSelectionChange]);
 
   useEffect(() => {
     const query = focusQuery?.trim();
@@ -1026,6 +907,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         />
         {selectionBubble && (
           <div
+            ref={selectionMenuRef}
             className={styles.selectionBubble}
             style={{
               left: `${selectionBubble.x}px`,

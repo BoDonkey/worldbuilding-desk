@@ -31,7 +31,9 @@ schema versioning, first-run onboarding with a sample project, trial/license
 gate, a help/docs baseline, and — added 2026-08-29 — the derived story
 dashboard and the writing coach described below, and — added 2026-09-26 —
 the character lab, and — added 2026-10-03 — optional password-protected
-project vaults.
+project vaults, and — added 2026-11-07 — separate per-project switches for
+AI coaching and AI prose, both off by default, and author-editable AI
+actions in the selection menu (5.18, 5.19).
 
 **Privacy promise.** Project data and manuscripts are stored locally.
 SagaSpine does not send diagnostic telemetry and does not use author
@@ -68,8 +70,9 @@ that work has landed.
   `docs/archive/`.
 - Trust dogfooding (1.1) is the checkpoint before beta. Phase 5 slices run
   only as author-approved exceptions to that gate, recorded on the board
-  (5.1, 5.2, 5.3, 5.8 so far). The A–F trust run resumes on one fresh stable
-  build before 6.1; release-blocking trust or data-loss findings come first.
+  (5.1, 5.2, 5.3, 5.8, 5.18, 5.19 so far). The A–F trust run resumes on one
+  fresh stable build before 6.1; release-blocking trust or data-loss
+  findings come first.
 
 ### Verification policy
 
@@ -146,7 +149,8 @@ run when a result was reused or coverage was focused.
 1. **Claim it.** Set the slice to `WIP` on the status board below before
    starting. Respect the open dependencies: 1.1's
    fresh-build trust run before 6.1; 5.2's macOS signing and 5.7 before the
-   paid launch (6.4); 5.9 before 6.4; Phase 6 strictly ordered. Finished
+   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; Phase 6
+   strictly ordered. Finished
    slices' ordering is in the archived snapshot.
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -339,6 +343,8 @@ messages).
 | 5.15c | Project vaults: verification + copy | 5 | M | Done `a1b9621` |
 | 5.16 | First-release dogfood polish | 5 | M | Done `9b242c1` |
 | 5.17 | Writing-flow stability + assistant continuity | 5 | L | Done `dc0460c` |
+| 5.18 | Per-project AI switches (coaching, prose) | 5 | M | — (author-approved pre-beta exception, 2026-11-07) |
+| 5.19 | Custom AI actions in the selection menu | 5 | M | — (author-approved pre-beta exception, 2026-11-07; after 5.18) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -388,7 +394,6 @@ bug before changing the Phase 5 board.
   restorable backup per 4.2. Update `docs/domain-model.md` §3 (subject scope)
   and the smoke procedures. Do not add stats or resources to general
   fiction; this is descriptive state only.
-
 ### Phase 5 — Release engineering
 
 - **5.2 Code signing + notarization.** Author decision (2026-10-31): builds
@@ -436,6 +441,112 @@ bug before changing the Phase 5 board.
   and **Private local AI** rather than collapsing them into a single offline
   claim. Do not advertise encrypted working projects before the vault smoke
   and packaged-desktop checks pass.
+- **5.18 Per-project AI switches (coaching, prose).** Raised in 2026-11-07
+  dogfooding: an author must be able to write without AI, and to accept AI
+  feedback without accepting AI-written prose. Add two independent
+  switches at the top of Settings → AI Settings, per project:
+  - **AI coaching** — AI that reads and responds and never puts text into
+    the manuscript: assistant chat and its prompt tools, writing coach
+    (inline and dashboard), **Ask your project**, model-assisted canon
+    check and review items, canon decision consultations, progression
+    continuity, World Canvas coaching, Workspace context actions, and
+    `note` AI actions (5.19). Also World Canvas brainstorming, **Talk to**
+    a character, and **Character from a description**, which produce world
+    material for review rather than manuscript prose (author decision,
+    2026-11-07).
+  - **AI prose** — every path that puts model-written text into the
+    manuscript: **Preview scene revision** from the assistant, **Draft this
+    scene**, **Character scene**, and `replace` AI actions (5.19).
+  - **Defaults.** Every project starts with both switches off, including
+    projects saved before this slice (there are no released users yet, so
+    no migration keeps AI on). AI Settings says where the switches are.
+  - **When a switch is off**, its surfaces are hidden, not disabled (with
+    coaching off and prose on, the assistant drawer shows only what prose
+    needs), and the shared LLM call path refuses requests tagged with that
+    switch's features, so a surface the UI missed still cannot send. Every
+    `ConsultationFeature` in `services/editor/inspectorBudgetService.ts`
+    is assigned to exactly one switch, and a test fails when a new feature
+    has none. Deterministic features (review, extraction rules, canon,
+    replay, dashboard measurements) and on-device search do not depend on
+    either switch.
+  - With both off, the rest of AI Settings collapses to a short note; saved
+    provider settings and keys are kept.
+  - Replace the misleading **Enable AI consultation actions in Lore
+    Inspector** checkbox (it gates several features, not the Lore
+    Inspector, and the assistant ignores it); fold its stored value into
+    the coaching switch without turning anything off for authors who had
+    it on.
+  - Help (**Setting up AI**, **Where your data goes**) explains both
+    switches. Verify with unit tests on the call-path guard and feature
+    assignment, a route test per surface family, and a Cypress smoke for
+    each switch combination.
+- **5.19 Custom AI actions in the selection menu.** Pre-beta (author
+  decision, 2026-11-07; after 5.18), raised in 2026-11-07 dogfooding
+  (custom tools are a main draw of competing writing apps). Today's prompt
+  tools are standing instructions added to every assistant chat message;
+  this adds one-shot *actions* the author runs on selected text from the
+  right-click selection menu (moved to right-click in the same dogfooding
+  session).
+  - **Model.** A separate `selectionActions` list in the project AI
+    settings: name, instructions, what it receives (the selection always;
+    optionally the current scene and the World Bible records the selection
+    names, through the 4.71 linked-record pull-in), an output kind
+    (`replace`: a rewrite of the selection; `note`: a written reply with no
+    edit), and an on/off switch. Prompt tools stay as they are and do not
+    apply to actions. Tool pack export/import carries both lists, with a
+    schema version bump that still reads version 1 packs.
+  - **Presets, off by default.** Ship a few examples, all switched off
+    until the author turns them on in Settings, for example **Tighten**,
+    **Expand this beat**, **Add sensory detail**, **Vary sentence rhythm**
+    (`replace`), and **Check against canon** (`note`: cites accepted facts
+    the selection contradicts, changes nothing).
+  - **Menu.** Switched-on actions appear in the selection menu after
+    **Ask AI about this** (grouped under one entry if there are many). The
+    character stat menu does not list them.
+  - **Trust boundary.** Author-invoked only. A `replace` result opens the
+    existing scene revision preview (`services/assistant/sceneRevision.ts`)
+    and changes the scene only on **Confirm**, refusing if the scene changed
+    since the request; a `note` result opens in the assistant reply reading
+    view. Nothing writes canon or mechanics. Each run counts against the
+    consultation budget as its own feature, and hosted runs show the same
+    provider disclosure as other AI actions.
+  - **Settings.** An **AI actions** section beside Prompt Tools where the
+    author adds, edits, deletes, and switches actions on or off; presets are
+    ordinary actions once installed, so they can be edited or deleted too.
+    **Install presets** re-adds missing presets without touching edited
+    ones.
+  - **Explaining the two kinds to authors.** Settings shows one line under
+    each section, and the **Setting up AI** help topic uses the examples
+    below:
+    - **Prompt Tools:** "Standing instructions for the AI chat, such as a
+      voice or role. Tick them in the AI panel; they apply to every
+      message."
+    - **AI actions:** "One-click tasks for selected text. Right-click a
+      selection to run one. Rewrites wait for your confirmation."
+    - *Prompt tool example:* **Blunt Beta Reader**, "Respond as a beta
+      reader who reads a lot of LitRPG. Be direct. Point out confusion and
+      slow spots before praising anything." Ticked in the AI panel, it
+      shapes every chat answer until unticked.
+    - *`replace` action example:* **Tighten**, "Cut filler words and
+      redundant phrases. Keep the meaning, voice and tense. Don't add
+      anything new." Select, right-click, **Tighten**: a preview shows the
+      tighter text, and the scene changes only on **Confirm**.
+    - *`note` action example:* **Check against canon**, "List anything in
+      this passage that contradicts accepted facts, citing each fact."
+      Select, right-click, **Check against canon**: a short report, and the
+      text is unchanged.
+  - **AI switches.** `note` actions follow 5.18's coaching switch and
+    `replace` actions its prose switch; an action whose switch is off is
+    hidden from the menu and from Settings' on/off list.
+  - **Verify.** Unit tests for prompt building and preset defaults;
+    integration tests that only switched-on actions appear in the menu;
+    Cypress: right-click → action → preview → Confirm writes, Dismiss leaves
+    the text unchanged, a `note` action never edits. Update
+    `PROJECT_STATUS.md`, `docs/status-writing-workspace.md`, the **Setting
+    up AI** help topic, and add a smoke procedure.
+  - **Out of scope.** Free-form template variables, actions outside the
+    Workspace editor (Source Notes, World Bible fields), and sharing action
+    packs beyond file export.
 
 ### Phase 6 — Beta, RC, Launch
 

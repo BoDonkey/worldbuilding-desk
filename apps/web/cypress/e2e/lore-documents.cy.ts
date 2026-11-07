@@ -251,6 +251,7 @@ describe('Source Notes', () => {
 
   it('opens every note in Markdown source once the author prefers it', () => {
     cy.visit('/settings');
+    cy.ensureSettingsSectionOpen('Reading & Editor');
     cy.contains('Source Notes open in')
       .parent()
       .within(() => {

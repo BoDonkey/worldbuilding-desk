@@ -28,13 +28,13 @@ import styles from '../styles/SettingsRoute.module.css';
 
 interface SettingsSectionProps {
   title: string;
-  defaultOpen?: boolean;
   children: ReactNode;
 }
 
-function SettingsSection({title, defaultOpen = false, children}: SettingsSectionProps) {
+/** Sections start collapsed so the page reads as an index of what can be set. */
+function SettingsSection({title, children}: SettingsSectionProps) {
   return (
-    <details className={styles.sectionDetails} open={defaultOpen}>
+    <details className={styles.sectionDetails}>
       <summary className={styles.sectionSummary}>{title}</summary>
       <div className={styles.sectionBody}>{children}</div>
     </details>
@@ -320,7 +320,7 @@ function SettingsRoute() {
       </details>
 
       <div className={styles.settingsGrid}>
-        <SettingsSection title='Reading & Editor' defaultOpen={true}>
+        <SettingsSection title='Reading & Editor'>
           <FontSizeControl />
           <EditorAppearanceControl />
           <div className={styles.helperList}>
@@ -371,7 +371,7 @@ function SettingsRoute() {
           <DiagnosticsPanel secrets={configuredApiKeys} />
         </SettingsSection>
 
-        <SettingsSection title='Project Mode' defaultOpen={true}>
+        <SettingsSection title='Project Mode'>
           <p className={styles.helperText}>
             Choose the default experience for this project. Changing mode resets
             feature toggles to mode defaults.

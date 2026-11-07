@@ -220,8 +220,8 @@ export function useEditorStatPeek({
     const container = editorScrollRef.current;
     const editor = editorRef.current;
     if (!container || !editor || !characterStatPeek) return;
-    // Capture phase, so a character name gets this menu before the editor's own
-    // right-click handling (Ask AI about this on a selection), which the menu keeps.
+    // Capture phase, so a character name gets this menu before the selection
+    // menu's right-click handling; this menu keeps its Ask AI about this action.
     const onContextMenu = (event: MouseEvent) => {
       if (editor.isDestroyed || !(event.target instanceof Node)) return;
       if (!editor.view.dom.contains(event.target)) return;

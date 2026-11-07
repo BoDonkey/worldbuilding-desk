@@ -1,0 +1,45 @@
+/* Workspace scratchpad dialog. Shared modal pieces stay in WorkspaceRoute.module.css. */
+
+.card {
+  padding: 1.1rem;
+  width: min(720px, 94vw);
+  max-height: 82vh;
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* The editor takes the card's spare height and scrolls inside it, so long
+   notes never push the footer off screen. */
+.editorShell {
+  flex: 1 1 auto;
+  min-height: 12rem;
+  height: min(56vh, 520px);
+  overflow-y: auto;
+}
+
+.editorShell :global(.control-group) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}

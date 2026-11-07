@@ -13,25 +13,8 @@ describe('Reviewed assistant scene revisions', () => {
     });
   });
 
-  function selectAlpha() {
-    cy.window().then((win) => win.dispatchEvent(new CustomEvent('ai-expand-request', {
-      detail: {selectedText: 'Alpha', from: 1, to: 6}
-    })));
-    cy.contains('button', 'Preview scene revision').should('be.visible').click();
-    cy.contains('strong', 'Replace selected scene text').should('be.visible');
-  }
-
-  it('offers the inline writing coach with scene evidence, and keeps it enabled once text is selected', () => {
-    cy.contains('button', 'Context').click();
-    cy.contains('button', /^AI$/).click();
-    cy.contains('button', 'Ask the writing coach').should('be.visible').and('not.be.disabled');
-    cy.window().then((win) => win.dispatchEvent(new CustomEvent('ai-expand-request', {
-      detail: {selectedText: 'Alpha', from: 1, to: 6}
-    })));
-    cy.contains('button', 'Ask the writing coach').should('not.be.disabled');
-  });
-
-  it('keeps a passage handed to the assistant marked until the author clears it', () => {
+  /** Selects "Alpha", the first word of the scene. */
+  function selectFirstWord() {
     cy.get('.tiptap[contenteditable="true"]').click();
     cy.get('.tiptap[contenteditable="true"] p').first().then(($paragraph) => {
       const doc = $paragraph[0].ownerDocument;
@@ -44,7 +27,32 @@ describe('Reviewed assistant scene revisions', () => {
       selection.addRange(range);
       doc.dispatchEvent(new Event('selectionchange'));
     });
+  }
+
+  /** Selecting alone shows no menu; right-clicking the selection opens it. */
+  function askAIAboutFirstWord() {
+    selectFirstWord();
+    cy.contains('button', 'Ask AI about this').should('not.exist');
+    cy.get('.tiptap[contenteditable="true"] p').first().trigger('contextmenu');
     cy.contains('button', 'Ask AI about this').click();
+  }
+
+  function selectAlpha() {
+    askAIAboutFirstWord();
+    cy.contains('button', 'Preview scene revision').should('be.visible').click();
+    cy.contains('strong', 'Replace selected scene text').should('be.visible');
+  }
+
+  it('offers the inline writing coach with scene evidence, and keeps it enabled once text is selected', () => {
+    cy.contains('button', 'Context').click();
+    cy.contains('button', /^AI$/).click();
+    cy.contains('button', 'Ask the writing coach').should('be.visible').and('not.be.disabled');
+    askAIAboutFirstWord();
+    cy.contains('button', 'Ask the writing coach').should('not.be.disabled');
+  });
+
+  it('keeps a passage handed to the assistant marked until the author clears it', () => {
+    askAIAboutFirstWord();
 
     cy.contains('Selected text').should('be.visible');
     cy.get('[data-testid="ai-context-passage"]').should('have.text', 'Alpha');

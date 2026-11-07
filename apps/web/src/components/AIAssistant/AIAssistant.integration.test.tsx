@@ -411,6 +411,33 @@ describe('AIAssistant factual lookup integration', () => {
     expect(mocks.stream).toHaveBeenCalledTimes(1);
   });
 
+  it('sends each ticked prompt tool as its name and instructions', async () => {
+    mocks.search.mockResolvedValue([]);
+    renderAssistant({
+      projectId: 'project-tools',
+      aiConfig: {
+        ...hostedSettings,
+        promptTools: [
+          {id: 'line-editor', name: 'Line Editor', content: 'Prefer concise prose.', enabled: true},
+          {id: 'critic', name: 'Critic', content: 'Be blunt.', enabled: true}
+        ],
+        defaultToolIds: ['line-editor']
+      },
+      showWritingCoach: false
+    });
+
+    await screen.findByText('Project context ready.');
+    expect(screen.getByRole('checkbox', {name: 'Line Editor'})).toBeChecked();
+    expect(screen.getByRole('checkbox', {name: 'Critic'})).not.toBeChecked();
+    fireEvent.change(screen.getByRole('textbox'), {target: {value: 'Tighten this.'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+
+    await screen.findByText('This should not be used.');
+    const request = JSON.stringify(mocks.stream.mock.calls[0][0]);
+    expect(request).toContain('Active Prompt Tools:\\n- Line Editor: Prefer concise prose.');
+    expect(request).not.toContain('Be blunt.');
+  });
+
   it('attributes the embedded writing coach to writing-coach', async () => {
     renderAssistant({
       projectId: 'project-coach-budget',

@@ -3,6 +3,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {filterHelpTopics, parseHelpText} from './helpSearch';
 import {HELP_TOPICS} from './helpTopics';
+import {markdownToHelpBlocks} from './portableFormatTopic';
 
 describe('parseHelpText', () => {
   it('marks on-screen names', () => {
@@ -17,6 +18,25 @@ describe('parseHelpText', () => {
 
   it('keeps an unclosed marker as plain text', () => {
     expect(parseHelpText('Press **Cmd')).toEqual([{text: 'Press **Cmd', label: false}]);
+  });
+
+  it('marks file names in backticks as code', () => {
+    expect(parseHelpText('Open **Export** to get `README.md`.')).toEqual([
+      {text: 'Open ', label: false},
+      {text: 'Export', label: true},
+      {text: ' to get ', label: false},
+      {text: 'README.md', label: false, code: true},
+      {text: '.', label: false}
+    ]);
+  });
+});
+
+describe('markdownToHelpBlocks', () => {
+  it('drops the top heading and keeps paragraphs and bullet lists', () => {
+    expect(markdownToHelpBlocks('# Title\n\nFirst line\nsame paragraph.\n\n- one\n- two\n')).toEqual([
+      {kind: 'paragraph', text: 'First line same paragraph.'},
+      {kind: 'list', items: ['one', 'two']}
+    ]);
   });
 });
 

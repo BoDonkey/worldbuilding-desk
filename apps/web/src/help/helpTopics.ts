@@ -1,9 +1,11 @@
 /*
  * In-app help (Slice 5.8). Plain author-facing text, one entry per topic.
- * `**Label**` marks an on-screen name and renders bold. Every statement here
- * must match what the app does today; when a workflow changes, update its
- * topic in the same change.
+ * `**Label**` marks an on-screen name and renders bold; `code` marks a file
+ * or folder name. Every statement here must match what the app does today;
+ * when a workflow changes, update its topic in the same change.
  */
+
+import {PORTABLE_FORMAT_TOPIC} from './portableFormatTopic';
 
 export type HelpBlock =
   | {kind: 'paragraph'; text: string}
@@ -232,5 +234,6 @@ export const HELP_TOPICS: HelpTopic[] = [
       {label: 'Projects', to: '/projects'},
       {label: 'Settings', to: '/settings'}
     ]
-  }
+  },
+  PORTABLE_FORMAT_TOPIC
 ];

@@ -2,7 +2,6 @@ import React, {useEffect, useState} from 'react';
 import type {
   ProjectAISettings,
   AIProviderId,
-  PromptToolKind,
   PromptTool,
   ProjectMode
 } from '../../entityTypes';
@@ -54,13 +53,6 @@ interface AISettingsProps {
 }
 
 
-const PROMPT_TOOL_KIND_LABELS: Record<PromptToolKind, string> = {
-  style: 'Style Guide',
-  tone: 'Tone Guide',
-  persona: 'AI Persona',
-  instruction: 'Instruction'
-};
-
 interface PromptToolPack {
   schemaVersion: 1;
   tools: PromptTool[];
@@ -90,7 +82,6 @@ const DEFAULT_PRESET_TOOLS: PromptTool[] = [
   {
     id: 'preset-literary-critic',
     name: 'Literary Critic',
-    kind: 'persona',
     content:
       'Respond as a rigorous literary critic. Focus on structure, pacing, thematic coherence, and prose clarity.',
     enabled: true
@@ -98,7 +89,6 @@ const DEFAULT_PRESET_TOOLS: PromptTool[] = [
   {
     id: 'preset-beta-reader',
     name: 'Beta Reader',
-    kind: 'persona',
     content:
       'Respond as an engaged beta reader. Call out confusion points, emotional impact, and readability issues.',
     enabled: true
@@ -106,7 +96,6 @@ const DEFAULT_PRESET_TOOLS: PromptTool[] = [
   {
     id: 'preset-line-editor',
     name: 'Line Editor',
-    kind: 'tone',
     content:
       'Prefer concise, concrete prose. Remove filler, tighten sentence rhythm, and avoid repetition.',
     enabled: true
@@ -126,11 +115,9 @@ export const AISettings: React.FC<AISettingsProps> = ({
   const [keyStatus, setKeyStatus] = useState<ProviderKeyStatus | null>(null);
   const providerRoute = useProviderRoute(aiSettings);
   const [toolName, setToolName] = useState('');
-  const [toolKind, setToolKind] = useState<PromptToolKind>('persona');
   const [toolContent, setToolContent] = useState('');
   const [editingToolId, setEditingToolId] = useState<string | null>(null);
   const [editingToolName, setEditingToolName] = useState('');
-  const [editingToolKind, setEditingToolKind] = useState<PromptToolKind>('persona');
   const [editingToolContent, setEditingToolContent] = useState('');
   const [defaultsMode, setDefaultsMode] = useState<ProjectMode>(projectMode);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
@@ -366,7 +353,6 @@ export const AISettings: React.FC<AISettingsProps> = ({
           {
             id,
             name: toolName.trim(),
-            kind: toolKind,
             content: toolContent.trim(),
             enabled: true
           }
@@ -379,7 +365,6 @@ export const AISettings: React.FC<AISettingsProps> = ({
       })
     );
     setToolName('');
-    setToolKind('persona');
     setToolContent('');
   };
 
@@ -400,14 +385,12 @@ export const AISettings: React.FC<AISettingsProps> = ({
   const handleStartEditTool = (tool: PromptTool) => {
     setEditingToolId(tool.id);
     setEditingToolName(tool.name);
-    setEditingToolKind(tool.kind);
     setEditingToolContent(tool.content);
   };
 
   const handleCancelEditTool = () => {
     setEditingToolId(null);
     setEditingToolName('');
-    setEditingToolKind('persona');
     setEditingToolContent('');
   };
 
@@ -418,10 +401,10 @@ export const AISettings: React.FC<AISettingsProps> = ({
       promptTools: promptTools.map((tool) =>
         tool.id === toolId
           ? {
-              ...tool,
+              id: tool.id,
               name: editingToolName.trim(),
-              kind: editingToolKind,
-              content: editingToolContent.trim()
+              content: editingToolContent.trim(),
+              enabled: tool.enabled
             }
           : tool
       )
@@ -544,7 +527,6 @@ export const AISettings: React.FC<AISettingsProps> = ({
           return {
             id: nextId,
             name: tool.name,
-            kind: (tool.kind as PromptToolKind) || 'instruction',
             content: tool.content,
             enabled: tool.enabled !== false
           };
@@ -1059,21 +1041,6 @@ export const AISettings: React.FC<AISettingsProps> = ({
         </div>
 
         <div className={styles.field}>
-          <label className={styles.label}>Tool Type</label>
-          <select
-            className={styles.input}
-            value={toolKind}
-            onChange={(e) => setToolKind(e.target.value as PromptToolKind)}
-          >
-            {Object.entries(PROMPT_TOOL_KIND_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.field}>
           <label className={styles.label}>Tool Instructions</label>
           <textarea
             className={styles.textarea}
@@ -1127,20 +1094,6 @@ export const AISettings: React.FC<AISettingsProps> = ({
                       />
                     </div>
                     <div className={styles.field}>
-                      <label className={styles.label}>Tool Type</label>
-                      <select
-                        className={styles.input}
-                        value={editingToolKind}
-                        onChange={(e) => setEditingToolKind(e.target.value as PromptToolKind)}
-                      >
-                        {Object.entries(PROMPT_TOOL_KIND_LABELS).map(([value, label]) => (
-                          <option key={`edit-${value}`} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className={styles.field}>
                       <label className={styles.label}>Tool Instructions</label>
                       <textarea
                         className={styles.textarea}
@@ -1169,9 +1122,6 @@ export const AISettings: React.FC<AISettingsProps> = ({
                   <>
                     <div className={styles.toolHeader}>
                       <strong>{tool.name}</strong>
-                      <span className={styles.toolKind}>
-                        {PROMPT_TOOL_KIND_LABELS[tool.kind]}
-                      </span>
                     </div>
                     <p className={styles.toolContent}>{tool.content}</p>
                   </>
