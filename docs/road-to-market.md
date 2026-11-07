@@ -70,9 +70,9 @@ that work has landed.
   `docs/archive/`.
 - Trust dogfooding (1.1) is the checkpoint before beta. Phase 5 slices run
   only as author-approved exceptions to that gate, recorded on the board
-  (5.1, 5.2, 5.3, 5.8, 5.18, 5.19 so far). The A–F trust run resumes on one
-  fresh stable build before 6.1; release-blocking trust or data-loss
-  findings come first.
+  (5.1, 5.2, 5.3, 5.8, 5.18, 5.19, and the Phase 3 refactor 3.32 so far).
+  The A–F trust run resumes on one fresh stable build before 6.1;
+  release-blocking trust or data-loss findings come first.
 
 ### Verification policy
 
@@ -149,8 +149,8 @@ run when a result was reused or coverage was focused.
 1. **Claim it.** Set the slice to `WIP` on the status board below before
    starting. Respect the open dependencies: 1.1's
    fresh-build trust run before 6.1; 5.2's macOS signing and 5.7 before the
-   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; Phase 6
-   strictly ordered. Finished
+   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; 3.32
+   after 5.19; Phase 6 strictly ordered. Finished
    slices' ordering is in the archived snapshot.
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -345,6 +345,7 @@ messages).
 | 5.17 | Writing-flow stability + assistant continuity | 5 | L | Done `dc0460c` |
 | 5.18 | Per-project AI switches (coaching, prose) | 5 | M | — (author-approved pre-beta exception, 2026-11-07) |
 | 5.19 | Custom AI actions in the selection menu | 5 | M | — (author-approved pre-beta exception, 2026-11-07; after 5.18) |
+| 3.32 | Break up the oversized route files along feature seams | 3 | L | — (author-approved pre-beta exception, 2026-11-07; after 5.19) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -378,6 +379,40 @@ and results templates in the fixture runbook. Do not fix ordinary findings
 mid-run. Preserve evidence, finish A–H, then classify each finding as a
 release blocker, workflow blocker, UX friction, false positive, or fixture
 bug before changing the Phase 5 board.
+
+### Phase 3 — Code fitness
+
+- **3.32 Break up the oversized route files along feature seams.**
+  Pre-beta (author decision, 2026-11-07; after 5.19). Raised when 5.18
+  showed the size gate pushing small, hard-to-find extractions.
+  Behavior-preserving refactor. Instead of shaving a few lines off a
+  hotspot in each feature slice, split each file once, on purpose, along
+  the seams a reader would look for:
+  - **Files.** `WorldBibleRoute.tsx` (2,145 lines, 29 `useState`),
+    `CharacterSheetsRoute.tsx` (2,105, 37), `WorkspaceRoute.tsx` (1,829,
+    13 effects), `LoreRoute.tsx` (1,766, 38), and
+    `WorkspaceContextDrawer.tsx` (1,284). Their CSS modules
+    (`WorldBibleRoute.module.css`, `WorkspaceRoute.module.css`) split with
+    the components that use them. `EditorWithAI.tsx`, `AISettings.tsx`,
+    and `ConsistencyEngineService.ts` are out of scope unless a seam falls
+    out naturally.
+  - **Method.** Per file, write the seam map first, in the PR description:
+    each section of the screen or concern, the state and handlers it owns,
+    and the file it moves to (a section component plus a hook for its
+    state, in a folder named after the route, such as
+    `components/WorldBible/record/`). The route keeps routing, data
+    loading, and layout. Fold back any size-only fragments made earlier
+    (for example `WorldBibleRecordAiHelperToggle`) into the section they
+    belong to.
+  - **Targets.** Each route file under 600 lines; no new file over 600; no
+    component that is only markup passed through from its parent.
+  - **Order.** One PR per route, World Bible first (largest and most
+    fragmented). After 5.19, which adds to the Workspace selection menu and
+    assistant, so the two do not collide; a 5.19 seam such as a
+    selection-menu component counts toward this slice.
+  - **Verify.** Full-coverage tier per PR, with no test changes beyond
+    import paths; `--update` the size baseline as files shrink, and drop
+    each file from it once under 1,000 lines.
 
 ### Phase 4 — Post-beta candidate
 
