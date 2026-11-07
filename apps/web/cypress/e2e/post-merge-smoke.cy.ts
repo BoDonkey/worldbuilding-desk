@@ -1091,7 +1091,7 @@ describe('Post-merge smoke checklist', () => {
 
       // The importer offers a Replace/Append choice via the shared confirm
       // dialog instead of a native confirm() — choose Replace here.
-      cy.contains('[role="dialog"]', 'Replace existing prompt tools with imported tools?')
+      cy.contains('[role="dialog"]', 'Replace existing prompt tools and AI actions with the imported ones?')
         .should('be.visible')
         .within(() => {
           cy.contains('button', 'Replace').click();
@@ -1110,7 +1110,7 @@ describe('Post-merge smoke checklist', () => {
       });
 
       // Second import: choose Append instead of Replace.
-      cy.contains('[role="dialog"]', 'Replace existing prompt tools with imported tools?')
+      cy.contains('[role="dialog"]', 'Replace existing prompt tools and AI actions with the imported ones?')
         .should('be.visible')
         .within(() => {
           cy.contains('button', 'Append').click();

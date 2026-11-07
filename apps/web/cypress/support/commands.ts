@@ -401,6 +401,10 @@ Cypress.Commands.add('setSeededAISwitches', (switches: {coaching: boolean; prose
   patchSeededAISettings({aiCoaching: switches.coaching, aiProse: switches.prose})
 );
 
+Cypress.Commands.add('setSeededSelectionActions', (actions: Array<Record<string, unknown>>) =>
+  patchSeededAISettings({selectionActions: actions})
+);
+
 // Writes records into one store of the app's database. The write can wait
 // behind the app's own transactions on a busy machine, so it gets a longer
 // limit than Cypress's 4s default, and a blocked open fails with a reason.
@@ -442,6 +446,7 @@ declare global {
       setSeededProjectProvider(provider: 'anthropic' | 'ollama' | 'local-openai'): Chainable<void>;
       // Sets the seeded project's AI coaching and AI prose switches (5.18).
       setSeededAISwitches(switches: {coaching: boolean; prose: boolean}): Chainable<void>;
+      setSeededSelectionActions(actions: Array<Record<string, unknown>>): Chainable<void>;
       // Puts records into one IndexedDB store of the app database.
       putIndexedDbRecords<T extends {id: string}>(storeName: string, records: T[]): Chainable<void>;
     }

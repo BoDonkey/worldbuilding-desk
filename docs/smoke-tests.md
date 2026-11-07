@@ -1,6 +1,6 @@
 # Manual Smoke Procedures
 
-Last updated: 2026-10-25
+Last updated: 2026-11-07
 
 Reusable manual smoke procedures targeting trust and data-loss boundaries.
 Consolidates the former `project-backup-smoke-test.md`,
@@ -291,6 +291,34 @@ locked preview or notification revealing project text; a locked write;
 restart opening without the passphrase; either passphrase working after a
 change; unprotected backup defaults; data loss after unlock or removal; or
 copy that implies protection securely erases prior unencrypted writes.
+
+## 1i. Custom AI Actions (slice 5.19)
+
+1. In a project with **AI coaching** and **AI prose** on and a working
+   provider, open **Settings → AI Settings → AI actions**. The five presets
+   are listed and switched off. Turn on **Tighten** and **Check against
+   canon**.
+2. In Workspace, select a sentence and right-click: **Tighten** and **Check
+   against canon** follow **Ask AI about this**; the other presets do not
+   appear. Right-clicking a character name opens the stat menu, which lists
+   no actions.
+3. Choose **Tighten**: progress with Stop appears above the editor, then the
+   **Replace selected scene text** preview. **Dismiss**: the scene is
+   unchanged. Run it again and **Confirm**: the selection is replaced in one
+   undoable step and shown as AI text.
+4. Run **Tighten**, type in the scene before confirming, then **Confirm**:
+   the preview refuses and the scene keeps your typing.
+5. Choose **Check against canon** on a passage that names a World Bible
+   record with accepted facts: a reading view opens with the report, and the
+   scene is unchanged.
+6. Turn **AI prose** off: **Tighten** disappears from the menu and from the
+   AI actions list; **Check against canon** stays. Turn it back on.
+7. Edit **Tighten**, delete **Vary sentence rhythm**, and choose **Install
+   Presets**: only **Vary sentence rhythm** comes back, and your edit to
+   **Tighten** is kept.
+8. **Export Tool Pack**, delete an action, then **Import Tool Pack** and
+   choose **Append**: the exported actions come back alongside the current
+   ones. Nothing in the World Bible, canon, or story state changed.
 
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 

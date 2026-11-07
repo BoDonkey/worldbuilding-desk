@@ -21,7 +21,7 @@ describe('AI switches (5.18)', () => {
 
   it('puts only manuscript-writing features under prose', () => {
     const prose = CONSULTATION_FEATURES.filter((feature) => FEATURE_SWITCH[feature] === 'prose').sort();
-    expect(prose).toEqual(['character-scene', 'scene-draft', 'scene-revision']);
+    expect(prose).toEqual(['ai-action-replace', 'character-scene', 'scene-draft', 'scene-revision']);
   });
 
   it('treats a missing switch as off', () => {

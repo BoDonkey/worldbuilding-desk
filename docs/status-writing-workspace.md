@@ -277,6 +277,19 @@
   revision**. AI prose alone gives a revision-only chat (**Describe the
   revision you want, then preview it.**), **Preview scene revision**,
   **Draft this scene**, and **Write a character scene**.
+- Custom AI actions (5.19) the author switched on in **Settings → AI
+  Settings → AI actions** appear in the selection menu after **Ask AI about
+  this**, listed directly when there are three or fewer and grouped under
+  one **AI actions** entry when there are more; with a hosted provider the
+  menu also says where the text goes. The character stat menu does not list
+  them. Rewrite actions need AI prose and note actions need AI coaching.
+  Running one closes the menu and shows the action's progress, with Stop,
+  above the editor. A rewrite opens the usual **Replace selected scene text**
+  preview: **Confirm** applies it as one undoable change marked as AI text,
+  **Dismiss** leaves the scene alone, and a scene or selection that changed
+  since the request is refused. A note opens in the reply reading view and
+  edits nothing. A rewrite that finishes after the author moved to another
+  scene is not previewed.
 - To give the assistant a passage, the author selects it, right-clicks, and
   chooses **Ask AI about this**. While that passage is the
   assistant's context it stays marked in the editor, even after focus moves

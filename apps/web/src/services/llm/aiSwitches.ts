@@ -34,9 +34,11 @@ export const FEATURE_SWITCH: Record<ConsultationFeature, AISwitch> = {
   'canvas-coach': 'coaching',
   'canon-check': 'coaching',
   'character-lab': 'coaching',
+  'ai-action-note': 'coaching',
   'scene-revision': 'prose',
   'scene-draft': 'prose',
-  'character-scene': 'prose'
+  'character-scene': 'prose',
+  'ai-action-replace': 'prose'
 };
 
 /** The provider connection test sends no story text, so no switch gates it. */
