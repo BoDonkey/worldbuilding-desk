@@ -424,7 +424,29 @@ export function useWorldBibleAuthoringAssistant({
     setFieldValues
   ]);
 
+  /** Drops the helper's selection and pending proposal; the panel stays as it is. */
+  const clearAiHelperDraft = useCallback(() => {
+    setAiHelperSelectedText('');
+    setAiHelperNewSectionLabel('');
+    setAiHelperProposal(null);
+  }, []);
+  /** Closes the record helper and returns it to its starting target. */
+  const closeRecordAiHelper = useCallback(() => {
+    clearAiHelperDraft();
+    setIsRecordAiHelperOpen(false);
+    setAiHelperActionTarget('name');
+  }, [clearAiHelperDraft]);
+  /** Full reset when the record panel closes: both helpers and the section draft. */
+  const resetAiHelpers = useCallback(() => {
+    closeRecordAiHelper();
+    setIsImportAiHelperOpen(false);
+    setNewCharacterSectionName('');
+  }, [closeRecordAiHelper]);
+
   return {
+    clearAiHelperDraft,
+    closeRecordAiHelper,
+    resetAiHelpers,
     isRecordAiHelperOpen,
     setIsRecordAiHelperOpen,
     isImportAiHelperOpen,

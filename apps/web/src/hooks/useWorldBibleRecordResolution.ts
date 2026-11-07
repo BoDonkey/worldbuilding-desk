@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, type Dispatch, type SetStateAction} from 'react';
+import {useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction} from 'react';
 import {saveEntity} from '../services/storage';
 import type {
   EntityCategory,
@@ -8,6 +8,8 @@ import type {
 } from '../entityTypes';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
+import {indexWorldBibleEntity} from '../services/worldBible/indexWorldBibleEntity';
+import type {WorldBibleRecordDraft} from '../components/WorldBible/record/useWorldBibleRecordDraft';
 import {
   buildCanonicalAliasList,
   deriveCharacterAliasSuggestions
@@ -41,29 +43,30 @@ interface UseWorldBibleRecordResolutionOptions {
   saveProjectSettings: (settings: ProjectSettings) => Promise<ProjectSettings>;
   activeCategoryIsCharacterLike: boolean;
   activeTab: string | null;
-  editingId: string | null;
-  name: string;
-  setName: Dispatch<SetStateAction<string>>;
-  fieldValues: Record<string, string>;
-  setFieldValues: Dispatch<SetStateAction<Record<string, string>>>;
+  /** The open record's draft: its name, aliases, and resolver selections. */
+  draft: Pick<
+    WorldBibleRecordDraft,
+    | 'editingId'
+    | 'name'
+    | 'setName'
+    | 'fieldValues'
+    | 'setFieldValues'
+    | 'manualResolutionTargetId'
+    | 'setManualResolutionTargetId'
+    | 'moveCategoryTargetId'
+    | 'setIsNameResolverOpen'
+  >;
   selectedEntity: WorldEntity | null;
   selectedEntityAliases: string[];
   entities: WorldEntity[];
   setEntities: Dispatch<SetStateAction<WorldEntity[]>>;
   categories: EntityCategory[];
   potentialEntityMatches: PotentialEntityMatch[];
-  handoffGuidance: WorldBibleCanonicalizationHandoff | null;
-  manualResolutionTargetId: string;
-  setManualResolutionTargetId: Dispatch<SetStateAction<string>>;
-  moveCategoryTargetId: string;
-  setMovingEntityCategoryId: Dispatch<SetStateAction<string | null>>;
   setActiveTab: Dispatch<SetStateAction<string | null>>;
-  setIsNameResolverOpen: Dispatch<SetStateAction<boolean>>;
   setFeedback: Dispatch<SetStateAction<FeedbackState | null>>;
   ragService: RAGProvider | null;
   shodhService: ShodhMemoryProvider | null;
   refreshMemories: () => Promise<void>;
-  buildEntityContent: (entity: WorldEntity) => string;
   handleEdit: (entity: WorldEntity, focus?: 'general' | 'aliases') => void;
   saveEntityDraft: (options?: {
     openNext?: boolean;
@@ -78,32 +81,36 @@ export function useWorldBibleRecordResolution({
   saveProjectSettings,
   activeCategoryIsCharacterLike,
   activeTab,
-  editingId,
-  name,
-  setName,
-  fieldValues,
-  setFieldValues,
+  draft,
   selectedEntity,
   selectedEntityAliases,
   entities,
   setEntities,
   categories,
   potentialEntityMatches,
-  handoffGuidance,
-  manualResolutionTargetId,
-  setManualResolutionTargetId,
-  moveCategoryTargetId,
-  setMovingEntityCategoryId,
   setActiveTab,
-  setIsNameResolverOpen,
   setFeedback,
   ragService,
   shodhService,
   refreshMemories,
-  buildEntityContent,
   handleEdit,
   saveEntityDraft
 }: UseWorldBibleRecordResolutionOptions) {
+  const {
+    editingId,
+    name,
+    setName,
+    fieldValues,
+    setFieldValues,
+    manualResolutionTargetId,
+    setManualResolutionTargetId,
+    moveCategoryTargetId,
+    setIsNameResolverOpen
+  } = draft;
+  const [movingEntityCategoryId, setMovingEntityCategoryId] = useState<string | null>(null);
+  /** Set when another screen sends a character here to be canonicalized. */
+  const [handoffGuidance, setHandoffGuidance] =
+    useState<WorldBibleCanonicalizationHandoff | null>(null);
   const isCanonicalRenameDraft = Boolean(
     selectedEntity &&
       name.trim().length > 0 &&
@@ -225,28 +232,8 @@ export function useWorldBibleRecordResolution({
         updatedAt: Date.now()
       };
       await saveEntity(nextEntity);
-      if (ragService) {
-        await ragService.indexDocument(
-          nextEntity.id,
-          nextEntity.name,
-          buildEntityContent(nextEntity),
-          'worldbible',
-          {
-            tags: [targetCategory.slug],
-            entityIds: [nextEntity.id]
-          }
-        );
-      }
-      if (shodhService) {
-        await shodhService.captureAutoMemory({
-          projectId: nextEntity.projectId,
-          documentId: nextEntity.id,
-          title: nextEntity.name,
-          content: buildEntityContent(nextEntity),
-          tags: ['worldbible', targetCategory.slug]
-        });
-        await refreshMemories();
-      }
+      await indexWorldBibleEntity(nextEntity, targetCategory.slug, {ragService, shodhService});
+      if (shodhService) await refreshMemories();
       setEntities((current) =>
         current.map((entity) =>
           entity.id === nextEntity.id ? nextEntity : entity
@@ -266,7 +253,6 @@ export function useWorldBibleRecordResolution({
       setMovingEntityCategoryId(null);
     }
   }, [
-    buildEntityContent,
     categories,
     handleEdit,
     moveCategoryTargetId,
@@ -369,6 +355,9 @@ export function useWorldBibleRecordResolution({
     handleMoveSelectedEntityCategory,
     handleKeepSeparateMatch,
     handleIgnoreEntityMatch,
-    handleAddSuggestedCharacterAlias
+    handleAddSuggestedCharacterAlias,
+    movingEntityCategoryId,
+    handoffGuidance,
+    setHandoffGuidance
   };
 }

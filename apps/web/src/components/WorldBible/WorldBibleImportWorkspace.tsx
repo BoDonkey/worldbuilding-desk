@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import type {Dispatch, SetStateAction} from 'react';
+import type {Dispatch, RefObject, SetStateAction} from 'react';
 import type {EntityCategory, Project, ProjectSettings, WorldEntity} from '../../entityTypes';
 import type {
   ImportMode,
@@ -29,7 +29,9 @@ interface WorldBibleImportWorkspaceProps {
   setIsPasteImportOpen: Dispatch<SetStateAction<boolean>>;
   pastedImportText: string;
   setPastedImportText: Dispatch<SetStateAction<string>>;
-  handlePreparePastedImportDraft: () => void;
+  /** Hidden file pickers the category rail and overview open. */
+  importInputRef: RefObject<HTMLInputElement | null>;
+  jsonImportInputRef: RefObject<HTMLInputElement | null>;
   /** Opens a saved record in the editor; `saved` is the just-written copy when the list is not yet refreshed. */
   onOpenImportedEntity: (entityId: string, saved?: WorldEntity) => void;
 }
@@ -38,7 +40,7 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
   const {
     activeProject, projectSettings, activeCategory, categories, categoryById, imports, authoring,
     isPasteImportOpen, setIsPasteImportOpen, pastedImportText, setPastedImportText,
-    handlePreparePastedImportDraft, onOpenImportedEntity
+    importInputRef, jsonImportInputRef, onOpenImportedEntity
   } = props;
   // The import AI helper is AI coaching; it hides while that switch is off (5.18).
   const aiCoaching = readAISwitches(projectSettings?.aiSettings).coaching;
@@ -49,7 +51,8 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
     unresolvedJsonConflictCount, updateImportDraft, updateImportSectionDestination,
     applyJsonImport, handleJsonCategoryChange, handleJsonNameKeyChange,
     handleJsonModeChange, handleJsonFieldMapChange,
-    handleJsonConflictResolutionChange, clearJsonImportSession
+    handleJsonConflictResolutionChange, clearJsonImportSession,
+    handleImportEntities, handleJsonImportFile, preparePastedImportDraft
   } = imports;
   const {
     isImportAiHelperOpen, setIsImportAiHelperOpen, importAiContext,
@@ -68,6 +71,15 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
     (draft) => !draft.parseError && draft.status !== 'imported'
   );
   const selectedUnsavedCount = unsavedDrafts.filter((draft) => draft.include).length;
+
+  const handlePreparePastedImportDraft = () => {
+    if (!activeCategory) return;
+    preparePastedImportDraft(pastedImportText, `Pasted ${activeCategory.name.replace(/s$/i, '')}`);
+    if (pastedImportText.trim()) {
+      setIsPasteImportOpen(false);
+      setPastedImportText('');
+    }
+  };
 
   const handleImport = async (options?: {draftIds?: string[]; openFirstImported?: boolean}) => {
     const firstImported = await applyImportDrafts(options);
@@ -93,6 +105,25 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
 
   return (
     <>
+      {activeCategory && (
+        <>
+          <input
+            ref={importInputRef}
+            type='file'
+            accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
+            multiple
+            onChange={(e) => void handleImportEntities(e)}
+            style={{display: 'none'}}
+          />
+          <input
+            ref={jsonImportInputRef}
+            type='file'
+            accept='.json,application/json'
+            onChange={(e) => void handleJsonImportFile(e)}
+            style={{display: 'none'}}
+          />
+        </>
+      )}
       {activeCategory && isPasteImportOpen && (
         <section className={styles.characterImportPanel} aria-label='Paste import text'>
           <div className={styles.importPanelHeader}>
