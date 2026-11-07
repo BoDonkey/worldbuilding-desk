@@ -5,7 +5,8 @@ import {answerOllamaTags, withoutTagLookups} from '../../test/ollamaTagsStub';
 
 const ollamaSettings = {
   provider: 'ollama',
-  configs: {ollama: {model: 'cache-test-model', baseUrl: 'http://localhost:11434'}}
+  configs: {ollama: {model: 'cache-test-model', baseUrl: 'http://localhost:11434'}},
+  aiCoaching: true
 } as ProjectAISettings;
 
 describe('LLMService response cache', () => {
@@ -15,7 +16,7 @@ describe('LLMService response cache', () => {
     const fetchMock = vi.fn(answerOllamaTags(async () => new Response(JSON.stringify({message: {content: 'reply'}}))));
     vi.stubGlobal('fetch', fetchMock);
     const service = new LLMService(ollamaSettings);
-    const request = {messages: [{role: 'user' as const, content: `cache probe ${Math.random()}`}]};
+    const request = {feature: 'assistant' as const, messages: [{role: 'user' as const, content: `cache probe ${Math.random()}`}]};
 
     await service.complete(request);
     await service.complete(request);

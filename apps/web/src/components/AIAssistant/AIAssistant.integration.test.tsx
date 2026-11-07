@@ -66,8 +66,9 @@ const hostedSettings: ProjectAISettings = {
   configs: {anthropic: {apiKey: 'test-key', model: 'claude-test'}},
   promptTools: [],
   defaultToolIds: [],
+  aiCoaching: true,
+  aiProse: true,
   inspectorSettings: {
-    enableAIConsultation: true,
     maxConsultationsPerDay: 1,
     maxContextChars: 1800,
     maxResponseTokens: 500,
@@ -75,10 +76,11 @@ const hostedSettings: ProjectAISettings = {
   }
 };
 
+// These tests exercise the coaching assistant, so AI coaching is on unless a test says otherwise.
 const renderAssistant = (props: ComponentProps<typeof AIAssistant>) =>
   render(
     <MemoryRouter>
-      <AIAssistant {...props} />
+      <AIAssistant {...props} aiConfig={props.aiConfig && {aiCoaching: true, ...props.aiConfig}} />
     </MemoryRouter>
   );
 
@@ -252,7 +254,7 @@ describe('AIAssistant factual lookup integration', () => {
   it('sends nothing while a send is blocked, keeps the question, and explains why', async () => {
     const props: ComponentProps<typeof AIAssistant> = {
       projectId: 'project-blocked',
-      aiConfig: {provider: 'ollama', configs: {}, promptTools: [], defaultToolIds: []},
+      aiConfig: {provider: 'ollama', configs: {}, promptTools: [], defaultToolIds: [], aiCoaching: true},
       sendBlockedReason: 'Loading pending proposals… Send is available once they are ready.'
     };
     const {rerender} = renderAssistant(props);

@@ -53,7 +53,7 @@ function Harness({stream}: {stream: ReturnType<typeof createControlledStream>['s
         type='button'
         onClick={() => {
           void modelRun
-            .run({stream}, {messages: [{role: 'user', content: 'go'}]}, (output) => setAnswer(output.answer))
+            .run({stream}, {feature: 'assistant', messages: [{role: 'user', content: 'go'}]}, (output) => setAnswer(output.answer))
             .then(setResult);
         }}
       >

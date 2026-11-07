@@ -13,6 +13,7 @@ import {
   normalizeLocalMaxReplyTokens
 } from './providerConfig';
 import {foldContextIntoSystemPrompt} from './contextPrompt';
+import {AISwitchOffError, aiSwitchRefusal, readAISwitches, type AISwitches} from './aiSwitches';
 import {
   getCachedProviderKeyStatus,
   readBrowserProviderKey,
@@ -66,8 +67,11 @@ export class LLMService {
   /** The local model server's reply cap for servers that do not report a context size. */
   private readonly localMaxReplyTokens?: number;
   private readonly electronAPI = typeof window !== 'undefined' ? window.electronAPI : undefined;
+  /** The project's AI switches (Slice 5.18); every request is checked against them. */
+  private readonly switches: AISwitches;
 
   constructor(settings?: ProjectAISettings | null) {
+    this.switches = readAISwitches(settings);
     const credentials = this.resolveProviderCredentials(settings ?? undefined);
     this.providerId = credentials.id;
     if ('model' in credentials) {
@@ -92,7 +96,17 @@ export class LLMService {
     return this.provider;
   }
 
+  /**
+   * The shared call path's switch guard: refuses an untagged request, or one whose AI switch is
+   * off, before the cache or any provider is touched.
+   */
+  private assertFeatureAllowed(request: LLMRequest): void {
+    const refusal = aiSwitchRefusal({aiCoaching: this.switches.coaching, aiProse: this.switches.prose}, request.feature);
+    if (refusal) throw new AISwitchOffError(refusal);
+  }
+
   async complete(request: LLMRequest): Promise<LLMResponse> {
+    this.assertFeatureAllowed(request);
     const normalizedRequest = this.applyProviderDefaults(request);
     const useCache = request.cache !== false;
     const cacheKey = this.buildCacheKey(normalizedRequest);
@@ -109,6 +123,7 @@ export class LLMService {
   }
 
   async *stream(request: LLMRequest): AsyncGenerator<string> {
+    this.assertFeatureAllowed(request);
     const normalizedRequest = this.applyProviderDefaults(request);
     const useCache = request.cache !== false;
     const cacheKey = this.buildCacheKey(normalizedRequest);

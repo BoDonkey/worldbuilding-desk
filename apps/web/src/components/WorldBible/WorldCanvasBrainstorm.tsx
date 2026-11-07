@@ -40,6 +40,7 @@ import {
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import styles from './WorldCanvasView.module.css';
 import {HOSTED_PROVIDER_NAMES, isHostedAIProvider} from '../../services/llm/providerConfig';
+import {readAISwitches} from '../../services/llm/aiSwitches';
 
 interface WorldCanvasBrainstormProps {
   projectId: string;
@@ -83,7 +84,7 @@ export function WorldCanvasBrainstorm({
 
   const providerIssue = useMemo(() => getBrainstormProviderIssue(aiConfig), [aiConfig]);
   const inspector = aiConfig?.inspectorSettings;
-  const consultationEnabled = inspector?.enableAIConsultation !== false;
+  const consultationEnabled = readAISwitches(aiConfig).coaching;
   const provider = aiConfig?.provider;
   const disclosure = budget.route.kind === 'private-local'
     ? describePrivateLocalRoute(budget.route)
@@ -116,7 +117,7 @@ export function WorldCanvasBrainstorm({
   const ask = () => {
     if (status === 'loading' || !aiConfig || providerIssue) return;
     if (!consultationEnabled) {
-      setError('AI consultation is disabled in Settings.');
+      setError('AI coaching is off for this project. Turn it on in Settings → AI Settings.');
       return;
     }
     if (budget.blocked) {
@@ -151,6 +152,7 @@ export function WorldCanvasBrainstorm({
       const service = new LLMService(config);
       budget.spend('canvas-brainstorm');
       const result = await modelRun.run(service, {
+        feature: 'canvas-brainstorm',
         messages: [{role: 'user', content: userPrompt}],
         systemPrompt,
         model: inspector?.lowCostModel?.trim() || undefined,
@@ -213,7 +215,7 @@ export function WorldCanvasBrainstorm({
         </p>
       ) : !consultationEnabled ? (
         <p className={styles.brainstormNote}>
-          AI consultation is disabled in Settings. <Link to='/settings'>Open Settings</Link>
+          AI coaching is off for this project. <Link to='/settings'>Open Settings</Link>
         </p>
       ) : (
         <>

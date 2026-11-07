@@ -167,16 +167,25 @@ export const HELP_TOPICS: HelpTopic[] = [
     id: 'ai-setup',
     title: 'Setting up AI',
     summary: 'Connect a hosted provider or a model on your computer.',
-    keywords: ['ai', 'assistant', 'api key', 'claude', 'anthropic', 'openai', 'gemini', 'ollama', 'lm studio', 'koboldcpp', 'llama.cpp', 'local', 'budget', 'consultations', 'test connection', 'ask'],
+    keywords: ['ai', 'assistant', 'api key', 'claude', 'anthropic', 'openai', 'gemini', 'ollama', 'lm studio', 'koboldcpp', 'llama.cpp', 'local', 'budget', 'consultations', 'test connection', 'ask', 'coaching', 'prose', 'switch', 'turn off ai', 'without ai'],
     blocks: [
       {
         kind: 'paragraph',
-        text: 'AI is optional. Writing, the World Bible, review, and backups all work without it.'
+        text: 'AI is optional and off until you turn it on, separately for each project. Writing, the World Bible, review, and backups all work without it.'
+      },
+      {
+        kind: 'list',
+        items: [
+          '**AI coaching** is AI that reads and responds and never puts text into your manuscript: the assistant chat and its prompt tools, the writing coach, Ask your project, canon checks and canon decision advice, continuity questions, World Canvas brainstorming and coaching, talking to a character, and Character from a description.',
+          '**AI prose** is model-written text for your manuscript: **Preview scene revision**, **Draft this scene**, and **Character scene**. Every insert is previewed first and marked as AI text.',
+          'The two switches are independent. Turn on coaching alone to get feedback with no AI-written prose, or prose alone to ask for revisions without the coaching tools. A switch that is off hides everything it covers, and the app refuses to send its requests.'
+        ]
       },
       {
         kind: 'steps',
         items: [
-          'Open **Settings → AI Settings** and choose a **Provider**: Anthropic (Claude), OpenAI, or Gemini with your own API key, or a model on your computer through **Ollama** or a local model server (LM Studio, KoboldCPP, llama.cpp).',
+          'Open **Settings → AI Settings** and turn on **AI coaching**, **AI prose**, or both, at the top.',
+          'Choose a **Provider**: Anthropic (Claude), OpenAI, or Gemini with your own API key, or a model on your computer through **Ollama** or a local model server (LM Studio, KoboldCPP, llama.cpp).',
           'For a hosted provider, paste your API key and save it. Saved keys are encrypted by your operating system and never shown again.',
           'Choose **Test connection** to check that it works.'
         ]
@@ -185,7 +194,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         kind: 'list',
         items: [
           '**Daily budget:** hosted requests count against **Max consultations per day**, a per-project limit that stops runaway use. When you reach it, you can add more for today right where you are, or change the limit in Settings. Each button that uses AI shows the cost and what is left. Local models don’t use the budget.',
-          '**The assistant in Workspace** can brainstorm and draft. It never changes your scene by itself: replacing or adding text opens a preview of the current and proposed text, and nothing changes until you confirm. You can also save a reply as a Source Note.',
+          '**The assistant in Workspace** can brainstorm with AI coaching and write revisions with AI prose. It never changes your scene by itself: replacing or adding text opens a preview of the current and proposed text, and nothing changes until you confirm. With coaching on, you can also save a reply as a Source Note.',
           '**Ask your project** (under **More**) answers questions about your story. When it recognizes a factual question, it answers from your saved records and scenes, or says it can’t confirm the answer, instead of letting a model guess.'
         ]
       }
@@ -216,6 +225,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       {
         kind: 'list',
         items: [
+          '**Nothing, while AI is off.** Each project starts with **AI coaching** and **AI prose** off (**Settings → AI Settings**). With both off, no text is sent to any model.',
           '**Hosted AI, when you ask.** When you use the assistant or another AI action with Anthropic, OpenAI, or Gemini, the text that request needs is sent to that provider under its own terms. This happens only when you start the request, never in the background.',
           '**Local AI stays here.** Ollama or a local model server at an address on this computer keeps everything on this computer. Ollama cloud models and remote addresses are blocked, and the app tells you when a route isn’t verified as local.',
           '**Files you export.** Backups and exports go where you save them.'

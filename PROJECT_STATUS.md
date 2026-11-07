@@ -316,6 +316,23 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   runner, with newer snapshot versions rejected before import writes begin.
 
 ### AI and Retrieval
+- Per-project AI switches (5.18) at the top of **Settings → AI Settings**:
+  **AI coaching** (AI that reads and responds and never writes into the
+  manuscript: assistant chat and prompt tools, writing coach, Ask your
+  project, model-assisted canon check, canon decision consultations,
+  progression continuity, Lore Inspector consultations, World Canvas
+  brainstorming and coaching, Talk to a character, Character from a
+  description, and local AI review annotations) and **AI prose** (Preview
+  scene revision, Draft this scene, Character scene). Both start off for
+  every project, including projects saved before the switches existed; the
+  old **Enable AI consultation actions in Lore Inspector** value is dropped.
+  A switch that is off hides its surfaces, and `LLMService` refuses any
+  request whose feature tag belongs to it or that carries no tag, before the
+  cache or a provider is touched (`services/llm/aiSwitches.ts` maps every
+  `ConsultationFeature` to one switch). With coaching off and prose on, the
+  assistant chat sends `scene-revision` requests and shows only what a
+  revision needs. With both off, AI Settings collapses to the switches and a
+  note; saved provider settings and keys are kept.
 - Multi-provider abstraction for Anthropic, OpenAI, Gemini, Ollama, and a local OpenAI-compatible server (KoboldCPP, LM Studio, llama.cpp).
 - Prompt management and provider diagnostics.
 - Prompt tools are standing instructions with a name and text (no type);

@@ -70,33 +70,34 @@ export const LoreInspectorPanel = ({
         </ul>
       </section>
 
+      {aiEnabled && (
       <section className={styles.loreSection}>
         <h4 className={styles.loreSectionTitle}>AI Consultation</h4>
         <ConsultationBudgetNotice
           status={budget.status}
           isLocal={budget.isLocal}
           onGrantMore={budget.grantMore}
-          hidden={!aiEnabled}
           className={styles.loreBudgetText}
         />
         <div className={styles.systemActions}>
-          <button type='button' onClick={() => onConsult('consistency')} disabled={!aiEnabled || budget.blocked}>
+          <button type='button' onClick={() => onConsult('consistency')} disabled={budget.blocked}>
             Check Consistency
           </button>
-          <button type='button' onClick={() => onConsult('reaction')} disabled={!aiEnabled || budget.blocked}>
+          <button type='button' onClick={() => onConsult('reaction')} disabled={budget.blocked}>
             Suggest Reaction
           </button>
-          <button type='button' onClick={() => onConsult('outcome')} disabled={!aiEnabled || budget.blocked}>
+          <button type='button' onClick={() => onConsult('outcome')} disabled={budget.blocked}>
             Calculate Outcome
           </button>
-          <button type='button' onClick={() => onConsult('worldbuilding')} disabled={!aiEnabled || budget.blocked}>
+          <button type='button' onClick={() => onConsult('worldbuilding')} disabled={budget.blocked}>
             Expand World Detail
           </button>
-          <button type='button' onClick={() => onConsult('plotting')} disabled={!aiEnabled || budget.blocked}>
+          <button type='button' onClick={() => onConsult('plotting')} disabled={budget.blocked}>
             Generate Plot Hooks
           </button>
         </div>
       </section>
+      )}
     </div>
   );
 };

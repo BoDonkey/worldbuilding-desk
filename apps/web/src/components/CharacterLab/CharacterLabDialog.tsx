@@ -44,6 +44,7 @@ import {CharacterStatCard} from '../CharacterSheets/CharacterStatCard';
 import styles from '../../styles/CharacterLab.module.css';
 import {StoryPointPicker} from './StoryPointPicker';
 import {describeCharacterLabDataFlow, getCharacterLabProviderIssue} from './characterLabProvider';
+import {readAISwitches} from '../../services/llm/aiSwitches';
 
 interface CharacterLabDialogProps {
   isOpen: boolean;
@@ -77,7 +78,7 @@ export function CharacterLabDialog({
   const lab = useCharacterLabData(projectId, isOpen);
   const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
-  const consultationEnabled = inspector?.enableAIConsultation !== false;
+  const consultationEnabled = readAISwitches(lab.aiConfig).coaching;
   const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
   const [mode, setMode] = useState<CharacterLabMode>('talk');
   const [position, setPosition] = useState<CharacterVoicePosition>(defaultPosition);
@@ -184,7 +185,7 @@ export function CharacterLabDialog({
   // Every generation, first or another version, passes the same checks and is charged once.
   const blockedReason = (): string | null => {
     if (providerIssue) return providerIssue;
-    if (!consultationEnabled) return 'AI consultation is disabled in Settings.';
+    if (!consultationEnabled) return 'AI coaching is off for this project. Turn it on in Settings → AI Settings.';
     if (budget.blocked) return budget.blockedMessage ?? 'AI consultation budget reached for today.';
     return null;
   };
@@ -203,7 +204,7 @@ export function CharacterLabDialog({
       budget.spend('character-lab');
       const result = await modelRun.run(
         service,
-        {systemPrompt: prompt.systemPrompt, messages: prompt.messages, maxTokens, cache: false},
+        {feature: 'character-lab', systemPrompt: prompt.systemPrompt, messages: prompt.messages, maxTokens, cache: false},
         ({answer}) => updateShown({reply: answer})
       );
       updateShown({reply: result.answer, stopped: result.stopped});
@@ -291,7 +292,7 @@ export function CharacterLabDialog({
     try {
       const service = new LLMService(lab.aiConfig);
       budget.spend('character-lab');
-      const result = await modelRun.run(service, {...request, maxTokens, cache: false});
+      const result = await modelRun.run(service, {...request, feature: 'character-lab', maxTokens, cache: false});
       if (!result.answer.trim() || result.stopped) {
         setError(result.stopped ? 'Summary stopped; the earlier turns are still sent in full.' : 'The model returned no summary.');
         return;

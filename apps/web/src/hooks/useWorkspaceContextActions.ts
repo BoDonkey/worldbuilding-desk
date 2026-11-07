@@ -10,6 +10,7 @@ import {
   type WorkspaceLoreConsultationMode
 } from '../services/workspace/workspaceConsultation';
 import type {AITextProvenance} from '../services/editor/aiTextProvenance';
+import {anyAISwitchOn, readAISwitches} from '../services/llm/aiSwitches';
 
 export interface WorkspaceAIContext {
   type: 'document';
@@ -112,7 +113,7 @@ export function useWorkspaceContextActions(params: {
   const handleConsultationFromLore = useCallback((mode: WorkspaceLoreConsultationMode) => {
     if (!activeProjectId || !activeLoreRecord) return;
     const inspector = projectSettings?.aiSettings?.inspectorSettings;
-    if (inspector?.enableAIConsultation === false) return;
+    if (!readAISwitches(projectSettings?.aiSettings).coaching) return;
     if (consultationBudget.blocked) return;
 
     consultationBudget.spend('workspace-context');
@@ -141,7 +142,7 @@ export function useWorkspaceContextActions(params: {
     consultationBudget,
     content,
     handleOpenAIContext,
-    projectSettings?.aiSettings?.inspectorSettings,
+    projectSettings?.aiSettings,
     selectedId
   ]);
 
@@ -158,7 +159,8 @@ export function useWorkspaceContextActions(params: {
     activeLoreRecord,
     consultationBudget,
     resetContextActions,
-    handleOpenAIContext,
+    // The editor's Ask AI about this needs one of the AI switches; unset hides it (5.18).
+    handleOpenAIContext: anyAISwitchOn(readAISwitches(projectSettings?.aiSettings)) ? handleOpenAIContext : undefined,
     handleOpenLoreInspector,
     handleConsultationFromLore
   };

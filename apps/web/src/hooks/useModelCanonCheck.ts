@@ -26,6 +26,7 @@ import {describeError} from '../services/errors';
 import {getCharacterLabProviderIssue} from '../components/CharacterLab/characterLabProvider';
 import {useConsultationBudget} from './useConsultationBudget';
 import {useModelRun} from './useModelRun';
+import {readAISwitches} from '../services/llm/aiSwitches';
 
 export interface CanonCheckPreview {
   sceneId: string;
@@ -53,7 +54,7 @@ export function useModelCanonCheck(params: {
   const {projectId, aiSettings, scene, documents, onAddItems} = params;
   const modelRun = useModelRun();
   const inspector = aiSettings?.inspectorSettings;
-  const consultationEnabled = inspector?.enableAIConsultation !== false;
+  const consultationEnabled = readAISwitches(aiSettings).coaching;
   const budget = useConsultationBudget(projectId, inspector, aiSettings);
   const [preview, setPreview] = useState<CanonCheckPreview | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -102,6 +103,7 @@ export function useModelCanonCheck(params: {
       const prompt = buildCanonCheckPrompt({sceneTitle: scene.title, sceneText: checked.text, facts: selected});
       budget.spend('canon-check');
       const result = await modelRun.run(new LLMService(aiSettings), {
+        feature: 'canon-check',
         systemPrompt: prompt.systemPrompt,
         messages: prompt.messages,
         maxTokens: resolveResponseTokenLimit(aiSettings.provider, inspector?.maxResponseTokens),

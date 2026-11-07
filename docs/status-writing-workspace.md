@@ -269,6 +269,14 @@
   scrolls, and closes on Escape or when the selection changes. A right-click
   on a character name opens the stat menu instead, which also offers **Ask
   AI about this**.
+- The project's AI switches (5.18) decide what the Workspace shows. With
+  both off there is no **Ask AI about this**, no AI drawer tab, no Lore
+  Inspector consultations, no canon check, and no character lab entries.
+  AI coaching alone gives the chat, prompt tools, writing coach, **Save as
+  Source Note**, and **Open character lab**, but no **Preview scene
+  revision**. AI prose alone gives a revision-only chat (**Describe the
+  revision you want, then preview it.**), **Preview scene revision**,
+  **Draft this scene**, and **Write a character scene**.
 - To give the assistant a passage, the author selects it, right-clicks, and
   chooses **Ask AI about this**. While that passage is the
   assistant's context it stays marked in the editor, even after focus moves

@@ -44,6 +44,7 @@ vi.mock('../../hooks/useCharacterLabData', () => ({
       promptTools: [],
       defaultToolIds: [],
       allowSceneDrafts: true,
+      aiProse: true,
       inspectorSettings: {enableAIConsultation: true, maxConsultationsPerDay: 10, maxContextChars: 1800, maxResponseTokens: 500}
     },
     characterOptions: [

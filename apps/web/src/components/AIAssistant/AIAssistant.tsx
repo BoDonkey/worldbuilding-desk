@@ -83,6 +83,8 @@ import {
 } from '../../services/lore/canonicalFactValidity';
 import {buildAITextProvenance, type AITextProvenance} from '../../services/editor/aiTextProvenance';
 import {useAssistantRequestPolicy} from '../../hooks/useAssistantRequestPolicy';
+import {OFF_COACHING_NOTE, readAISwitches} from '../../services/llm/aiSwitches';
+import {AssistantPromptToolsBar} from './AssistantPromptToolsBar';
 
 interface AIAssistantProps {
   projectId: string;
@@ -161,6 +163,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [versionError, setVersionError] = useState<string | null>(null);
   const [readingIndex, setReadingIndex] = useState<ReplyReaderSelection>(null);
   const aiProvider = aiConfig?.provider;
+  // AI switches (5.18): with coaching off, the chat exists only to ask for a scene revision.
+  const switches = readAISwitches(aiConfig);
+  const chatFeature = switches.coaching ? 'assistant' : 'scene-revision';
+  const canPreviewRevision = switches.prose && Boolean(onInsert);
   const requestPolicy = useAssistantRequestPolicy({
     projectId,
     aiConfig,
@@ -496,7 +502,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const promptType = context?.type === 'rule' ? 'rules' : context?.type || 'document';
       const basePrompt = await promptManager.current.getPrompt(promptType);
       const activeTools = ((aiConfig?.promptTools ?? []) as PromptTool[])
-        .filter((tool) => tool.enabled && selectedToolIds.includes(tool.id));
+        .filter((tool) => switches.coaching && tool.enabled && selectedToolIds.includes(tool.id));
       const toolPrompt =
         activeTools.length > 0
           ? `\n\nActive Prompt Tools:\n${activeTools
@@ -557,7 +563,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         maxTokens: replyTokens
       };
       const outcome = await runModelRequest({
-        feature: 'assistant',
+        feature: chatFeature,
         request: modelRequest,
         failureMessage: 'The assistant could not generate a response.',
         onUpdate: ({answer}) => {
@@ -604,6 +610,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     }
   }, [
     aiProvider,
+    chatFeature,
+    switches.coaching,
     modelReplyProvenance,
     announceStatus,
     buildMemoryChunks,
@@ -664,7 +672,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const coachScope: WritingCoachScope = selectedText ? 'selection' : 'scene';
   const coachEvidenceLabel = selectedText ? 'Selected passage' : 'Current scene';
   const inspectorSettings = aiConfig?.inspectorSettings;
-  const coachConsultationEnabled = inspectorSettings?.enableAIConsultation !== false;
+  const coachConsultationEnabled = switches.coaching;
 
   const handleAnotherVersion = async () => {
     const request = versionRequest;
@@ -679,7 +687,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       setMessages((prev) => (prev.length > 0 ? [...prev.slice(0, -1), update(prev[prev.length - 1]!)] : prev));
     replaceLast((message) => startReplyVersion(message, provenance));
     const outcome = await runModelRequest({
-      feature: 'assistant',
+      feature: chatFeature,
       request,
       failureMessage: 'The assistant could not write another version.',
       onUpdate: ({answer}) => replaceLast((message) => updateShownReply(message, stripAssistantThinking(answer)))
@@ -701,7 +709,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     if (!coachConsultationEnabled) {
       setMessages((prev) => [
         ...prev,
-        {role: 'assistant', content: 'AI consultation is disabled in Settings.'}
+        {role: 'assistant', content: 'AI coaching is off for this project. Turn it on in Settings → AI Settings.'}
       ]);
       return;
     }
@@ -802,6 +810,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setMessages
   ]);
 
+  if (!switches.coaching && !canPreviewRevision) {
+    return <div className={styles.container}><p className={styles.notice}>{OFF_COACHING_NOTE}</p></div>;
+  }
+
   return (
     <div className={styles.container}>
       {showContextPreview && selectedText && (
@@ -824,30 +836,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           <p className={styles.contextText}>{selectedTextPreview}</p>
         </div>
       )}
-      {(aiConfig?.promptTools?.filter((tool) => tool.enabled).length ?? 0) > 0 && (
-        <div className={styles.toolsBar}>
-          <div className={styles.toolsHeading}>Prompt Tools</div>
-          <div className={styles.toolsList}>
-            {aiConfig?.promptTools
-              ?.filter((tool) => tool.enabled)
-              .map((tool) => (
-                <label key={tool.id} className={styles.toolChip}>
-                  <input
-                    type='checkbox'
-                    checked={selectedToolIds.includes(tool.id)}
-                    onChange={(e) =>
-                      setSelectedToolIds((prev) =>
-                        e.target.checked
-                          ? [...new Set([...prev, tool.id])]
-                          : prev.filter((id) => id !== tool.id)
-                      )
-                    }
-                  />
-                  <span>{tool.name}</span>
-                </label>
-              ))}
-          </div>
-        </div>
+      {/* Prompt tools shape the chat, which is AI coaching (5.18). */}
+      {switches.coaching && (
+        <AssistantPromptToolsBar
+          tools={aiConfig?.promptTools ?? []}
+          selectedToolIds={selectedToolIds}
+          setSelectedToolIds={setSelectedToolIds}
+        />
       )}
       {providerIssue && (
         <div className={styles.notice}>
@@ -939,7 +934,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               handleSend();
             }
           }}
-          placeholder={placeholder}
+          placeholder={switches.coaching ? placeholder : 'Describe the revision you want, then preview it.'}
           disabled={isStreaming || contextStatus !== 'ready'}
           aria-describedby={contextStatusId}
         />
@@ -957,17 +952,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           >
             Send
           </button>
-          {onInsert && (
+          {canPreviewRevision && (
             <button onClick={handleInsert} disabled={isStreaming}>
               Preview scene revision
             </button>
           )}
-          {onCaptureSourceNote && (
+          {onCaptureSourceNote && switches.coaching && (
             <button onClick={handleCaptureSourceNote} disabled={isStreaming}>
               Save as Source Note
             </button>
           )}
-          {showWritingCoach && (
+          {showWritingCoach && switches.coaching && (
             <button
               onClick={() => void handleAskCoach()}
               disabled={isStreaming || contextStatus !== 'ready' || !coachEvidence}

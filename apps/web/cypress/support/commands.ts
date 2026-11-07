@@ -82,6 +82,8 @@ interface SeedSettings {
       gemini: {model: string};
       ollama: {model: string; baseUrl: string};
     };
+    aiCoaching: boolean;
+    aiProse: boolean;
     promptTools: unknown[];
     defaultToolIds: string[];
     defaultToolIdsByMode: {
@@ -243,6 +245,10 @@ Cypress.Commands.add('seedSmokeProjectData', () => {
           gemini: {model: 'gemini-2.0-flash'},
           ollama: {model: 'llama3.1', baseUrl: 'http://localhost:11434'}
         },
+        // Real projects start with both AI switches off (5.18). The smoke project stands for an
+        // author who turned AI on; `setSeededAISwitches` changes that per test.
+        aiCoaching: true,
+        aiProse: true,
         promptTools: [],
         defaultToolIds: [],
         defaultToolIdsByMode: {
@@ -350,7 +356,7 @@ Cypress.Commands.add('ensureSettingsSectionOpen', (sectionTitle: string) => {
     });
 });
 
-Cypress.Commands.add('setSeededProjectProvider', (provider: 'anthropic' | 'ollama' | 'local-openai') => {
+function patchSeededAISettings(patch: Record<string, unknown>) {
   return cy.window().then(
     (win) =>
       new Cypress.Promise<void>((resolve, reject) => {
@@ -367,7 +373,7 @@ Cypress.Commands.add('setSeededProjectProvider', (provider: 'anthropic' | 'ollam
             const existing = getRequest.result;
             store.put({
               ...existing,
-              aiSettings: {...existing.aiSettings, provider}
+              aiSettings: {...existing.aiSettings, ...patch}
             });
           };
           tx.oncomplete = () => {
@@ -385,7 +391,15 @@ Cypress.Commands.add('setSeededProjectProvider', (provider: 'anthropic' | 'ollam
         };
       })
   );
-});
+}
+
+Cypress.Commands.add('setSeededProjectProvider', (provider: 'anthropic' | 'ollama' | 'local-openai') =>
+  patchSeededAISettings({provider})
+);
+
+Cypress.Commands.add('setSeededAISwitches', (switches: {coaching: boolean; prose: boolean}) =>
+  patchSeededAISettings({aiCoaching: switches.coaching, aiProse: switches.prose})
+);
 
 // Writes records into one store of the app's database. The write can wait
 // behind the app's own transactions on a busy machine, so it gets a longer
@@ -426,6 +440,8 @@ declare global {
       ensureSettingsSectionOpen(sectionTitle: string): Chainable<void>;
       // Switches the seeded smoke project's AI provider in IndexedDB; reload afterwards.
       setSeededProjectProvider(provider: 'anthropic' | 'ollama' | 'local-openai'): Chainable<void>;
+      // Sets the seeded project's AI coaching and AI prose switches (5.18).
+      setSeededAISwitches(switches: {coaching: boolean; prose: boolean}): Chainable<void>;
       // Puts records into one IndexedDB store of the app database.
       putIndexedDbRecords<T extends {id: string}>(storeName: string, records: T[]): Chainable<void>;
     }

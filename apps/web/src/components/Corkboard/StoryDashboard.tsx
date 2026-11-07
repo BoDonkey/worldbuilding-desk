@@ -4,6 +4,7 @@ import type {ProgressionContinuityCandidate} from '../../services/progressionCon
 import {WritingCoachSection} from './WritingCoachSection';
 import {ProgressionContinuitySection} from './ProgressionContinuitySection';
 import styles from '../../styles/CorkboardRoute.module.css';
+import {readAISwitches} from '../../services/llm/aiSwitches';
 
 interface StoryDashboardProps {
   dashboard: StoryDashboardData;
@@ -181,7 +182,10 @@ export function StoryDashboard({
         onOpenScene={onOpenScene}
       />
 
-      <WritingCoachSection dashboard={dashboard} projectId={projectId} aiConfig={aiConfig} />
+      {/* The writing coach is AI coaching; it hides while that switch is off (5.18). */}
+      {readAISwitches(aiConfig).coaching && (
+        <WritingCoachSection dashboard={dashboard} projectId={projectId} aiConfig={aiConfig} />
+      )}
     </div>
   );
 }

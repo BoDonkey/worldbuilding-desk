@@ -24,7 +24,6 @@ import {
 const LAST_AI_PROVIDER_STORAGE_KEY = 'wbd:ai:last-provider';
 
 const DEFAULT_INSPECTOR_SETTINGS: InspectorSettings = {
-  enableAIConsultation: true,
   reviewEngineMode: 'deterministic',
   canonDecisionProviderMode: 'project-provider',
   maxConsultationsPerDay: 20,
@@ -157,7 +156,8 @@ function normalizeIgnoredEntityMatchKeys(keys: string[] | undefined): string[] {
   return Array.from(unique);
 }
 
-function ensureAISettings(settings: ProjectSettings): ProjectSettings {
+/** Normalizes stored AI settings on read; exported for its tests. */
+export function ensureAISettings(settings: ProjectSettings): ProjectSettings {
   const aiSettings: ProjectAISettings = {
     ...(settings.aiSettings ?? createDefaultAISettings())
   };
@@ -212,9 +212,18 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
       aiSettings.defaultToolIdsByMode?.general?.filter((id) => enabledIds.has(id)) ??
       fallbackDefaults
   };
+  // Both AI switches are off unless the author turned them on (Slice 5.18). Projects saved
+  // before the switches existed start with both off, by author decision: no migration.
+  aiSettings.aiCoaching = aiSettings.aiCoaching === true;
+  aiSettings.aiProse = aiSettings.aiProse === true;
+  // The pre-5.18 "Enable AI consultation actions in Lore Inspector" value; the coaching
+  // switch replaced it.
+  const {enableAIConsultation: _legacyConsultation, ...storedInspector} =
+    (aiSettings.inspectorSettings ?? {}) as Partial<InspectorSettings> & {enableAIConsultation?: unknown};
+  void _legacyConsultation;
   aiSettings.inspectorSettings = {
     ...DEFAULT_INSPECTOR_SETTINGS,
-    ...(aiSettings.inspectorSettings ?? {}),
+    ...storedInspector,
     reviewEngineMode:
       aiSettings.inspectorSettings?.reviewEngineMode === 'local-ai-preview'
         ? 'local-ai-preview'

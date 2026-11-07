@@ -20,6 +20,8 @@ async function useLocalModelServer(page: Page) {
   await openFromRail(page, 'Settings');
   const summary = page.locator('summary', {hasText: 'AI Settings'});
   if ((await summary.locator('xpath=..').getAttribute('open')) === null) await summary.click();
+  // Projects start with AI off (5.18); the assistant chat needs AI coaching.
+  await page.getByLabel('AI coaching', {exact: true}).check();
   await page.locator('label', {hasText: /^Provider$/}).locator('..').locator('select')
     .selectOption({label: 'Local server (OpenAI-compatible)'});
   await page.locator('#local-server-base-url').fill(server.baseUrl);

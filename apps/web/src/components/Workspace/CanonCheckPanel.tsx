@@ -17,7 +17,8 @@ interface CanonCheckPanelProps {
  */
 export function CanonCheckPanel({check, sceneTitle}: CanonCheckPanelProps) {
   const {preview, modelRun, budget} = check;
-  if (sceneTitle === null) return null;
+  // The model-assisted check is AI coaching; it hides while that switch is off (5.18).
+  if (sceneTitle === null || !check.consultationEnabled) return null;
 
   const notes = preview
     ? [
@@ -41,11 +42,7 @@ export function CanonCheckPanel({check, sceneTitle}: CanonCheckPanelProps) {
           {modelRun.isRunning ? 'Checking…' : 'Check this scene against canon'}
         </button>
       </div>
-      {!check.consultationEnabled ? (
-        <div className={styles.consistencyDescription}>
-          AI consultation actions are off for this project. <Link to='/settings'>Open Settings</Link>
-        </div>
-      ) : check.providerIssue ? (
+      {check.providerIssue ? (
         <div className={styles.consistencyDescription}>
           {check.providerIssue} <Link to='/settings'>Open Settings</Link>
         </div>
@@ -56,7 +53,7 @@ export function CanonCheckPanel({check, sceneTitle}: CanonCheckPanelProps) {
         status={budget.status}
         isLocal={budget.isLocal}
         onGrantMore={budget.grantMore}
-        hidden={!check.consultationEnabled || Boolean(check.providerIssue)}
+        hidden={Boolean(check.providerIssue)}
       />
       <ModelRunProgress run={modelRun} />
       {check.error && <div className={styles.consistencyDescription} role='alert'>{check.error}</div>}

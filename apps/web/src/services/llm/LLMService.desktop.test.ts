@@ -4,7 +4,7 @@ import {LLMService} from './LLMService';
 import {getProviderKeyStatus} from './providerKeyStore';
 
 const settings = (provider: string) =>
-  ({provider, configs: {[provider]: {model: `${provider}-model`}}}) as unknown as ProjectAISettings;
+  ({provider, configs: {[provider]: {model: `${provider}-model`}}, aiCoaching: true}) as unknown as ProjectAISettings;
 
 function desktopWindow(status = {anthropic: true, openai: true, gemini: true}) {
   const llmComplete = vi.fn(async () => 'from main');
@@ -25,6 +25,7 @@ describe('LLMService in the desktop app', () => {
 
     for (const provider of ['anthropic', 'openai', 'gemini']) {
       const response = await new LLMService(settings(provider)).complete({
+        feature: 'assistant',
         messages: [{role: 'user', content: `Hi ${provider}`}],
         cache: false
       });
@@ -44,8 +45,9 @@ describe('LLMService in the desktop app', () => {
 
     await new LLMService({
       provider: 'local-openai',
-      configs: {'local-openai': {baseUrl: 'http://127.0.0.1:8080/v1', model: 'qwen3'}}
-    } as unknown as ProjectAISettings).complete({messages: [{role: 'user', content: 'Hi'}], cache: false});
+      configs: {'local-openai': {baseUrl: 'http://127.0.0.1:8080/v1', model: 'qwen3'}},
+      aiCoaching: true
+    } as unknown as ProjectAISettings).complete({feature: 'assistant', messages: [{role: 'user', content: 'Hi'}], cache: false});
 
     expect(fetchMock).not.toHaveBeenCalled();
     const [payload] = llmComplete.mock.calls[0] as unknown as [Record<string, unknown>];
@@ -62,8 +64,9 @@ describe('LLMService in the desktop app', () => {
     const ask = (maxReplyTokens: unknown) =>
       new LLMService({
         provider: 'local-openai',
-        configs: {'local-openai': {baseUrl: 'http://127.0.0.1:8080/v1', maxReplyTokens}}
-      } as unknown as ProjectAISettings).complete({messages: [{role: 'user', content: 'Hi'}], cache: false});
+        configs: {'local-openai': {baseUrl: 'http://127.0.0.1:8080/v1', maxReplyTokens}},
+        aiCoaching: true
+      } as unknown as ProjectAISettings).complete({feature: 'assistant', messages: [{role: 'user', content: 'Hi'}], cache: false});
 
     await ask(1500);
     await ask(10);

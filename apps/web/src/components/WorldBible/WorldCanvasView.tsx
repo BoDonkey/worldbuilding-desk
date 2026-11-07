@@ -18,6 +18,7 @@ import {WorldCanvasBrainstorm} from './WorldCanvasBrainstorm';
 import {WorldCanvasCoaching} from './WorldCanvasCoaching';
 import {WorldCanvasReferencePaletteView} from './WorldCanvasReferencePalette';
 import styles from './WorldCanvasView.module.css';
+import {readAISwitches} from '../../services/llm/aiSwitches';
 
 type CanonLinkTarget =
   | {type: 'core-idea'}
@@ -164,12 +165,14 @@ export function WorldCanvasView({
     </div>;
   };
 
-  const renderBrainstorm = (focus: {type: 'premise'} | {type: 'lens'; kind: WorldCanvasLensKind}) => <WorldCanvasBrainstorm projectId={projectId} focus={focus} canvas={canvas} canonNames={canonNames} aiConfig={aiConfig} budget={budget} requestConfirm={requestConfirm} onKeepAsSourceNote={worldCanvas.keepBrainstormItemAsSourceNote} onAddOpenThread={(text, lensKind) => worldCanvas.addOpenThread(text, lensKind, 'brainstorm')} onFeedback={onFeedback} />;
+  // Brainstorming and coaching are AI coaching; both hide while that switch is off (5.18).
+  const aiCoaching = readAISwitches(aiConfig).coaching;
+  const renderBrainstorm = (focus: {type: 'premise'} | {type: 'lens'; kind: WorldCanvasLensKind}) => aiCoaching && <WorldCanvasBrainstorm projectId={projectId} focus={focus} canvas={canvas} canonNames={canonNames} aiConfig={aiConfig} budget={budget} requestConfirm={requestConfirm} onKeepAsSourceNote={worldCanvas.keepBrainstormItemAsSourceNote} onAddOpenThread={(text, lensKind) => worldCanvas.addOpenThread(text, lensKind, 'brainstorm')} onFeedback={onFeedback} />;
   const renderCoaching = (
     focus: {type: 'premise'} | {type: 'lens'; kind: WorldCanvasLensKind},
     focusLabel: string,
     focusText: string
-  ) => <WorldCanvasCoaching
+  ) => aiCoaching && <WorldCanvasCoaching
     focus={focus}
     focusLabel={focusLabel}
     focusText={focusText}

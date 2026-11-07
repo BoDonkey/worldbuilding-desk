@@ -787,6 +787,17 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, [documentId, editorReadyToken, editorScrollKey, focusQuery, focusToken]);
 
+  /** Replaces the selection with the matched record's quick snippet. */
+  const insertSelectionSnippet = (kind: 'characters' | 'entities') => {
+    const editor = editorRef.current;
+    const key = selectionBubble ? normalizeSelectionSurface(selectionBubble.selectedText) : null;
+    const snippet = key ? selectionQuickSnippets?.[kind][key]?.html : null;
+    if (!selectionBubble || !snippet || !editor) return;
+    editor.commands.setTextSelection({from: selectionBubble.from, to: selectionBubble.to});
+    editor.commands.insertContent(snippet);
+    setSelectionBubble(null);
+  };
+
   const handleTypingActivity = useCallback(() => {
     if (inlineHighlightsMode !== 'hidden-while-typing') {
       return;
@@ -915,20 +926,23 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             }}
             onMouseDown={(event) => event.preventDefault()}
           >
-            <button
-              type='button'
-              onClick={() => {
-                onOpenAIContext?.({
-                  type: 'document',
-                  id: documentId,
-                  selectedText: selectionBubble.selectedText,
-                  from: selectionBubble.from,
-                  to: selectionBubble.to
-                });
-              }}
-            >
-              Ask AI about this
-            </button>
+            {/* The Workspace leaves `onOpenAIContext` unset while both AI switches are off (5.18). */}
+            {onOpenAIContext && (
+              <button
+                type='button'
+                onClick={() => {
+                  onOpenAIContext({
+                    type: 'document',
+                    id: documentId,
+                    selectedText: selectionBubble.selectedText,
+                    from: selectionBubble.from,
+                    to: selectionBubble.to
+                  });
+                }}
+              >
+                Ask AI about this
+              </button>
+            )}
             {selectionBubble.matchType === 'character' && (
               <button
                 type='button'
@@ -954,38 +968,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
               </button>
             )}
             {selectionBubble.matchType === 'character' && (
-              <button
-                type='button'
-                onClick={() => {
-                  const key = normalizeSelectionSurface(selectionBubble.selectedText);
-                  const snippet = key ? selectionQuickSnippets?.characters[key]?.html : null;
-                  if (!snippet || !editorRef.current) return;
-                  editorRef.current.commands.setTextSelection({
-                    from: selectionBubble.from,
-                    to: selectionBubble.to
-                  });
-                  editorRef.current.commands.insertContent(snippet);
-                  setSelectionBubble(null);
-                }}
-              >
+              <button type='button' onClick={() => insertSelectionSnippet('characters')}>
                 Insert Stat Snapshot
               </button>
             )}
             {selectionBubble.matchType === 'entity' && (
-              <button
-                type='button'
-                onClick={() => {
-                  const key = normalizeSelectionSurface(selectionBubble.selectedText);
-                  const snippet = key ? selectionQuickSnippets?.entities[key]?.html : null;
-                  if (!snippet || !editorRef.current) return;
-                  editorRef.current.commands.setTextSelection({
-                    from: selectionBubble.from,
-                    to: selectionBubble.to
-                  });
-                  editorRef.current.commands.insertContent(snippet);
-                  setSelectionBubble(null);
-                }}
-              >
+              <button type='button' onClick={() => insertSelectionSnippet('entities')}>
                 Insert Lore Snippet
               </button>
             )}
@@ -1146,7 +1134,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         <EditorStatPeekLayer
           peek={statPeekControls}
           characterStatPeek={characterStatPeek}
-          onExpandSelection={(selection) => onOpenAIContext?.({type: 'document', id: documentId, ...selection})}
+          onExpandSelection={onOpenAIContext && ((selection) => onOpenAIContext({type: 'document', id: documentId, ...selection}))}
         />
       </div>
     </div>

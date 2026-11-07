@@ -28,6 +28,7 @@ import styles from '../../styles/CharacterLab.module.css';
 import {StoryPointPicker} from './StoryPointPicker';
 import {describeCharacterLabDataFlow, getCharacterLabProviderIssue} from './characterLabProvider';
 import {buildAITextProvenance, type AITextProvenance} from '../../services/editor/aiTextProvenance';
+import {readAISwitches} from '../../services/llm/aiSwitches';
 
 const MAX_CHARACTERS = 3;
 
@@ -58,7 +59,7 @@ export function CharacterSceneDialog({
   const lab = useCharacterLabData(projectId, isOpen);
   const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
-  const consultationEnabled = inspector?.enableAIConsultation !== false;
+  const consultationEnabled = readAISwitches(lab.aiConfig).prose;
   const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [position, setPosition] = useState<CharacterVoicePosition>(defaultPosition);
@@ -190,10 +191,11 @@ export function CharacterSceneDialog({
     updateDrafts((current) => [...current, draft]);
     try {
       const service = new LLMService(lab.aiConfig);
-      budget.spend('character-lab');
+      budget.spend('character-scene');
       const result = await modelRun.run(
         service,
         {
+          feature: 'character-scene',
           systemPrompt: prompt.systemPrompt,
           messages: prompt.messages,
           maxTokens,

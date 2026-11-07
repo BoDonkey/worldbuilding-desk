@@ -9,6 +9,7 @@ import {
   type CharacterVoiceContext
 } from '../characterLab';
 import {htmlToPlainText} from '../../utils/textHelpers';
+import {readAISwitches} from '../llm/aiSwitches';
 
 /** Hard cap on one draft, enforced in code whatever the model returns. */
 export const SCENE_DRAFT_WORD_CAP = 1500;
@@ -43,9 +44,9 @@ export interface SceneDraft {
   trimmed: boolean;
 }
 
-/** The project allows AI scene drafts, and AI consultation is on. */
+/** The project allows AI scene drafts, and its AI prose switch is on (Slice 5.18). */
 export const canDraftScenes = (aiSettings: ProjectAISettings | undefined | null): boolean =>
-  Boolean(aiSettings?.allowSceneDrafts) && aiSettings?.inspectorSettings?.enableAIConsultation !== false;
+  Boolean(aiSettings?.allowSceneDrafts) && readAISwitches(aiSettings).prose;
 
 export const isSceneDraftable = (html: string): boolean =>
   countWords(html) <= SCENE_DRAFT_EMPTY_WORD_LIMIT;

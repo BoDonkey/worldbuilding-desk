@@ -43,6 +43,8 @@ import {
   getConsultationBudgetStatus,
   LOCAL_CONSULTATION_DAILY_GUARD
 } from '../../services/editor';
+import {anyAISwitchOn, readAISwitches} from '../../services/llm/aiSwitches';
+import {AISwitchesFields} from './AISwitchesFields';
 
 interface AISettingsProps {
   aiSettings: ProjectAISettings;
@@ -279,6 +281,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
     }
   };
 
+  const aiSwitches = readAISwitches(aiSettings);
   const hostedProvider = isHostedAIProvider(aiSettings.provider) ? aiSettings.provider : null;
   const currentProviderConfig = aiSettings.configs[aiSettings.provider] ?? {};
   const currentModel = currentProviderConfig.model ?? '';
@@ -295,7 +298,6 @@ export const AISettings: React.FC<AISettingsProps> = ({
   const defaultsForSelectedMode =
     defaultToolIdsByMode[defaultsMode] ?? defaultToolIds;
   const inspectorSettings = aiSettings.inspectorSettings ?? {
-    enableAIConsultation: true,
     reviewEngineMode: 'deterministic' as const,
     canonDecisionProviderMode: 'project-provider' as const,
     maxConsultationsPerDay: 20,
@@ -630,6 +632,10 @@ export const AISettings: React.FC<AISettingsProps> = ({
           autoDismissMs={statusMessage.variant === 'error' ? undefined : 4000}
         />
       )}
+      <AISwitchesFields aiSettings={aiSettings} onSettingsChange={onSettingsChange} />
+      {/* With both switches off the rest collapses; saved settings and keys are kept (5.18). */}
+      {anyAISwitchOn(aiSwitches) && (
+      <>
       <div className={styles.toolsSection}>
         <h3 className={styles.toolsHeading}>Setup</h3>
         <div className={styles.field}>
@@ -806,11 +812,13 @@ export const AISettings: React.FC<AISettingsProps> = ({
 
         <ModelContextFields
           aiSettings={aiSettings}
-          consultationEnabled={inspectorSettings.enableAIConsultation}
+          proseEnabled={aiSwitches.prose}
           onSettingsChange={onSettingsChange}
         />
 
-        <h3 className={styles.toolsHeading}>Lore Inspector AI Guardrails</h3>
+        <h3 className={styles.toolsHeading}>AI Guardrails</h3>
+        {aiSwitches.coaching && (
+        <>
         <div className={styles.field}>
           <label className={styles.label}>Who checks your draft</label>
           <select
@@ -863,24 +871,8 @@ export const AISettings: React.FC<AISettingsProps> = ({
             Canon decision consultations can follow the main assistant provider or stay local through Ollama even when writing assistance uses a hosted model.
           </p>
         </div>
-        <label className={styles.field}>
-          <span className={styles.label}>
-            <input
-              type='checkbox'
-              checked={inspectorSettings.enableAIConsultation}
-              onChange={(e) =>
-                onSettingsChange({
-                  ...aiSettings,
-                  inspectorSettings: {
-                    ...inspectorSettings,
-                    enableAIConsultation: e.target.checked
-                  }
-                })
-              }
-            />{' '}
-            Enable AI consultation actions in Lore Inspector
-          </span>
-        </label>
+        </>
+        )}
         <div className={styles.field}>
           <label className={styles.label}>Max consultations per day</label>
           <input
@@ -1003,6 +995,8 @@ export const AISettings: React.FC<AISettingsProps> = ({
         )}
       </div>
 
+      {/* Prompt tools shape the assistant chat, which is AI coaching. */}
+      {aiSwitches.coaching && (
       <div className={styles.toolsSection}>
         <h3 className={styles.toolsHeading}>Prompt Tools</h3>
         <p className={styles.help}>
@@ -1169,6 +1163,9 @@ export const AISettings: React.FC<AISettingsProps> = ({
           </ul>
         )}
       </div>
+      )}
+      </>
+      )}
 
       {confirmDialog}
     </div>

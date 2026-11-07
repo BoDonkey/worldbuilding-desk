@@ -6,6 +6,7 @@ import {describeRouteDataFlow} from '../services/llm/providerRoute';
 import type {LLMRequest} from '../services/llm/types';
 import type {SplitModelOutput} from '../services/llm/modelRun';
 import type {ConsultationFeature} from '../services/editor';
+import {aiSwitchRefusal} from '../services/llm/aiSwitches';
 import {useConsultationBudget} from './useConsultationBudget';
 import {useModelRun} from './useModelRun';
 
@@ -69,6 +70,8 @@ export function useAssistantRequestPolicy({
       onUpdate?: (output: SplitModelOutput) => void;
       failureMessage: string;
     }): Promise<AssistantRequestOutcome> => {
+      const switchRefusal = aiSwitchRefusal(aiConfig, feature);
+      if (switchRefusal) return {ok: false, message: switchRefusal};
       if (providerIssue || !provider.service) {
         return {ok: false, message: providerIssue ?? 'AI provider unavailable. Check your settings and try again.'};
       }
@@ -83,7 +86,7 @@ export function useAssistantRequestPolicy({
       // budget and verified private-local requests against the runaway guard.
       budget.spend(feature);
       try {
-        const result = await modelRun.run(provider.service, request, onUpdate);
+        const result = await modelRun.run(provider.service, {...request, feature}, onUpdate);
         return {ok: true, stopped: result.stopped};
       } catch (error) {
         return {
@@ -92,7 +95,7 @@ export function useAssistantRequestPolicy({
         };
       }
     },
-    [budget, modelRun, provider.service, providerIssue]
+    [aiConfig, budget, modelRun, provider.service, providerIssue]
   );
 
   return {

@@ -1,4 +1,5 @@
 import type {AIProviderId} from '../../entityTypes';
+import type {AIRequestFeature} from './aiSwitches';
 
 export interface LLMMessage {
   role: 'user' | 'assistant' | 'system';
@@ -19,6 +20,11 @@ export interface LLMContextChunk {
 }
 
 export interface LLMRequest {
+  /**
+   * The feature making the request. `LLMService` refuses an untagged request, or one whose
+   * AI switch is off for the project (Slice 5.18).
+   */
+  feature?: AIRequestFeature;
   messages: LLMMessage[];
   context?: LLMContextChunk[];
   systemPrompt?: string;

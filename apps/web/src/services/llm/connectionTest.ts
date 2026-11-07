@@ -89,6 +89,7 @@ export async function testHostedProviderConnection(params: {
     } as unknown as ProjectAISettings;
     const service = new LLMService(settings);
     await service.complete({
+      feature: 'connection-test',
       messages: [{role: 'user', content: 'Reply with just the word OK.'}],
       maxTokens: 5
     });
@@ -214,6 +215,7 @@ export async function testLocalServerConnection(params: {
       defaultToolIds: []
     });
     await service.complete({
+      feature: 'connection-test',
       messages: [{role: 'user', content: 'Reply with just the word OK.'}],
       maxTokens: 5,
       cache: false
