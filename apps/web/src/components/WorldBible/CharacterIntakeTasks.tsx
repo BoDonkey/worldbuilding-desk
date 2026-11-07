@@ -5,9 +5,11 @@ import {CharacterCardImportDialog} from '../CharacterLab/CharacterCardImportDial
 export type CharacterIntakeKind = 'description' | 'card';
 
 /** The character category's guided starts: from a description, or from a character card (4.69). */
-export function CharacterIntakeTasks({onStart}: {onStart: (kind: CharacterIntakeKind) => void}) {
+/** `fromDescription` is false while AI coaching is off, which hides that start (5.18). */
+export function CharacterIntakeTasks({onStart, fromDescription}: {onStart: (kind: CharacterIntakeKind) => void; fromDescription: boolean}) {
   return (
     <>
+      {fromDescription && (
       <div className={styles.castTask}>
         <h3>From a description</h3>
         <p>
@@ -18,6 +20,7 @@ export function CharacterIntakeTasks({onStart}: {onStart: (kind: CharacterIntake
           Start from a description
         </button>
       </div>
+      )}
       <div className={styles.castTask}>
         <h3>From a character card</h3>
         <p>

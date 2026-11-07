@@ -36,6 +36,7 @@ import {ModelRunProgress} from '../common/ModelRunProgress';
 import {CraftCitationList} from '../CraftCitationList';
 import styles from './WorldCanvasView.module.css';
 import {HOSTED_PROVIDER_NAMES, isHostedAIProvider} from '../../services/llm/providerConfig';
+import {readAISwitches} from '../../services/llm/aiSwitches';
 
 interface CoachingResult {
   action: WorldCanvasCoachingAction;
@@ -75,7 +76,7 @@ export function WorldCanvasCoaching({
   const [rejectedReply, setRejectedReply] = useState<string | null>(null);
   const modelRun = useModelRun();
   const inspector = aiConfig?.inspectorSettings;
-  const consultationEnabled = inspector?.enableAIConsultation !== false;
+  const consultationEnabled = readAISwitches(aiConfig).coaching;
 
   const providerIssue = useMemo(() => {
     if (!aiConfig) return 'AI provider is not configured. Add one in Settings to use Canvas coaching.';
@@ -109,7 +110,7 @@ export function WorldCanvasCoaching({
   const runCoaching = async (action: WorldCanvasCoachingAction) => {
     if (!aiConfig || providerIssue || modelRun.isRunning || !focusText.trim()) return;
     if (!consultationEnabled) {
-      setError('AI consultation is disabled in Settings.');
+      setError('AI coaching is off for this project. Turn it on in Settings → AI Settings.');
       return;
     }
     if (budget.blocked) {
@@ -145,6 +146,7 @@ export function WorldCanvasCoaching({
       const service = new LLMService(aiConfig);
       budget.spend('canvas-coach');
       const run = await modelRun.run(service, {
+        feature: 'canvas-coach',
         messages: [{role: 'user', content: prompt.userPrompt}],
         context: buildCraftContextChunks(craftResults),
         systemPrompt: prompt.systemPrompt,
@@ -198,7 +200,7 @@ export function WorldCanvasCoaching({
       {providerIssue ? (
         <p className={styles.brainstormNote}>{providerIssue} <Link to='/settings'>Open Settings</Link></p>
       ) : !consultationEnabled ? (
-        <p className={styles.brainstormNote}>AI consultation is disabled in Settings. <Link to='/settings'>Open Settings</Link></p>
+        <p className={styles.brainstormNote}>AI coaching is off for this project. <Link to='/settings'>Open Settings</Link></p>
       ) : (
         <>
           {disclosure && <p className={styles.coachingDisclosure}>{disclosure}</p>}

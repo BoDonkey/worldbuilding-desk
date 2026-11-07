@@ -63,6 +63,7 @@ import {ConsultationBudgetNotice, ModelRunProgress, RouteFeedback} from '../comp
 import {useConsultationBudget} from '../hooks/useConsultationBudget';
 import {useModelRun} from '../hooks/useModelRun';
 import {resolveResponseTokenLimit} from '../services/llm/modelRun';
+import {readAISwitches} from '../services/llm/aiSwitches';
 
 const PROVIDER_LABELS = {
   anthropic: 'Claude',
@@ -238,8 +239,7 @@ function CanonDecisionsRoute() {
   const aiProviderLabel = effectiveAIProviderId
     ? PROVIDER_LABELS[effectiveAIProviderId]
     : 'AI';
-  const aiConsultationEnabled =
-    projectSettings?.aiSettings?.inspectorSettings?.enableAIConsultation !== false;
+  const aiConsultationEnabled = readAISwitches(projectSettings?.aiSettings).coaching;
   // The settings a canon-decision request actually uses: the local-Ollama override and the
   // low-cost model included. The budget classifies this route, so the exemption applies only when
   // that exact model is verified local.
@@ -610,7 +610,7 @@ function CanonDecisionsRoute() {
       return;
     }
     if (!aiConsultationEnabled) {
-      setFeedback({tone: 'error', message: 'AI consultation is disabled in Settings.'});
+      setFeedback({tone: 'error', message: 'AI coaching is off for this project. Turn it on in Settings → AI Settings.'});
       return;
     }
     if (budget.blocked) {
@@ -682,6 +682,7 @@ function CanonDecisionsRoute() {
       await modelRun.run(
         service,
         {
+          feature: 'canon-decision',
           messages: [{role: 'user', content: userPrompt}],
           systemPrompt,
           context: ragChunks,
@@ -852,6 +853,7 @@ function CanonDecisionsRoute() {
                   />
                 ) : null}
 
+                {aiConsultationEnabled && (
                 <div className={styles.aiPanel}>
                   <div className={styles.aiPanelHeader}>
                     <p className={styles.aiPanelTitle}>Think it through</p>
@@ -878,10 +880,12 @@ function CanonDecisionsRoute() {
                     </p>
                   )}
                 </div>
+                )}
 
                 {runClusterId === cluster.id && <ModelRunProgress run={modelRun} />}
 
                 <div className={styles.actionRow}>
+                  {aiConsultationEnabled && (
                   <button
                     type='button'
                     onClick={() => void handleConsultCluster(cluster)}
@@ -897,6 +901,7 @@ function CanonDecisionsRoute() {
                       ? `Asking ${aiProviderLabel}...`
                       : `Ask ${aiProviderLabel}`}
                   </button>
+                  )}
                   {cluster.kind === 'entity_identity' ? (
                     <>
                       {targetRef ? (

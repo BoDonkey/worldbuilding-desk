@@ -35,7 +35,9 @@ export type ConsultationFeature =
   | 'canvas-coach'
   | 'canon-check'
   | 'character-lab'
-  | 'scene-draft';
+  | 'scene-revision'
+  | 'scene-draft'
+  | 'character-scene';
 
 const FEATURE_LABELS: Record<ConsultationFeature, string> = {
   assistant: 'Writing assistant',
@@ -47,7 +49,9 @@ const FEATURE_LABELS: Record<ConsultationFeature, string> = {
   'canvas-coach': 'World Canvas coaching',
   'canon-check': 'Model-assisted canon check',
   'character-lab': 'Character lab',
-  'scene-draft': 'Scene drafts'
+  'scene-revision': 'Scene revisions',
+  'scene-draft': 'Scene drafts',
+  'character-scene': 'Character scenes'
 };
 
 export const CONSULTATION_FEATURES = Object.keys(FEATURE_LABELS) as ConsultationFeature[];

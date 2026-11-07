@@ -1,7 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate} from 'react-router';
 import {clearSystemHistoryEntries} from '../../services/system';
-import {isCharacterCategory} from '../../services/characters/characterIdentity';
 import type {
   Character,
   CharacterSheet,
@@ -47,6 +46,8 @@ import type {AITextProvenance} from '../../services/editor/aiTextProvenance';
 import {useModelCanonCheck} from '../../hooks/useModelCanonCheck';
 import {sceneCheckText} from '../../services/consistency/modelCanonCheck';
 import {CanonCheckPanel} from './CanonCheckPanel';
+import {anyAISwitchOn, readAISwitches} from '../../services/llm/aiSwitches';
+import {WorkspaceCharacterLabSection} from './WorkspaceCharacterLabSection';
 
 interface ConsistencyReviewItem {
   id: string;
@@ -416,18 +417,8 @@ export function WorkspaceContextDrawer({
   >({});
   const [pendingSourceNoteCapture, setPendingSourceNoteCapture] = useState<string | null>(null);
   const [assistantSessionId] = useState(() => crypto.randomUUID());
-  const [labEntityId, setLabEntityId] = useState('');
-  const labCharacterOptions = useMemo(() => {
-    const characterCategoryIds = new Set(
-      categories.filter((category) => isCharacterCategory(category)).map((category) => category.id)
-    );
-    return entities
-      .filter((entity) => characterCategoryIds.has(entity.categoryId))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [categories, entities]);
-  const selectedLabEntityId = labCharacterOptions.some((entity) => entity.id === labEntityId)
-    ? labEntityId
-    : labCharacterOptions[0]?.id ?? '';
+  const aiSwitches = readAISwitches(projectSettings?.aiSettings);
+  const anyAIOn = anyAISwitchOn(aiSwitches);
   const activeReviewItemRef = useRef<HTMLLIElement | null>(null);
 
   const visibleTabs = useMemo(
@@ -435,9 +426,10 @@ export function WorkspaceContextDrawer({
       CONTEXT_DRAWER_TABS.filter(
         (tab) =>
           (tab.id !== 'compendium' || showGameSystems) &&
-          (tab.id !== 'ruleset' || showRuleAuthoring)
+          (tab.id !== 'ruleset' || showRuleAuthoring) &&
+          (tab.id !== 'ai' || anyAIOn)
       ),
-    [showGameSystems, showRuleAuthoring]
+    [showGameSystems, showRuleAuthoring, anyAIOn]
   );
   const currentDocument = useMemo(
     () => documents.find((document) => document.id === selectedId) ?? null,
@@ -864,47 +856,13 @@ export function WorkspaceContextDrawer({
           >
             Open World Bible characters
           </button>
-          <div className={styles.contextSummaryText}>
-            <strong>Character lab</strong>
-            <div className={styles.consistencyDescription}>
-              Talk to a character, test a reaction, or draft a short scene for two or three
-              characters, grounded in canon and story state at your cursor. Draft only;
-              nothing changes canon.
-            </div>
-          </div>
-          {labCharacterOptions.length === 0 ? (
-            <p className={styles.contextSummaryText}>
-              Add a character in World Bible to use the lab.
-            </p>
-          ) : (
-            <>
-              <label className={styles.contextSummaryText}>
-                Character{' '}
-                <select
-                  value={selectedLabEntityId}
-                  onChange={(event) => setLabEntityId(event.target.value)}
-                >
-                  {labCharacterOptions.map((entity) => (
-                    <option key={entity.id} value={entity.id}>{entity.name}</option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type='button'
-                onClick={() => onOpenCharacterLab(selectedLabEntityId)}
-                disabled={!selectedLabEntityId}
-              >
-                Open character lab
-              </button>
-              <button
-                type='button'
-                onClick={() => onOpenCharacterScene(selectedLabEntityId)}
-                disabled={labCharacterOptions.length < 2}
-              >
-                Write a character scene
-              </button>
-            </>
-          )}
+          <WorkspaceCharacterLabSection
+            entities={entities}
+            categories={categories}
+            switches={aiSwitches}
+            onOpenCharacterLab={onOpenCharacterLab}
+            onOpenCharacterScene={onOpenCharacterScene}
+          />
         </div>
       );
     }
@@ -1233,9 +1191,7 @@ export function WorkspaceContextDrawer({
         <LoreInspectorPanel
           record={activeLoreRecord}
           onEditRecord={openWorldRecord}
-          aiEnabled={
-            projectSettings?.aiSettings?.inspectorSettings?.enableAIConsultation !== false
-          }
+          aiEnabled={aiSwitches.coaching}
           budget={consultationBudget}
           onConsult={handleConsultationFromLore}
         />

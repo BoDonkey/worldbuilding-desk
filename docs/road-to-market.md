@@ -343,7 +343,7 @@ messages).
 | 5.15c | Project vaults: verification + copy | 5 | M | Done `a1b9621` |
 | 5.16 | First-release dogfood polish | 5 | M | Done `9b242c1` |
 | 5.17 | Writing-flow stability + assistant continuity | 5 | L | Done `dc0460c` |
-| 5.18 | Per-project AI switches (coaching, prose) | 5 | M | — (author-approved pre-beta exception, 2026-11-07) |
+| 5.18 | Per-project AI switches (coaching, prose) | 5 | M | WIP (author-approved pre-beta exception, 2026-11-07) |
 | 5.19 | Custom AI actions in the selection menu | 5 | M | — (author-approved pre-beta exception, 2026-11-07; after 5.18) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |

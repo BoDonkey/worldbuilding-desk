@@ -204,6 +204,13 @@ export interface ProjectAISettings {
   defaultToolIdsByMode?: Record<ProjectMode, string[]>;
   inspectorSettings?: InspectorSettings;
   /**
+   * AI coaching switch (Slice 5.18): AI that reads and responds and never writes into the
+   * manuscript. Off unless true. Per project; see `services/llm/aiSwitches.ts`.
+   */
+  aiCoaching?: boolean;
+  /** AI prose switch (Slice 5.18): model-written text into the manuscript. Off unless true. */
+  aiProse?: boolean;
+  /**
    * Lets the AI draft whole scenes on request (Slice 4.52). Off by default and
    * per project: child projects do not copy it. Drafts are previews until the
    * author inserts them, and inserted text is marked as AI text.
@@ -217,7 +224,6 @@ export interface ProjectAISettings {
 }
 
 export interface InspectorSettings {
-  enableAIConsultation: boolean;
   reviewEngineMode?: 'deterministic' | 'local-ai-preview';
   canonDecisionProviderMode?: 'project-provider' | 'local-ollama';
   maxConsultationsPerDay: number;

@@ -39,9 +39,9 @@ const mara: CharacterVoiceContext = {
 } as unknown as CharacterVoiceContext;
 
 describe('scene draft rules', () => {
-  it('offers drafting only when the project allows it and consultation is on', () => {
-    const settings = (allowSceneDrafts?: boolean, enableAIConsultation = true) =>
-      ({allowSceneDrafts, inspectorSettings: {enableAIConsultation}}) as unknown as ProjectAISettings;
+  it('offers drafting only when the project allows it and AI prose is on', () => {
+    const settings = (allowSceneDrafts?: boolean, aiProse = true) =>
+      ({allowSceneDrafts, aiProse}) as unknown as ProjectAISettings;
     expect(canDraftScenes(undefined)).toBe(false);
     expect(canDraftScenes(settings(undefined))).toBe(false);
     expect(canDraftScenes(settings(true))).toBe(true);

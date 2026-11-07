@@ -13,6 +13,7 @@ import {ImportDraftCard} from './ImportDraftCard';
 import {ImportDocumentPreviewDialog} from './ImportDocumentPreviewDialog';
 import {getPlannedNewFieldLabels} from '../../services/worldBible/worldBibleImportParsing';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
+import {readAISwitches} from '../../services/llm/aiSwitches';
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
@@ -39,6 +40,8 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
     isPasteImportOpen, setIsPasteImportOpen, pastedImportText, setPastedImportText,
     handlePreparePastedImportDraft, onOpenImportedEntity
   } = props;
+  // The import AI helper is AI coaching; it hides while that switch is off (5.18).
+  const aiCoaching = readAISwitches(projectSettings?.aiSettings).coaching;
   const {
     isApplyingImports, importDrafts, clearImportDrafts, applyImportDrafts, isApplyingJsonImport,
     jsonImportSession, jsonImportConflictResolutions, activeJsonCategory,
@@ -134,13 +137,15 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
           <div className={styles.importPanelHeader}>
             <h2>Import Preview</h2>
             <div className={styles.importPanelActions}>
-              <button
-                type='button'
-                onClick={() => setIsImportAiHelperOpen((value) => !value)}
-                aria-expanded={isImportAiHelperOpen}
-              >
-                {isImportAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
-              </button>
+              {aiCoaching && (
+                <button
+                  type='button'
+                  onClick={() => setIsImportAiHelperOpen((value) => !value)}
+                  aria-expanded={isImportAiHelperOpen}
+                >
+                  {isImportAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
+                </button>
+              )}
               <button
                 type='button'
                 onClick={() => void handleImport()}
@@ -166,7 +171,7 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
             {failedCount > 0 ? ` · ${failedCount} failed` : ''}
             {unreadableCount > 0 ? ` · ${unreadableCount} unreadable` : ''}
           </p>
-          {isImportAiHelperOpen && (
+          {aiCoaching && isImportAiHelperOpen && (
             <section className={styles.aiHelperPanel} aria-label='Import AI helper'>
               <div className={styles.aiHelperHeader}>
                 <div>

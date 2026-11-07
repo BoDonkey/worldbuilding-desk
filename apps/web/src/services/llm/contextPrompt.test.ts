@@ -93,10 +93,11 @@ describe('context prompt rendering', () => {
     vi.stubGlobal('window', {electronAPI: {llmComplete, providerKeys}});
     const settings = {
       provider: 'anthropic',
-      configs: {anthropic: {model: 'claude-test'}}
+      configs: {anthropic: {model: 'claude-test'}},
+      aiCoaching: true
     } as unknown as ProjectAISettings;
 
-    await new LLMService(settings).complete({...request, cache: false});
+    await new LLMService(settings).complete({...request, feature: 'assistant', cache: false});
 
     const payload = (llmComplete.mock.calls[0] as unknown as [Record<string, unknown> & {request: LLMRequest}])[0];
     // The main process attaches the key; the renderer never sends one.

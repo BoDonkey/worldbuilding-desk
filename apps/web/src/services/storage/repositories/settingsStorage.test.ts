@@ -1,6 +1,8 @@
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
+import type {ProjectSettings} from '../../../entityTypes';
 import {
   createDefaultAISettings,
+  ensureAISettings,
   getDefaultAIProvider,
   rememberDefaultAIProvider
 } from './settingsStorage';
@@ -47,5 +49,32 @@ describe('settingsStorage AI defaults', () => {
 
     expect(getDefaultAIProvider()).toBe('local-openai');
     expect(createDefaultAISettings().configs['local-openai']).toEqual({baseUrl: 'http://localhost:5001/v1'});
+  });
+
+  it('starts every project with both AI switches off, including projects saved before them (5.18)', () => {
+    const legacy = {
+      id: 's1',
+      projectId: 'p1',
+      aiSettings: {
+        ...createDefaultAISettings(),
+        inspectorSettings: {enableAIConsultation: true, maxConsultationsPerDay: 7}
+      }
+    } as unknown as ProjectSettings;
+    const normalized = ensureAISettings(legacy).aiSettings;
+    expect(normalized.aiCoaching).toBe(false);
+    expect(normalized.aiProse).toBe(false);
+    // The old Lore Inspector checkbox value is dropped; the coaching switch replaced it.
+    expect(normalized.inspectorSettings).not.toHaveProperty('enableAIConsultation');
+    expect(normalized.inspectorSettings?.maxConsultationsPerDay).toBe(7);
+  });
+
+  it('keeps switches the author turned on', () => {
+    const settings = {
+      id: 's2',
+      projectId: 'p2',
+      aiSettings: {...createDefaultAISettings(), aiCoaching: true, aiProse: true}
+    } as unknown as ProjectSettings;
+    const normalized = ensureAISettings(settings).aiSettings;
+    expect([normalized.aiCoaching, normalized.aiProse]).toEqual([true, true]);
   });
 });

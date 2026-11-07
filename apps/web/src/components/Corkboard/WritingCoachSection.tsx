@@ -21,6 +21,7 @@ import {AIProposalPreview} from '../common/AIProposalPreview';
 import {saveDraftSourceNoteFromAssistantOutput} from '../../services/lore/sourceNoteCapture';
 import styles from '../../styles/CorkboardRoute.module.css';
 import {describeError} from '../../services/errors';
+import {readAISwitches} from '../../services/llm/aiSwitches';
 
 /** Base retrieval query for the manuscript-wide coach: the dashboard's evidence is aggregate
  * numbers, not prose, so a fixed structural query finds relevant patterns better than searching
@@ -44,7 +45,7 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
   const modelRun = useModelRun();
 
   const inspector = aiConfig?.inspectorSettings;
-  const consultationEnabled = inspector?.enableAIConsultation !== false;
+  const consultationEnabled = readAISwitches(aiConfig).coaching;
   const budget = useConsultationBudget(projectId, inspector, aiConfig);
   const hasEvidence = dashboard.scenes.length > 0;
 
@@ -56,7 +57,7 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
     }
     if (!consultationEnabled) {
       setStatus('error');
-      setError('AI consultation is disabled in Settings.');
+      setError('AI coaching is off for this project. Turn it on in Settings → AI Settings.');
       return;
     }
     if (budget.blocked) {
@@ -93,6 +94,7 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
       await modelRun.run(
         service,
         {
+          feature: 'writing-coach',
           messages: [{role: 'user', content: userPrompt}],
           context: craftContext,
           systemPrompt,

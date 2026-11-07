@@ -14,6 +14,7 @@ import {
   SCENE_DRAFT_MIN_WORDS,
   SCENE_DRAFT_WORD_CAP,
   buildSceneDraftPrompt,
+  canDraftScenes,
   capDraftWords,
   clampTargetWords,
   formatSceneDraftInsertHtml,
@@ -71,8 +72,7 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
   const lab = useCharacterLabData(projectId, isOpen);
   const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
-  const consultationEnabled = inspector?.enableAIConsultation !== false;
-  const draftsAllowed = Boolean(lab.aiConfig?.allowSceneDrafts) && consultationEnabled;
+  const draftsAllowed = canDraftScenes(lab.aiConfig);
   const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
   const [inputs, setInputs] = useState<SceneDraftInputs>(emptyInputs);
   const [draft, setDraft] = useState<SceneDraft | null>(null);
@@ -213,6 +213,7 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
       const result = await modelRun.run(
         service,
         {
+          feature: 'scene-draft',
           systemPrompt: prompt.systemPrompt,
           messages: prompt.messages,
           maxTokens,

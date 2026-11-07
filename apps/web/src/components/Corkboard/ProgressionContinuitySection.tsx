@@ -21,6 +21,7 @@ import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {SourceScenes} from './StoryDashboard';
 import styles from '../../styles/CorkboardRoute.module.css';
 import {describeError} from '../../services/errors';
+import {readAISwitches} from '../../services/llm/aiSwitches';
 
 const KIND_LABELS: Record<ProgressionContinuityCandidate['kind'], string> = {
   unused_solution: 'Possible unused solution',
@@ -62,7 +63,7 @@ export function ProgressionContinuitySection({
   const documentsById = useMemo(() => new Map(documents.map((document) => [document.id, document])), [documents]);
   const visibleCandidates = candidates.filter((candidate) => !dismissedKeys.has(candidate.key));
   const inspector = aiConfig?.inspectorSettings;
-  const consultationEnabled = inspector?.enableAIConsultation !== false;
+  const consultationEnabled = readAISwitches(aiConfig).coaching;
   const budget = useConsultationBudget(projectId, inspector, aiConfig);
 
   const dismiss = (key: string) => {
@@ -86,7 +87,7 @@ export function ProgressionContinuitySection({
     if (!consultationEnabled) {
       setConsultationByKey((prev) => ({
         ...prev,
-        [candidate.key]: {status: 'error', error: 'AI consultation is disabled in Settings.'}
+        [candidate.key]: {status: 'error', error: 'AI coaching is off for this project. Turn it on in Settings → AI Settings.'}
       }));
       return;
     }
@@ -121,6 +122,7 @@ export function ProgressionContinuitySection({
       budget.spend('progression-continuity');
 
       const {answer: content} = await modelRun.run(service, {
+        feature: 'progression-continuity',
         messages: [{role: 'user', content: userPrompt}],
         systemPrompt,
         model: inspector?.lowCostModel?.trim() || undefined,
@@ -149,9 +151,11 @@ export function ProgressionContinuitySection({
           <span className={styles.derivedEyebrow}>Author-triggered, model-assisted shortlist</span>
           <h2 id='dashboard-progression-continuity'>Progression continuity</h2>
         </div>
-        <span className={styles.coachPanelMeta}>
-          {budget.isLocal ? 'Local model' : `${budget.status.used}/${budget.status.limit} today`}
-        </span>
+        {consultationEnabled && (
+          <span className={styles.coachPanelMeta}>
+            {budget.isLocal ? 'Local model' : `${budget.status.used}/${budget.status.limit} today`}
+          </span>
+        )}
       </div>
 
       <ConsultationBudgetNotice
@@ -185,6 +189,8 @@ export function ProgressionContinuitySection({
                 <p>{candidate.detailText}</p>
                 <SourceScenes sceneIds={candidate.sourceSceneIds} scenes={scenes} onOpenScene={onOpenScene} />
 
+                {/* The candidates are deterministic; asking the model about one is AI coaching (5.18). */}
+                {consultationEnabled && (
                 <div className={styles.coachPanel} aria-busy={consultation?.status === 'loading'}>
                   {consultation?.status === 'error' ? (
                     <p className={styles.coachError} role='alert'>{consultation.error}</p>
@@ -208,17 +214,20 @@ export function ProgressionContinuitySection({
                     </p>
                   )}
                 </div>
+                )}
 
                 {runKey === candidate.key && <ModelRunProgress run={modelRun} />}
 
                 <div className={styles.actionRow}>
-                  <button
-                    type='button'
-                    onClick={() => void consult(candidate)}
-                    disabled={consultation?.status === 'loading' || modelRun.isRunning || !consultationEnabled}
-                  >
-                    {consultation?.status === 'loading' ? 'Asking...' : 'Ask about this'}
-                  </button>
+                  {consultationEnabled && (
+                    <button
+                      type='button'
+                      onClick={() => void consult(candidate)}
+                      disabled={consultation?.status === 'loading' || modelRun.isRunning}
+                    >
+                      {consultation?.status === 'loading' ? 'Asking...' : 'Ask about this'}
+                    </button>
+                  )}
                   <button type='button' onClick={() => dismiss(candidate.key)}>
                     Dismiss
                   </button>

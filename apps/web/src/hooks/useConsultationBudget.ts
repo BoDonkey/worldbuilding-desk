@@ -9,6 +9,7 @@ import {
   type ConsultationFeature
 } from '../services/editor';
 import type {ProviderRoute} from '../services/llm/providerRoute';
+import {aiSwitchRefusal} from '../services/llm/aiSwitches';
 import {useProviderRoute} from './useProviderRoute';
 
 export interface UseConsultationBudget {
@@ -36,7 +37,10 @@ export interface UseConsultationBudget {
 export function useConsultationBudget(
   projectId: string | null,
   inspector: InspectorSettings | undefined,
-  aiConfig: Pick<ProjectAISettings, 'provider' | 'configs'> | undefined | null
+  aiConfig:
+    | (Pick<ProjectAISettings, 'provider' | 'configs'> & Partial<Pick<ProjectAISettings, 'aiCoaching' | 'aiProse'>>)
+    | undefined
+    | null
 ): UseConsultationBudget {
   const configuredLimit = inspector?.maxConsultationsPerDay ?? DEFAULT_CONSULTATION_LIMIT;
   const route = useProviderRoute(aiConfig);
@@ -59,10 +63,12 @@ export function useConsultationBudget(
   const spend = useCallback(
     (feature: ConsultationFeature) => {
       if (!projectId) return;
+      // A request its AI switch refuses is never sent, so it costs nothing (Slice 5.18).
+      if (aiSwitchRefusal(aiConfig, feature)) return;
       recordConsultation(projectId, feature, route, configuredLimit);
       refresh();
     },
-    [projectId, route, configuredLimit, refresh]
+    [projectId, aiConfig, route, configuredLimit, refresh]
   );
 
   const grantMore = useCallback(() => {

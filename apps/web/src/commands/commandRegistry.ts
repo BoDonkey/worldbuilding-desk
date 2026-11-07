@@ -3,6 +3,7 @@ import type {Project, ProjectSettings} from '../entityTypes';
 import {getProjectCapabilities} from '../projectMode';
 import {isProtectedProject, lockProjectVault} from '../services/storage';
 import {dispatchWorkspaceCommand} from './workspaceCommands';
+import {anyAISwitchOn, readAISwitches} from '../services/llm/aiSwitches';
 
 export interface AppCommand {
   id: string;
@@ -28,6 +29,14 @@ export const createAppCommands = ({
   projectSettings
 }: CreateAppCommandsOptions): AppCommand[] => {
   const capabilities = getProjectCapabilities(activeProject ? projectSettings : null);
+  // AI surfaces are hidden while their switch is off (Slice 5.18): Ask your project is AI
+  // coaching, and the Workspace AI panel needs either switch.
+  const aiSwitches = readAISwitches(activeProject ? projectSettings?.aiSettings : null);
+  const hiddenIds = new Set<string>([
+    ...(aiSwitches.coaching ? [] : ['nav-ask']),
+    ...(anyAISwitchOn(aiSwitches) ? [] : ['workspace-toggle-ai'])
+  ]);
+  const visible = (commands: AppCommand[]) => commands.filter((command) => !hiddenIds.has(command.id));
 
   const navigationCommands: AppCommand[] = [
     {
@@ -126,7 +135,7 @@ export const createAppCommands = ({
 
   const isWorkspaceRoute = pathname.startsWith('/workspace');
   if (!isWorkspaceRoute) {
-    return navigationCommands;
+    return visible(navigationCommands);
   }
 
   const workspaceCommands: AppCommand[] = [
@@ -258,5 +267,5 @@ export const createAppCommands = ({
     });
   }
 
-  return [...navigationCommands, ...workspaceCommands];
+  return visible([...navigationCommands, ...workspaceCommands]);
 };

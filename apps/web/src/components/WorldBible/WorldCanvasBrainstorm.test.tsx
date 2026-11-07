@@ -29,7 +29,8 @@ vi.mock('../../services/llm/LLMService', async (importOriginal) => {
 
 const hostedConfig: ProjectAISettings = {
   provider: 'anthropic',
-  configs: {anthropic: {apiKey: 'test-key', model: 'claude-test'}}
+  configs: {anthropic: {apiKey: 'test-key', model: 'claude-test'}},
+  aiCoaching: true
 } as ProjectAISettings;
 
 const buildBudget = (overrides: Partial<UseConsultationBudget> = {}): UseConsultationBudget => ({
@@ -103,7 +104,7 @@ describe('WorldCanvasBrainstorm', () => {
   });
 
   it('treats a hosted provider with no API key as not configured', () => {
-    renderBrainstorm({aiConfig: {provider: 'openai', configs: {}} as ProjectAISettings});
+    renderBrainstorm({aiConfig: {provider: 'openai', configs: {}, aiCoaching: true} as ProjectAISettings});
 
     expect(screen.getByText(/OpenAI API key is missing/)).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Ask for tensions and questions'})).toBeDisabled();
@@ -232,7 +233,7 @@ describe('WorldCanvasBrainstorm', () => {
       ['The author wants {"items": ideas}.', ' Keep it short.']
     );
     renderBrainstorm({
-      aiConfig: {provider: 'ollama', configs: {ollama: {model: 'qwen3'}}} as ProjectAISettings,
+      aiConfig: {provider: 'ollama', configs: {ollama: {model: 'qwen3'}}, aiCoaching: true} as ProjectAISettings,
       budget: buildBudget({isLocal: true})
     });
     fireEvent.click(screen.getByRole('button', {name: 'Ask for tensions and questions'}));

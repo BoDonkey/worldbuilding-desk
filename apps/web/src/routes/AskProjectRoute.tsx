@@ -9,6 +9,7 @@ import {usePendingProposals} from '../hooks/usePendingProposals';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
 import styles from '../styles/AskProjectRoute.module.css';
+import {OFF_COACHING_NOTE, readAISwitches} from '../services/llm/aiSwitches';
 
 /**
  * **Ask your project** (roadmap 1.4): the project assistant as its own
@@ -54,6 +55,16 @@ function AskProjectRoute() {
           title='Ask your project'
           description='Open or create a project first to ask questions about it.'
         />
+      </section>
+    );
+  }
+
+  // Ask your project is AI coaching (5.18); its menu entries are hidden while the switch is off.
+  if (!readAISwitches(projectSettings?.aiSettings).coaching) {
+    return (
+      <section className={styles.page}>
+        <PageHeader eyebrow='Assistance' title='Ask your project' description={OFF_COACHING_NOTE} />
+        <p><Link to='/settings'>Open Settings</Link></p>
       </section>
     );
   }

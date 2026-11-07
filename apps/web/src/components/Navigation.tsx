@@ -6,6 +6,7 @@ import {getCompendiumEntriesByProject} from '../services/storage';
 import {getProjectCapabilities} from '../projectMode';
 import {useAppStore} from '../store/appStore';
 import styles from '../assets/components/Navigation.module.css';
+import {readAISwitches} from '../services/llm/aiSwitches';
 
 interface NavigationProps {
   isRailCollapsed?: boolean;
@@ -40,6 +41,7 @@ export const Navigation: FC<NavigationProps> = ({
   const [compendiumPendingCount, setCompendiumPendingCount] = useState(0);
   const mobileMenuCloseRef = useRef<HTMLButtonElement | null>(null);
   const capabilities = getProjectCapabilities(activeProject ? projectSettings : null);
+  const aiCoaching = readAISwitches(activeProject ? projectSettings?.aiSettings : null).coaching;
   const loadPendingCounts = useCallback(() => {
     if (!activeProject || !capabilities.canUseGameSystems) {
       setCompendiumPendingCount(0);
@@ -112,7 +114,8 @@ export const Navigation: FC<NavigationProps> = ({
     sections.push({
       label: 'Utilities',
       items: [
-        {to: '/ask', label: 'Ask your project', icon: 'AQ'},
+        // Ask your project is AI coaching; hidden while that switch is off (5.18).
+        ...(aiCoaching ? [{to: '/ask', label: 'Ask your project', icon: 'AQ'}] : []),
         {to: '/character-packages', label: 'Character packages', icon: 'CP'},
         {to: '/portable-data', label: 'Portable data', icon: 'PD'}
       ]
@@ -125,7 +128,8 @@ export const Navigation: FC<NavigationProps> = ({
   }, [
     capabilities.canUseGameSystems,
     capabilities.canUseRuleAuthoring,
-    compendiumPendingCount
+    compendiumPendingCount,
+    aiCoaching
   ]);
 
   const secondaryNavItems = useMemo<NavItem[]>(

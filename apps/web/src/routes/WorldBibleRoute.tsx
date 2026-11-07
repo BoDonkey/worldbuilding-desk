@@ -12,7 +12,8 @@ import {CategoryManager} from '../components/WorldBible/CategoryManager';
 import {EntityFieldEditor} from '../components/WorldBible/EntityFieldEditor';
 import {WorldBibleImportWorkspace} from '../components/WorldBible/WorldBibleImportWorkspace';
 import {WorldBibleEntityList} from '../components/WorldBible/WorldBibleEntityList';
-import {WorldBibleRecordAiHelper} from '../components/WorldBible/WorldBibleRecordAiHelper';
+import {WorldBibleRecordAiHelper, WorldBibleRecordAiHelperToggle} from '../components/WorldBible/WorldBibleRecordAiHelper';
+import {readAISwitches} from '../services/llm/aiSwitches';
 import {WorldBibleCharacterHealth} from '../components/WorldBible/WorldBibleCharacterHealth';
 import {WorldBibleLinkedSourceNote} from '../components/WorldBible/WorldBibleLinkedSourceNote';
 import {WorldBibleDialogueStyleControl} from '../components/WorldBible/WorldBibleDialogueStyleControl';
@@ -97,6 +98,7 @@ const getWorldBibleRailStorageKey = (projectId: string) =>
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
+  const aiCoaching = readAISwitches(projectSettings?.aiSettings).coaching;
   const saveProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const location = useLocation();
   const navigate = useNavigate();
@@ -399,7 +401,6 @@ function WorldBibleRoute() {
     setFeedback
   });
   const {
-    isRecordAiHelperOpen,
     setIsRecordAiHelperOpen,
     setIsImportAiHelperOpen,
     setAiHelperSelectedText,
@@ -1054,7 +1055,7 @@ function WorldBibleRoute() {
               </button>
             </div>
             {isCharacterCategory(activeCategory) && (
-              <CharacterIntakeTasks onStart={setCharacterIntake} />
+              <CharacterIntakeTasks onStart={setCharacterIntake} fromDescription={aiCoaching} />
             )}
             <div className={styles.castTask}>
               <h3>Import {activeCategory.name.replace(/s$/i, '')}</h3>
@@ -1120,21 +1121,11 @@ function WorldBibleRoute() {
                       : 'New Character Canon'
                     : `${editingId ? 'Edit' : 'New'} ${activeCategory.name.slice(0, -1)}`}
                 </h2>
-                {(!isDescriptionFirstItemDraft || areItemDetailsExpanded) && (
-                  <button
-                    type='button'
-                    onClick={() => {
-                      setAiHelperSelectedText('');
-                      setAiHelperProposal(null);
-                      setIsRecordAiHelperOpen((value) => !value);
-                    }}
-                    aria-expanded={isRecordAiHelperOpen}
-                  >
-                    {isRecordAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
-                  </button>
+                {aiCoaching && (!isDescriptionFirstItemDraft || areItemDetailsExpanded) && (
+                  <WorldBibleRecordAiHelperToggle authoring={worldBibleAuthoring} />
                 )}
               </div>
-              {(!isDescriptionFirstItemDraft || areItemDetailsExpanded) && (
+              {aiCoaching && (!isDescriptionFirstItemDraft || areItemDetailsExpanded) && (
                 <WorldBibleRecordAiHelper
                   activeProject={activeProject} projectSettings={projectSettings}
                   activeCategory={activeCategory} editingId={editingId}
@@ -1200,7 +1191,7 @@ function WorldBibleRoute() {
                     selectedEntity ? <CharacterCardExportButton projectId={activeProject.id} entityId={selectedEntity.id} /> : null
                   }
                   labAction={
-                    selectedEntity ? (
+                    selectedEntity && aiCoaching ? (
                       <button type='button' onClick={() => setLabEntityId(selectedEntity.id)}>
                         Talk to {selectedEntity.name}
                       </button>

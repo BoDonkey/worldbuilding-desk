@@ -8,8 +8,9 @@ const settings: ProjectAISettings = {
   configs: {openai: {model: 'gpt-4o-mini'}},
   promptTools: [],
   defaultToolIds: [],
+  aiCoaching: true,
+  aiProse: true,
   inspectorSettings: {
-    enableAIConsultation: true,
     reviewEngineMode: 'deterministic',
     canonDecisionProviderMode: 'project-provider',
     maxConsultationsPerDay: 20,
@@ -126,5 +127,41 @@ describe('AISettings local model server', () => {
     expect(onSettingsChange).toHaveBeenLastCalledWith(
       expect.objectContaining({configs: {'local-openai': {baseUrl: 'http://localhost:1234/v1', model: 'model-9'}}})
     );
+  });
+});
+
+describe('AISettings AI switches (5.18)', () => {
+  const renderSettings = (aiSettings: ProjectAISettings, onSettingsChange = vi.fn()) =>
+    render(<AISettings aiSettings={aiSettings} projectId='project-1' projectMode='general' onSettingsChange={onSettingsChange} />);
+
+  it('with both switches off, shows only the switches and keeps saved settings', () => {
+    const onSettingsChange = vi.fn();
+    renderSettings({...settings, aiCoaching: false, aiProse: false}, onSettingsChange);
+    expect(screen.getByLabelText('AI coaching')).not.toBeChecked();
+    expect(screen.getByLabelText('AI prose')).not.toBeChecked();
+    expect(screen.getByText(/AI is off for this project/)).toBeInTheDocument();
+    expect(screen.queryByText('Provider')).not.toBeInTheDocument();
+    expect(screen.queryByText('Prompt Tools')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('AI coaching'));
+    expect(onSettingsChange).toHaveBeenCalledWith({...settings, aiCoaching: true, aiProse: false});
+  });
+
+  it('with prose only, hides coaching settings and offers scene drafts', () => {
+    renderSettings({...settings, aiCoaching: false, aiProse: true});
+    expect(screen.getByText('Provider')).toBeInTheDocument();
+    expect(screen.queryByText('Prompt Tools')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Show advanced settings'}));
+    expect(screen.getByLabelText('Allow AI scene drafts')).toBeInTheDocument();
+    expect(screen.queryByText('Who checks your draft')).not.toBeInTheDocument();
+  });
+
+  it('with coaching only, hides scene drafts and keeps prompt tools', () => {
+    renderSettings({...settings, aiCoaching: true, aiProse: false});
+    expect(screen.getByText('Prompt Tools')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Show advanced settings'}));
+    expect(screen.queryByLabelText('Allow AI scene drafts')).not.toBeInTheDocument();
+    expect(screen.getByText('Who checks your draft')).toBeInTheDocument();
+    expect(screen.queryByText(/Enable AI consultation actions/)).not.toBeInTheDocument();
   });
 });

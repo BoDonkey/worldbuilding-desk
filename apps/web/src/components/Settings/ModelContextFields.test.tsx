@@ -8,18 +8,18 @@ const settings = {provider: 'ollama', configs: {}, promptTools: [], defaultToolI
 describe('ModelContextFields', () => {
   it('turns linked World Bible records on for the project, off by default', () => {
     const onSettingsChange = vi.fn();
-    render(<ModelContextFields aiSettings={settings} consultationEnabled onSettingsChange={onSettingsChange} />);
+    render(<ModelContextFields aiSettings={settings} proseEnabled onSettingsChange={onSettingsChange} />);
     const box = screen.getByLabelText('Include linked World Bible records');
     expect(box).not.toBeChecked();
     fireEvent.click(box);
     expect(onSettingsChange).toHaveBeenCalledWith({...settings, includeLinkedRecords: true});
   });
 
-  it('keeps scene drafts off while AI consultation is off', () => {
+  it('hides the scene draft option while AI prose is off', () => {
     render(
-      <ModelContextFields aiSettings={{...settings, allowSceneDrafts: true}} consultationEnabled={false} onSettingsChange={vi.fn()} />
+      <ModelContextFields aiSettings={{...settings, allowSceneDrafts: true}} proseEnabled={false} onSettingsChange={vi.fn()} />
     );
-    expect(screen.getByLabelText('Allow AI scene drafts')).not.toBeChecked();
-    expect(screen.getByLabelText('Allow AI scene drafts')).toBeDisabled();
+    expect(screen.queryByLabelText('Allow AI scene drafts')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Include linked World Bible records')).toBeInTheDocument();
   });
 });

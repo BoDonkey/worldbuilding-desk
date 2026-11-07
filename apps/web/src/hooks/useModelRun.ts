@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {LLMService} from '../services/llm/LLMService';
 import type {LLMRequest} from '../services/llm/types';
+import type {AIRequestFeature} from '../services/llm/aiSwitches';
 import {splitModelOutput, type ModelRunPhase, type SplitModelOutput} from '../services/llm/modelRun';
 
 export type ModelRunStatus = 'idle' | ModelRunPhase | 'done' | 'stopped' | 'error';
@@ -10,6 +11,9 @@ export interface ModelRunResult extends SplitModelOutput {
   stopped: boolean;
 }
 
+/** A model request as a surface sends it: tagged with the feature that makes it (Slice 5.18). */
+export type ModelRunRequest = Omit<LLMRequest, 'signal' | 'feature'> & {feature: AIRequestFeature};
+
 export interface UseModelRun {
   status: ModelRunStatus;
   thinking: string;
@@ -17,11 +21,12 @@ export interface UseModelRun {
   isRunning: boolean;
   /**
    * Streams one request, reporting thinking and answer separately as they arrive. Resolves with
-   * the final split (and `stopped` if the author stopped it); rejects on a real failure.
+   * the final split (and `stopped` if the author stopped it); rejects on a real failure. The
+   * request must name its feature: `LLMService` refuses it when that feature's AI switch is off.
    */
   run: (
     service: Pick<LLMService, 'stream'>,
-    request: Omit<LLMRequest, 'signal'>,
+    request: ModelRunRequest,
     onUpdate?: (output: SplitModelOutput) => void
   ) => Promise<ModelRunResult>;
   stop: () => void;

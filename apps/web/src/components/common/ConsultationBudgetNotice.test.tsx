@@ -7,7 +7,6 @@ import type {InspectorSettings, ProjectAISettings} from '../../entityTypes';
 import {clearInstalledOllamaModelsCache} from '../../services/llm/ollamaModels';
 
 const inspector = (limit: number): InspectorSettings => ({
-  enableAIConsultation: true,
   maxConsultationsPerDay: limit,
   maxContextChars: 1800,
   maxResponseTokens: 500
@@ -83,9 +82,9 @@ describe('ConsultationBudgetNotice', () => {
   });
 });
 
-const HOSTED = {provider: 'anthropic', configs: {}} as unknown as ProjectAISettings;
+const HOSTED = {provider: 'anthropic', configs: {}, aiCoaching: true} as unknown as ProjectAISettings;
 const ollamaConfig = (model: string) =>
-  ({provider: 'ollama', configs: {ollama: {baseUrl: 'http://localhost:11434', model}}}) as unknown as ProjectAISettings;
+  ({provider: 'ollama', configs: {ollama: {baseUrl: 'http://localhost:11434', model}}, aiCoaching: true}) as unknown as ProjectAISettings;
 function stubOllamaTags(models: Array<Record<string, unknown>>) {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({models}), {status: 200})));
 }

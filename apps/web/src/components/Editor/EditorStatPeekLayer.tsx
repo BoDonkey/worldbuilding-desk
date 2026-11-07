@@ -11,7 +11,8 @@ import styles from '../../assets/components/AISettings.module.css';
 interface EditorStatPeekLayerProps {
   peek: EditorStatPeekControls;
   characterStatPeek?: EditorCharacterStatPeek;
-  onExpandSelection: (selection: {selectedText: string; from: number; to: number}) => void;
+  /** Unset while both AI switches are off, which hides Ask AI about this (5.18). */
+  onExpandSelection?: (selection: {selectedText: string; from: number; to: number}) => void;
 }
 
 /** The right-click character menu and the stat peek popover in the editor. */
@@ -53,7 +54,7 @@ export function EditorStatPeekLayer({peek, characterStatPeek, onExpandSelection}
           >
             Show stats
           </button>
-          {statPeekMenu.selection && (
+          {statPeekMenu.selection && onExpandSelection && (
             <button
               type='button'
               role='menuitem'

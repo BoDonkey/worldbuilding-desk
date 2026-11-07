@@ -20,6 +20,7 @@ import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import styles from '../../styles/CharacterLab.module.css';
 import {describeCharacterLabDataFlow, getCharacterLabProviderIssue} from './characterLabProvider';
 import {isLocalAIProvider} from '../../services/llm/providerConfig';
+import {readAISwitches} from '../../services/llm/aiSwitches';
 
 interface CharacterFromDescriptionDialogProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ export function CharacterFromDescriptionDialog({
   const lab = useCharacterLabData(projectId, isOpen);
   const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
-  const consultationEnabled = inspector?.enableAIConsultation !== false;
+  const consultationEnabled = readAISwitches(lab.aiConfig).coaching;
   const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
   const [sessionId] = useState(() => crypto.randomUUID());
   const [description, setDescription] = useState('');
@@ -99,7 +100,7 @@ export function CharacterFromDescriptionDialog({
       return;
     }
     if (!consultationEnabled) {
-      setError('AI consultation is disabled in Settings.');
+      setError('AI coaching is off for this project. Turn it on in Settings → AI Settings.');
       return;
     }
     if (budget.blocked) {
@@ -112,6 +113,7 @@ export function CharacterFromDescriptionDialog({
       const service = new LLMService(lab.aiConfig);
       budget.spend('character-lab');
       const run = await modelRun.run(service, {
+        feature: 'character-lab',
         systemPrompt: prompt.systemPrompt,
         messages: prompt.messages,
         responseFormat: 'json',
