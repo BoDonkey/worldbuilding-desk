@@ -37,7 +37,9 @@ export type ConsultationFeature =
   | 'character-lab'
   | 'scene-revision'
   | 'scene-draft'
-  | 'character-scene';
+  | 'character-scene'
+  | 'ai-action-note'
+  | 'ai-action-replace';
 
 const FEATURE_LABELS: Record<ConsultationFeature, string> = {
   assistant: 'Writing assistant',
@@ -51,7 +53,9 @@ const FEATURE_LABELS: Record<ConsultationFeature, string> = {
   'character-lab': 'Character lab',
   'scene-revision': 'Scene revisions',
   'scene-draft': 'Scene drafts',
-  'character-scene': 'Character scenes'
+  'character-scene': 'Character scenes',
+  'ai-action-note': 'AI actions (notes)',
+  'ai-action-replace': 'AI actions (rewrites)'
 };
 
 export const CONSULTATION_FEATURES = Object.keys(FEATURE_LABELS) as ConsultationFeature[];

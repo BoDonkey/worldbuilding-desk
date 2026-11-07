@@ -200,6 +200,12 @@ export interface ProjectAISettings {
   provider: AIProviderId;
   configs: ProviderConfigMap;
   promptTools: PromptTool[];
+  /**
+   * One-shot AI actions run on selected text from the selection menu (Slice 5.19). Separate
+   * from prompt tools. Unset means the shipped presets, all switched off; see
+   * `services/assistant/selectionActions.ts`.
+   */
+  selectionActions?: SelectionAction[];
   defaultToolIds: string[];
   defaultToolIdsByMode?: Record<ProjectMode, string[]>;
   inspectorSettings?: InspectorSettings;
@@ -241,6 +247,22 @@ export interface PromptTool {
   name: string;
   content: string;
   enabled: boolean;
+}
+
+/** `replace` rewrites the selection (AI prose); `note` answers about it and edits nothing (AI coaching). */
+export type SelectionActionOutput = 'replace' | 'note';
+
+export interface SelectionAction {
+  id: string;
+  name: string;
+  instructions: string;
+  /** The selection is always sent; these add the current scene and the World Bible records it names. */
+  includeScene: boolean;
+  includeWorldBible: boolean;
+  output: SelectionActionOutput;
+  enabled: boolean;
+  /** Set on an action installed from a preset, so Install presets can tell which are missing. */
+  presetId?: string;
 }
 
 export type ProjectMode = 'litrpg' | 'game' | 'general';

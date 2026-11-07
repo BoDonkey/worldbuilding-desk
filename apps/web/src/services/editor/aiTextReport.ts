@@ -41,6 +41,7 @@ export const AI_TEXT_ORIGIN_LABELS: Record<AITextReportGroup['origin'], string> 
   'scene-revision': 'Assistant revision',
   'character-scene': 'Character scene',
   'scene-draft': 'Scene draft',
+  'ai-action': 'AI action',
   unknown: 'Unknown feature'
 };
 
@@ -48,7 +49,7 @@ export function aiTextProviderLabel(provider: AITextReportGroup['provider']): st
   return provider === 'unknown' ? 'Unknown provider' : AI_PROVIDER_LABELS[provider];
 }
 
-const ORIGINS = new Set<string>(['scene-revision', 'character-scene', 'scene-draft']);
+const ORIGINS = new Set<string>(['scene-revision', 'character-scene', 'scene-draft', 'ai-action']);
 const PROVIDERS = new Set<string>(Object.keys(AI_PROVIDER_LABELS));
 const BLOCK_TAGS = new Set([
   'P', 'DIV', 'LI', 'UL', 'OL', 'BLOCKQUOTE', 'PRE', 'HR', 'BR',

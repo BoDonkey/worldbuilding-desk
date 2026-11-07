@@ -31,8 +31,8 @@ export function AISwitchesFields({aiSettings, onSettingsChange}: AISwitchesField
         <p className={styles.help}>
           AI that reads and responds and never puts text into your manuscript: the assistant chat and its
           prompt tools, the writing coach, Ask your project, canon checks and canon decision advice,
-          continuity questions, World Canvas brainstorming and coaching, talking to a character, and
-          Character from a description.
+          continuity questions, World Canvas brainstorming and coaching, talking to a character,
+          Character from a description, and AI actions that write a note.
         </p>
       </div>
       <div className={styles.field}>
@@ -45,8 +45,9 @@ export function AISwitchesFields({aiSettings, onSettingsChange}: AISwitchesField
           AI prose
         </label>
         <p className={styles.help}>
-          Model-written text for your manuscript: Preview scene revision, Draft this scene, and Character
-          scene. Every insert is previewed first and marked as AI text.
+          Model-written text for your manuscript: Preview scene revision, Draft this scene, Character
+          scene, and AI actions that rewrite a selection. Every insert is previewed first and marked
+          as AI text.
         </p>
       </div>
       {!anyAISwitchOn(switches) && (

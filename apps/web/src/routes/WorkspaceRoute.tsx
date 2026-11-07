@@ -37,6 +37,8 @@ import {
   summarizeContent,
   useWorkspaceContextActions
 } from '../hooks/useWorkspaceContextActions';
+import {useSelectionActionRun} from '../hooks/useSelectionActionRun';
+import {WorkspaceSelectionActionPanel} from '../components/Workspace/WorkspaceSelectionActionPanel';
 import {useWorkspaceSystemHistory} from '../hooks/useWorkspaceSystemHistory';
 import {useWorkspaceReviewRefresh} from '../hooks/useWorkspaceReviewRefresh';
 import {
@@ -458,6 +460,11 @@ function WorkspaceRoute() {
     content,
     selectedId,
     openContextDrawer,
+    onSceneRevisionPreview: () => { if (isNarrowViewport) closeContextDrawer(); }
+  });
+  const selectionActionRun = useSelectionActionRun({
+    projectId: activeProject?.id ?? null, aiSettings: projectSettings?.aiSettings, documentId: selectedId,
+    sceneTitle: title, content, documents, setPendingAIInsert,
     onSceneRevisionPreview: () => { if (isNarrowViewport) closeContextDrawer(); }
   });
   useLayoutEffect(() => {
@@ -1473,6 +1480,7 @@ function WorkspaceRoute() {
               </div>
 
               <div className={styles.editorPane} data-wbd-scroll-key='workspace-editor-pane'>
+                <WorkspaceSelectionActionPanel controller={selectionActionRun} />
                 <EditorWithAI
                   projectId={activeProject.id}
                   documentId={selectedId}
@@ -1523,6 +1531,7 @@ function WorkspaceRoute() {
                   getStatBlockPreviewData={getStatBlockPreviewData}
                   onRebindStatBlockToken={openStatBlockRebind}
                   onOpenAIContext={handleOpenAIContext}
+                  selectionActions={selectionActionRun.menu}
                   onOpenLoreInspector={handleOpenLoreInspector}
                   onOpenWorldCapture={handleOpenManualWorldCapture}
                   onAddSelectionToInventory={isGeneralFictionProject

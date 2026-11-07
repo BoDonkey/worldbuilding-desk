@@ -344,7 +344,7 @@ messages).
 | 5.16 | First-release dogfood polish | 5 | M | Done `9b242c1` |
 | 5.17 | Writing-flow stability + assistant continuity | 5 | L | Done `dc0460c` |
 | 5.18 | Per-project AI switches (coaching, prose) | 5 | M | Done `bee5089` |
-| 5.19 | Custom AI actions in the selection menu | 5 | M | — (author-approved pre-beta exception, 2026-11-07; after 5.18) |
+| 5.19 | Custom AI actions in the selection menu | 5 | M | WIP (author-approved pre-beta exception, 2026-11-07; after 5.18) |
 | 3.32 | Break up the oversized route files along feature seams | 3 | L | — (author-approved pre-beta exception, 2026-11-07; after 5.19) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |

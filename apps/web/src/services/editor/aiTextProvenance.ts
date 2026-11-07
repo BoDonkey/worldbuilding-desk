@@ -2,7 +2,7 @@ import type {AIProviderId, ProjectAISettings} from '../../entityTypes';
 import type {ProviderRoute, ProviderRouteKind} from '../llm/providerRoute';
 
 /** Which feature inserted model-written text into a scene. */
-export type AITextOrigin = 'scene-revision' | 'character-scene' | 'scene-draft';
+export type AITextOrigin = 'scene-revision' | 'character-scene' | 'scene-draft' | 'ai-action';
 
 /**
  * Stored on the `aiText` mark. A record of what the app inserted, for the

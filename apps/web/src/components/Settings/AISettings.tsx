@@ -45,6 +45,8 @@ import {
 } from '../../services/editor';
 import {anyAISwitchOn, readAISwitches} from '../../services/llm/aiSwitches';
 import {AISwitchesFields} from './AISwitchesFields';
+import {AIActionsSection} from './AIActionsSection';
+import {appendToolPack, buildToolPack, parseToolPack, replaceWithToolPack} from '../../services/llm/toolPack';
 
 interface AISettingsProps {
   aiSettings: ProjectAISettings;
@@ -52,13 +54,6 @@ interface AISettingsProps {
   projectId: string | null;
   projectMode: ProjectMode;
   onSettingsChange: (aiSettings: ProjectAISettings) => void;
-}
-
-
-interface PromptToolPack {
-  schemaVersion: 1;
-  tools: PromptTool[];
-  defaultToolIdsByMode?: Record<ProjectMode, string[]>;
 }
 
 interface ProviderDiagnosticsState {
@@ -499,125 +494,28 @@ export const AISettings: React.FC<AISettingsProps> = ({
   };
 
   const handleExportToolPack = () => {
-    const pack: PromptToolPack = {
-      schemaVersion: 1,
-      tools: promptTools,
-      defaultToolIdsByMode
-    };
-    triggerJsonDownload('prompt-tools-pack.json', pack);
+    triggerJsonDownload('prompt-tools-pack.json', buildToolPack(aiSettings));
   };
 
-  const handleImportToolPack = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleImportToolPack = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      const raw = await file.text();
-      const parsed = JSON.parse(raw) as Partial<PromptToolPack>;
-      if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.tools)) {
-        throw new Error('Invalid tool pack format.');
-      }
-      const idMap = new Map<string, string>();
-      const importedTools = parsed.tools
-        .filter((tool) => tool && typeof tool.name === 'string' && typeof tool.content === 'string')
-        .map((tool) => {
-          const nextId = crypto.randomUUID();
-          if (typeof tool.id === 'string') {
-            idMap.set(tool.id, nextId);
-          }
-          return {
-            id: nextId,
-            name: tool.name,
-            content: tool.content,
-            enabled: tool.enabled !== false
-          };
-        }) as PromptTool[];
-
-      if (importedTools.length === 0) {
-        throw new Error('No valid tools found in pack.');
-      }
-
-      const replaceWithImportedTools = () => {
-        const enabledImportedIds = importedTools
-          .filter((tool) => tool.enabled)
-          .map((tool) => tool.id);
-        const importedDefaultsByMode = parsed.defaultToolIdsByMode ?? {
-          litrpg: enabledImportedIds,
-          game: enabledImportedIds,
-          general: enabledImportedIds
-        };
-        const validImportedIds = new Set(enabledImportedIds);
-        const remapModeDefaults = (ids: string[] | undefined): string[] =>
-          (ids ?? [])
-            .map((id) => idMap.get(id) ?? id)
-            .filter((id) => validImportedIds.has(id));
-        const normalizedImportedDefaultsByMode: Record<ProjectMode, string[]> = {
-          litrpg:
-            remapModeDefaults(importedDefaultsByMode.litrpg).length > 0
-              ? remapModeDefaults(importedDefaultsByMode.litrpg)
-              : enabledImportedIds,
-          game:
-            remapModeDefaults(importedDefaultsByMode.game).length > 0
-              ? remapModeDefaults(importedDefaultsByMode.game)
-              : enabledImportedIds,
-          general:
-            remapModeDefaults(importedDefaultsByMode.general).length > 0
-              ? remapModeDefaults(importedDefaultsByMode.general)
-              : enabledImportedIds
-        };
-        onSettingsChange(
-          withDefaultModes({
-            promptTools: importedTools,
-            defaultToolIds:
-              defaultsMode === projectMode ? enabledImportedIds : defaultToolIds,
-            defaultToolIdsByMode: normalizedImportedDefaultsByMode
-          })
-        );
-      };
-
-      const appendImportedTools = () => {
-        const enabledImportedIds = importedTools
-          .filter((tool) => tool.enabled)
-          .map((tool) => tool.id);
-        onSettingsChange(
-          withDefaultModes({
-            promptTools: [...promptTools, ...importedTools],
-            defaultToolIds: [
-              ...new Set([
-                ...defaultToolIds,
-                ...enabledImportedIds
-              ])
-            ],
-            defaultToolIdsByMode: {
-              ...defaultToolIdsByMode,
-              [defaultsMode]: [
-                ...new Set([
-                  ...(defaultToolIdsByMode[defaultsMode] ?? []),
-                  ...enabledImportedIds
-                ])
-              ]
-            }
-          })
-        );
-      };
-
+      const pack = parseToolPack(await file.text());
+      const context = {defaultsMode, projectMode};
       // Reset the file input now — we've already read its contents, and the
       // choice below is made asynchronously via the confirm dialog.
       event.target.value = '';
-
       requestConfirm({
-        title: 'Replace existing prompt tools with imported tools?',
-        message: 'Choose Append instead to add the imported tools alongside your existing ones.',
+        title: 'Replace existing prompt tools and AI actions with the imported ones?',
+        message: 'Choose Append instead to add the imported ones alongside your existing ones.',
         confirmLabel: 'Replace',
         cancelLabel: 'Append',
-        onConfirm: replaceWithImportedTools,
-        onCancel: appendImportedTools
+        onConfirm: () => onSettingsChange(withDefaultModes(replaceWithToolPack(aiSettings, pack, context))),
+        onCancel: () => onSettingsChange(withDefaultModes(appendToolPack(aiSettings, pack, context)))
       });
     } catch (error) {
-      const message =
-        describeError(error, 'Unable to import tool pack.');
-      setStatusMessage({variant: 'error', message});
+      setStatusMessage({variant: 'error', message: describeError(error, 'Unable to import tool pack.')});
       event.target.value = '';
     }
   };
@@ -1000,8 +898,8 @@ export const AISettings: React.FC<AISettingsProps> = ({
       <div className={styles.toolsSection}>
         <h3 className={styles.toolsHeading}>Prompt Tools</h3>
         <p className={styles.help}>
-          Add reusable prompt tools like tone guides, personas, and instruction
-          blocks. These can be selected in the AI assistant.
+          Standing instructions for the AI chat, such as a voice or role. Tick them in the AI
+          panel; they apply to every message.
         </p>
         <div className={styles.modeDefaultsHeader}>
           <label className={styles.label}>
@@ -1056,18 +954,6 @@ export const AISettings: React.FC<AISettingsProps> = ({
           <button type='button' className={styles.secondaryButton} onClick={handleInstallPresetTools}>
             Install Preset Tools
           </button>
-          <button type='button' className={styles.secondaryButton} onClick={handleExportToolPack}>
-            Export Tool Pack
-          </button>
-          <label className={styles.secondaryButton}>
-            Import Tool Pack
-            <input
-              type='file'
-              accept='.json,application/json'
-              onChange={(e) => void handleImportToolPack(e)}
-              style={{display: 'none'}}
-            />
-          </label>
         </div>
 
         {promptTools.length === 0 ? (
@@ -1164,6 +1050,27 @@ export const AISettings: React.FC<AISettingsProps> = ({
         )}
       </div>
       )}
+
+      <AIActionsSection aiSettings={aiSettings} onSettingsChange={onSettingsChange} />
+
+      <div className={styles.toolsSection}>
+        <h3 className={styles.toolsHeading}>Tool Packs</h3>
+        <p className={styles.help}>One file with your prompt tools and AI actions, to back up or share.</p>
+        <div className={styles.toolPackActions}>
+          <button type='button' className={styles.secondaryButton} onClick={handleExportToolPack}>
+            Export Tool Pack
+          </button>
+          <label className={styles.secondaryButton}>
+            Import Tool Pack
+            <input
+              type='file'
+              accept='.json,application/json'
+              onChange={(e) => void handleImportToolPack(e)}
+              style={{display: 'none'}}
+            />
+          </label>
+        </div>
+      </div>
       </>
       )}
 

@@ -32,6 +32,7 @@ import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
 import type {StatBlockPreviewData} from '../../hooks/useWorkspaceStatBlocks';
 import type {InlineHighlightsMode} from '../../entityTypes';
 import styles from '../../assets/components/AISettings.module.css';
+import {SelectionMenuAIEntries, type EditorSelectionActions} from './SelectionMenuAIEntries';
 import {
   captureStateMutationAnchor,
   normalizeStateMutationPosition,
@@ -103,6 +104,8 @@ interface EditorWithAIProps {
   getStatBlockPreviewData?: (rawToken: string) => StatBlockPreviewData;
   onRebindStatBlockToken?: (rawToken: string) => void;
   onOpenAIContext?: (context: AIContextType, prompt?: string | null) => void;
+  /** Custom AI actions listed after Ask AI about this (5.19); unset when none are on. */
+  selectionActions?: EditorSelectionActions;
   onOpenLoreInspector?: (record: LoreInspectorRecord) => void;
   onOpenWorldCapture?: (
     draftText: string,
@@ -147,6 +150,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   getStatBlockPreviewData,
   onRebindStatBlockToken,
   onOpenAIContext,
+  selectionActions,
   onOpenLoreInspector,
   onOpenWorldCapture,
   onAddSelectionToInventory,
@@ -926,23 +930,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             }}
             onMouseDown={(event) => event.preventDefault()}
           >
-            {/* The Workspace leaves `onOpenAIContext` unset while both AI switches are off (5.18). */}
-            {onOpenAIContext && (
-              <button
-                type='button'
-                onClick={() => {
-                  onOpenAIContext({
-                    type: 'document',
-                    id: documentId,
-                    selectedText: selectionBubble.selectedText,
-                    from: selectionBubble.from,
-                    to: selectionBubble.to
-                  });
-                }}
-              >
-                Ask AI about this
-              </button>
-            )}
+            <SelectionMenuAIEntries controls={selectionActions} selection={selectionBubble}
+              onAskAI={onOpenAIContext && (() => onOpenAIContext({type: 'document', id: documentId,
+                selectedText: selectionBubble.selectedText, from: selectionBubble.from, to: selectionBubble.to}))}
+              getPassage={() => editorRef.current?.state.doc.textBetween(selectionBubble.from, selectionBubble.to, '\n\n') ?? ''}
+              onDone={closeSelectionBubble} />
             {selectionBubble.matchType === 'character' && (
               <button
                 type='button'

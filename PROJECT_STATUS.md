@@ -340,6 +340,25 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   defaults start ticked, and each ticked tool goes into every assistant chat
   message as `- Name: instructions`. Only the assistant chat uses them.
   Older saved tools and tool packs still load; their old type is ignored.
+- Custom AI actions (5.19) are one-shot tasks the author runs on selected
+  text from the Workspace selection menu, kept in a separate
+  `selectionActions` list in the project AI settings: name, instructions,
+  what they send (the selection always; optionally the current scene and the
+  World Bible records the selection names, with their accepted facts and,
+  when **Include linked records** is on, records one hop away), a kind
+  (`replace` rewrites the selection, `note` writes a reply with no edit), and
+  an on/off switch. Five presets (Tighten, Expand this beat, Add sensory
+  detail, Vary sentence rhythm, Check against canon) come installed but
+  switched off; **Install Presets** re-adds deleted ones and leaves edited
+  ones alone. `replace` actions follow AI prose and spend
+  `ai-action-replace`; `note` actions follow AI coaching and spend
+  `ai-action-note`; an action whose switch is off is hidden from the menu
+  and from Settings. A rewrite opens the scene revision preview, changes the
+  scene only on **Confirm** (refusing if the scene or selection changed),
+  and is marked as AI text with origin `ai-action`; a note opens in the reply
+  reading view. Prompt tools do not apply to actions. Tool packs are now
+  version 2 and carry both lists; version 1 packs still import and leave
+  actions alone.
 - Local RAG and Shodh memory services for contextual assistance.
 - Selection-aware AI insertion and editor assistance tools.
 - Inherited canon support in AI grounding for parent/child projects.

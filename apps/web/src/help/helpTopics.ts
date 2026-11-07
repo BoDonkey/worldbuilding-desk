@@ -167,7 +167,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     id: 'ai-setup',
     title: 'Setting up AI',
     summary: 'Connect a hosted provider or a model on your computer.',
-    keywords: ['ai', 'assistant', 'api key', 'claude', 'anthropic', 'openai', 'gemini', 'ollama', 'lm studio', 'koboldcpp', 'llama.cpp', 'local', 'budget', 'consultations', 'test connection', 'ask', 'coaching', 'prose', 'switch', 'turn off ai', 'without ai'],
+    keywords: ['ai', 'assistant', 'api key', 'claude', 'anthropic', 'openai', 'gemini', 'ollama', 'lm studio', 'koboldcpp', 'llama.cpp', 'local', 'budget', 'consultations', 'test connection', 'ask', 'coaching', 'prose', 'switch', 'turn off ai', 'without ai', 'prompt tools', 'ai actions', 'tighten', 'right-click', 'tool pack'],
     blocks: [
       {
         kind: 'paragraph',
@@ -176,8 +176,8 @@ export const HELP_TOPICS: HelpTopic[] = [
       {
         kind: 'list',
         items: [
-          '**AI coaching** is AI that reads and responds and never puts text into your manuscript: the assistant chat and its prompt tools, the writing coach, Ask your project, canon checks and canon decision advice, continuity questions, World Canvas brainstorming and coaching, talking to a character, and Character from a description.',
-          '**AI prose** is model-written text for your manuscript: **Preview scene revision**, **Draft this scene**, and **Character scene**. Every insert is previewed first and marked as AI text.',
+          '**AI coaching** is AI that reads and responds and never puts text into your manuscript: the assistant chat and its prompt tools, the writing coach, Ask your project, canon checks and canon decision advice, continuity questions, World Canvas brainstorming and coaching, talking to a character, Character from a description, and AI actions that write a note.',
+          '**AI prose** is model-written text for your manuscript: **Preview scene revision**, **Draft this scene**, **Character scene**, and AI actions that rewrite a selection. Every insert is previewed first and marked as AI text.',
           'The two switches are independent. Turn on coaching alone to get feedback with no AI-written prose, or prose alone to ask for revisions without the coaching tools. A switch that is off hides everything it covers, and the app refuses to send its requests.'
         ]
       },
@@ -196,6 +196,19 @@ export const HELP_TOPICS: HelpTopic[] = [
           '**Daily budget:** hosted requests count against **Max consultations per day**, a per-project limit that stops runaway use. When you reach it, you can add more for today right where you are, or change the limit in Settings. Each button that uses AI shows the cost and what is left. Local models don’t use the budget.',
           '**The assistant in Workspace** can brainstorm with AI coaching and write revisions with AI prose. It never changes your scene by itself: replacing or adding text opens a preview of the current and proposed text, and nothing changes until you confirm. With coaching on, you can also save a reply as a Source Note.',
           '**Ask your project** (under **More**) answers questions about your story. When it recognizes a factual question, it answers from your saved records and scenes, or says it can’t confirm the answer, instead of letting a model guess.'
+        ]
+      },
+      {
+        kind: 'paragraph',
+        text: 'Settings has two kinds of custom AI tools. **Prompt Tools** are standing instructions for the AI chat, such as a voice or role. Tick them in the AI panel; they apply to every message. **AI actions** are one-click tasks for selected text. Right-click a selection to run one. Rewrites wait for your confirmation.'
+      },
+      {
+        kind: 'list',
+        items: [
+          '**A prompt tool:** **Blunt Beta Reader**, “Respond as a beta reader who reads a lot of LitRPG. Be direct. Point out confusion and slow spots before praising anything.” Ticked in the AI panel, it shapes every chat answer until you untick it.',
+          '**A rewrite action:** **Tighten**, “Cut filler words and redundant phrases. Keep the meaning, voice and tense. Don’t add anything new.” Select some text, right-click, and choose **Tighten**: a preview shows the tighter text, and the scene changes only when you choose **Confirm**.',
+          '**A note action:** **Check against canon**, “List anything in this passage that contradicts accepted facts, citing each fact.” Select, right-click, and choose **Check against canon**: you get a short report, and the text is unchanged.',
+          'Each action sends the selected text, and, if you tick them, the current scene and the World Bible records the selection names. The examples come installed but switched off; turn them on, edit them, or delete them under **AI actions**, and **Install Presets** brings back any you deleted. Rewrite actions need **AI prose** and note actions need **AI coaching**. **Export Tool Pack** saves your prompt tools and AI actions in one file.'
         ]
       }
     ],
