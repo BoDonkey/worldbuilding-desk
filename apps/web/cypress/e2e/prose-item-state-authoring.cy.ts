@@ -97,6 +97,8 @@ function openSelectionProposal(): void {
   cy.visit('/workspace');
   cy.contains('h1', 'Writing Workspace').should('be.visible');
   cy.get('.ProseMirror').click().type('{selectall}');
+  // The selection menu opens on right-click.
+  cy.get('.ProseMirror').trigger('contextmenu');
   cy.contains('button', 'Record item/state').click();
 }
 
@@ -203,6 +205,8 @@ describe('Prose-proximate item and state authoring', () => {
     cy.reload();
     cy.visit('/workspace');
     cy.get('.ProseMirror').click().type('{selectall}');
+    cy.get('.ProseMirror').trigger('contextmenu');
+    cy.contains('button', 'Ask AI about this').should('be.visible');
     cy.contains('button', 'Record item/state').should('not.exist');
   });
 });

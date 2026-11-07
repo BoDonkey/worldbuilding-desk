@@ -62,10 +62,21 @@
   line-height: 1.5;
 }
 
+/* The editor takes the card's spare height and scrolls inside it, so long
+   notes never push the footer off screen. */
 .editorShell {
+  flex: 1 1 auto;
   width: 100%;
-  min-height: min(56vh, 520px);
+  min-height: 12rem;
+  height: min(56vh, 520px);
+  overflow-y: auto;
   box-sizing: border-box;
+}
+
+.editorShell :global(.control-group) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .editorShell :global(.tiptap-wrapper) {
@@ -125,6 +136,6 @@
   }
 
   .editorShell {
-    min-height: 50vh;
+    height: 50vh;
   }
 }

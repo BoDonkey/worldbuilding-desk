@@ -104,6 +104,7 @@ function assertDefaultActiveForTool(
 }
 
 function setProjectMode(modeValue: 'litrpg' | 'game' | 'general'): void {
+  cy.ensureSettingsSectionOpen('Project Mode');
   cy.contains('summary', 'Project Mode')
     .closest('details')
     .within(() => {

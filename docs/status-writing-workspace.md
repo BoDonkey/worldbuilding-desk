@@ -261,8 +261,16 @@
   each edit, and the editor ignores late echoes of text it already emitted,
   so typing, deletion, and autosave in a long scene keep the caret, scroll,
   and text in place.
-- To give the assistant a passage, the author selects it and chooses **Ask
-  AI about this** (selection menu or right-click). While that passage is the
+- Selecting text shows no menu, so cutting, copying, and dragging text are
+  never blocked. Right-clicking a selection (or pressing the context-menu
+  key) opens the selection menu: **Ask AI about this**, **Add to World**,
+  and the lore, stat, and item actions that apply to the selection. It opens at
+  the pointer, stays inside the window, follows the text when the page
+  scrolls, and closes on Escape or when the selection changes. A right-click
+  on a character name opens the stat menu instead, which also offers **Ask
+  AI about this**.
+- To give the assistant a passage, the author selects it, right-clicks, and
+  chooses **Ask AI about this**. While that passage is the
   assistant's context it stays marked in the editor, even after focus moves
   to the assistant. The mark is display only: it follows edits and is never
   saved into the scene or its undo history. The assistant's **Selected

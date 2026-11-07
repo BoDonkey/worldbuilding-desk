@@ -2,6 +2,7 @@ import type {RefObject} from 'react';
 import TipTapEditor from '../TipTapEditor';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
 import styles from '../../styles/WorkspaceRoute.module.css';
+import modalStyles from './WorkspaceScratchpadModal.module.css';
 
 interface WorkspaceScratchpadModalProps {
   isOpen: boolean;
@@ -25,8 +26,8 @@ export const WorkspaceScratchpadModal = ({
     <div ref={dialogRef} role='dialog' aria-modal='true' aria-label='Project scratchpad'
       onClick={onClose} className={styles.modalOverlay}>
       <div onClick={(event) => event.stopPropagation()}
-        className={`${styles.modalCard} ${styles.scratchpadModalCard}`}>
-        <div className={styles.scratchpadModalHeader}>
+        className={`${styles.modalCard} ${modalStyles.card}`}>
+        <div className={modalStyles.header}>
           <div>
             <h3 className={styles.modalTitle}>Scratchpad</h3>
             <p className={styles.modalDescription}>
@@ -37,13 +38,13 @@ export const WorkspaceScratchpadModal = ({
             Close
           </button>
         </div>
-        <div className={`${styles.scratchpadEditorShell} ${styles.scratchpadModalEditorShell}`}
+        <div className={`${styles.scratchpadEditorShell} ${modalStyles.editorShell}`}
           aria-label='Project scratchpad'>
           <TipTapEditor content={normalizeRichTextValue(content)} onChange={setContent} />
         </div>
-        <div className={styles.scratchpadModalFooter}>
+        <div className={modalStyles.footer}>
           <div className={styles.scratchpadStatus} role='status'>{statusLabel}</div>
-          <div className={styles.scratchpadModalActions}>
+          <div className={modalStyles.actions}>
             <button type='button' className={styles.modalSecondaryAction} onClick={() => {
               setActiveContextView('scratchpad');
               setContextDrawerOpen(true);

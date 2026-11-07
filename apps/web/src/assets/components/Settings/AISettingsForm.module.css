@@ -204,11 +204,6 @@
   gap: 0.5rem;
 }
 
-.toolKind {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
 .toolContent {
   margin: 0.5rem 0;
   font-size: var(--font-size-sm);

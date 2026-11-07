@@ -4,6 +4,11 @@
   height: calc(100vh - 2rem);
   min-height: 0;
   overflow: hidden;
+  /* Room for focus rings (2px + 2px offset) on controls at the edge, which
+     the hidden overflow would otherwise cut off. The negative margin keeps
+     the layout where it was. */
+  padding: 4px;
+  margin: -4px;
 }
 
 .drawerToggleRow {
@@ -1614,12 +1619,6 @@
   max-height: 80vh;
 }
 
-.scratchpadModalCard {
-  padding: 1.1rem;
-  width: min(720px, 94vw);
-  max-height: 82vh;
-}
-
 .workspaceHeaderMeta {
   display: block;
 }
@@ -1855,32 +1854,6 @@
 
 .modalSecondaryAction {
   background: transparent;
-}
-
-.scratchpadModalHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.scratchpadModalEditorShell {
-  min-height: min(56vh, 520px);
-}
-
-.scratchpadModalFooter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.scratchpadModalActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .corkboardModalHeader {

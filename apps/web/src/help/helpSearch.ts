@@ -1,25 +1,42 @@
 import type {HelpBlock, HelpTopic} from './helpTopics';
 
-/** One piece of help text: plain, or an on-screen name to show in bold. */
+/** One piece of help text: plain, an on-screen name in bold, or a file name in code. */
 export interface HelpTextPart {
   text: string;
   label: boolean;
+  code?: boolean;
 }
 
-/** Splits `**Label**` markers into parts. An unclosed marker stays as plain text. */
+const MARKERS = ['**', '`'] as const;
+
+/**
+ * Splits `**Label**` and `` `code` `` markers into parts. An unclosed marker
+ * stays as plain text.
+ */
 export function parseHelpText(text: string): HelpTextPart[] {
   const parts: HelpTextPart[] = [];
   let rest = text;
   while (rest.length > 0) {
-    const open = rest.indexOf('**');
-    const close = open === -1 ? -1 : rest.indexOf('**', open + 2);
-    if (open === -1 || close === -1) {
+    let marker: (typeof MARKERS)[number] | null = null;
+    let open = -1;
+    let close = -1;
+    for (const candidate of MARKERS) {
+      const start = rest.indexOf(candidate);
+      if (start === -1 || (open !== -1 && start >= open)) continue;
+      const end = rest.indexOf(candidate, start + candidate.length);
+      if (end === -1) continue;
+      marker = candidate;
+      open = start;
+      close = end;
+    }
+    if (!marker) {
       parts.push({text: rest, label: false});
       break;
     }
     if (open > 0) parts.push({text: rest.slice(0, open), label: false});
-    if (close > open + 2) parts.push({text: rest.slice(open + 2, close), label: true});
-    rest = rest.slice(close + 2);
+    const inner = rest.slice(open + marker.length, close);
+    if (inner) parts.push(marker === '`' ? {text: inner, label: false, code: true} : {text: inner, label: true});
+    rest = rest.slice(close + marker.length);
   }
   return parts;
 }
@@ -29,7 +46,7 @@ function blockText(block: HelpBlock): string {
 }
 
 function normalize(value: string): string {
-  return value.replace(/\*\*/g, '').toLocaleLowerCase();
+  return value.replace(/\*\*|`/g, '').toLocaleLowerCase();
 }
 
 /**

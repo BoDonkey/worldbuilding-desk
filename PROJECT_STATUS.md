@@ -94,13 +94,22 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 
 ### Help
 - **Help** (More → App, `/help`, command palette **Go to Help**; Slice 5.8)
-  is an offline, in-app page of seven short topics: getting started; World
+  is an offline, in-app page of eight short topics: getting started; World
   Bible, Source Notes, and canon; reviewing suggestions; importing; backups
-  and exports; setting up AI; and where your data goes. It has a word filter,
-  **Open …** links to each topic's screens, `/help?topic=<id>` deep links,
-  and the portable export README (rendered from the same constant the export
-  writes). Content lives in `apps/web/src/help/helpTopics.ts`; update a
-  topic in the same change as the workflow it describes.
+  and exports; setting up AI; where your data goes; and the portable export
+  format (built from the same README constant the export writes). Topics are
+  collapsible and start collapsed; choosing one from the list, a search
+  match, or a `/help?topic=<id>` deep link opens it, and **Expand all** /
+  **Collapse all** toggles every topic. It also has **Open …** links to each
+  topic's screens. Content lives in `apps/web/src/help/helpTopics.ts`; update
+  a topic in the same change as the workflow it describes.
+
+### Settings and Reading
+- Every Settings section starts collapsed and opens on click.
+- The **Dyslexic** text style uses OpenDyslexic, bundled with the app
+  (`@fontsource/opendyslexic`, SIL Open Font License; license shipped as
+  `fonts/OpenDyslexic-LICENSE.txt`), so it no longer depends on an
+  installed font. Serif and Sans use fonts already on the computer.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
@@ -309,6 +318,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ### AI and Retrieval
 - Multi-provider abstraction for Anthropic, OpenAI, Gemini, Ollama, and a local OpenAI-compatible server (KoboldCPP, LM Studio, llama.cpp).
 - Prompt management and provider diagnostics.
+- Prompt tools are standing instructions with a name and text (no type);
+  the author ticks them in the assistant's **Prompt Tools** bar, the mode's
+  defaults start ticked, and each ticked tool goes into every assistant chat
+  message as `- Name: instructions`. Only the assistant chat uses them.
+  Older saved tools and tool packs still load; their old type is ignored.
 - Local RAG and Shodh memory services for contextual assistance.
 - Selection-aware AI insertion and editor assistance tools.
 - Inherited canon support in AI grounding for parent/child projects.

@@ -502,7 +502,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           ? `\n\nActive Prompt Tools:\n${activeTools
               .map(
                 (tool) =>
-                  `- [${tool.kind.toUpperCase()}] ${tool.name}: ${tool.content}`
+                  `- ${tool.name}: ${tool.content}`
               )
               .join('\n')}`
           : '';

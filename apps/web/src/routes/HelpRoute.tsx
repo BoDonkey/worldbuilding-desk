@@ -1,18 +1,18 @@
-import {useEffect, useId, useMemo, useState} from 'react';
+import {useCallback, useEffect, useId, useMemo, useState} from 'react';
 import {Link, useSearchParams} from 'react-router';
 import {PageHeader} from '../components/PageHeader';
 import {HELP_TOPICS, type HelpBlock, type HelpTopic} from '../help/helpTopics';
 import {filterHelpTopics, parseHelpText} from '../help/helpSearch';
-import {PORTABLE_SCHEMA_README} from '../services/portability/portableData';
 import styles from '../styles/HelpRoute.module.css';
 
-/** Shows `**Label**` parts in bold. */
+/** Shows `**Label**` parts in bold and `` `code` `` parts as code. */
 function HelpText({text}: {text: string}) {
   return (
     <>
-      {parseHelpText(text).map((part, index) =>
-        part.label ? <strong key={index}>{part.text}</strong> : <span key={index}>{part.text}</span>
-      )}
+      {parseHelpText(text).map((part, index) => {
+        if (part.code) return <code key={index}>{part.text}</code>;
+        return part.label ? <strong key={index}>{part.text}</strong> : <span key={index}>{part.text}</span>;
+      })}
     </>
   );
 }
@@ -45,12 +45,24 @@ function showTopic(topicId: string) {
   heading.focus({preventScroll: true});
 }
 
-function HelpTopicSection({topic}: {topic: HelpTopic}) {
+interface HelpTopicSectionProps {
+  topic: HelpTopic;
+  open: boolean;
+  onToggle: (topicId: string, open: boolean) => void;
+}
+
+function HelpTopicSection({topic, open, onToggle}: HelpTopicSectionProps) {
   return (
-    <section className={styles.topic} aria-labelledby={topicElementId(topic.id)}>
-      <h2 id={topicElementId(topic.id)} tabIndex={-1} className={styles.topicTitle}>
-        {topic.title}
-      </h2>
+    <details
+      className={styles.topic}
+      open={open}
+      onToggle={(event) => onToggle(topic.id, event.currentTarget.open)}
+    >
+      <summary className={styles.topicSummary}>
+        <h2 id={topicElementId(topic.id)} tabIndex={-1} className={styles.topicTitle}>
+          {topic.title}
+        </h2>
+      </summary>
       <div className={styles.topicBody}>
         {topic.blocks.map((block, index) => (
           <HelpBlockView key={index} block={block} />
@@ -65,8 +77,13 @@ function HelpTopicSection({topic}: {topic: HelpTopic}) {
           ))}
         </nav>
       )}
-    </section>
+    </details>
   );
+}
+
+function matchingTopicIds(query: string): Set<string> {
+  if (!query.trim()) return new Set();
+  return new Set(filterHelpTopics(HELP_TOPICS, query).map((topic) => topic.id));
 }
 
 /** Author help (Slice 5.8): offline, in-app, one page of short topics. */
@@ -76,11 +93,40 @@ function HelpRoute() {
   const searchId = useId();
   const topics = useMemo(() => filterHelpTopics(HELP_TOPICS, query), [query]);
   const requestedTopic = searchParams.get('topic');
+  // Topics start collapsed so the page reads as an index; search opens matches.
+  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(
+    () => new Set(requestedTopic ? [requestedTopic] : [])
+  );
+  // A topic to scroll to and focus once it has rendered open.
+  const [focusTarget, setFocusTarget] = useState<string | null>(requestedTopic);
+
+  const openTopic = useCallback((topicId: string) => {
+    setOpenIds((current) => (current.has(topicId) ? current : new Set(current).add(topicId)));
+    setFocusTarget(topicId);
+  }, []);
+
+  const toggleTopic = useCallback((topicId: string, open: boolean) => {
+    setOpenIds((current) => {
+      if (current.has(topicId) === open) return current;
+      const next = new Set(current);
+      if (open) next.add(topicId);
+      else next.delete(topicId);
+      return next;
+    });
+  }, []);
 
   // `/help?topic=privacy` opens at that topic, so other screens can link to it.
   useEffect(() => {
-    if (requestedTopic) showTopic(requestedTopic);
-  }, [requestedTopic]);
+    if (requestedTopic) openTopic(requestedTopic);
+  }, [requestedTopic, openTopic]);
+
+  useEffect(() => {
+    if (!focusTarget) return;
+    showTopic(focusTarget);
+    setFocusTarget(null);
+  }, [focusTarget]);
+
+  const allOpen = topics.length > 0 && topics.every((topic) => openIds.has(topic.id));
 
   return (
     <section className={styles.page}>
@@ -96,7 +142,10 @@ function HelpRoute() {
           id={searchId}
           type='search'
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpenIds(matchingTopicIds(event.target.value));
+          }}
           placeholder='Try backup, import, canon, or Ollama'
         />
       </div>
@@ -111,7 +160,7 @@ function HelpRoute() {
             <ul className={styles.topicList}>
               {topics.map((topic) => (
                 <li key={topic.id}>
-                  <button type='button' className={styles.topicButton} onClick={() => showTopic(topic.id)}>
+                  <button type='button' className={styles.topicButton} onClick={() => openTopic(topic.id)}>
                     <span className={styles.topicButtonTitle}>{topic.title}</span>
                     <span className={styles.topicButtonSummary}>{topic.summary}</span>
                   </button>
@@ -119,20 +168,26 @@ function HelpRoute() {
               ))}
             </ul>
           </nav>
+          <div className={styles.expandRow}>
+            <button
+              type='button'
+              className={styles.expandButton}
+              onClick={() => setOpenIds(allOpen ? new Set() : new Set(topics.map((topic) => topic.id)))}
+            >
+              {allOpen ? 'Collapse all' : 'Expand all'}
+            </button>
+          </div>
           {topics.map((topic) => (
-            <HelpTopicSection key={topic.id} topic={topic} />
+            <HelpTopicSection
+              key={topic.id}
+              topic={topic}
+              open={openIds.has(topic.id)}
+              onToggle={toggleTopic}
+            />
           ))}
         </>
       )}
 
-      <details className={styles.format}>
-        <summary>Portable export format</summary>
-        <p>
-          Every <strong>Export Markdown + CSV</strong> ZIP includes this description of its files as{' '}
-          <code>README.md</code>, so other tools and people can read it without SagaSpine.
-        </p>
-        <pre className={styles.formatText}>{PORTABLE_SCHEMA_README}</pre>
-      </details>
     </section>
   );
 }
