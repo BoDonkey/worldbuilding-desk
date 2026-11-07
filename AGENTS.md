@@ -28,10 +28,22 @@ commit hash. Refactor slices are strictly behavior-preserving.
   paths; keep the Electron IPC surface narrow.
 - **File size:** `pnpm check:file-sizes` fails when a source file passes
   1,000 lines or a file already over that grows past its baseline in
-  `scripts/file-size-baseline.json`. When a change hits the limit, move a
-  coherent piece (a hook, service, or component with its own tests) into its
-  own file. Never get under the limit by reformatting, joining lines, or
-  deleting comments. Run `--update` only to record a file that shrank.
+  `scripts/file-size-baseline.json`. The goal is code a reader can follow,
+  not a line count, so meet the limit with a real seam or not at all:
+  - **What counts as a seam.** A hook, service, or component that names one
+    feature or concern a reader would search for (for example
+    `useWorldBibleImports`, `WorkspaceCharacterLabSection`), keeps its own
+    state or logic, and lives in the same folder as the file it came from.
+    Removing duplicated code also counts.
+  - **What does not.** A single button, a few lines of JSX, or a wrapper
+    whose only reason to exist is the line count. Never get under the limit
+    by reformatting, joining lines, or deleting comments.
+  - **When there is no good seam.** A file already over the limit may grow
+    by up to 25 lines: run `pnpm check:file-sizes --update`, and say in the
+    commit message which file grew, by how much, and why no seam fit. The
+    file must then be covered by an open breakup slice on the status board
+    (see 3.32). New files still may not pass 1,000 lines.
+  - Otherwise, run `--update` only to record a file that shrank.
 - **Docs:** update `PROJECT_STATUS.md` (and `docs/status-writing-workspace.md`
   for Workspace behavior) when application truth changes; keep
   completed-work diaries out of the roadmap; archive superseded docs to
