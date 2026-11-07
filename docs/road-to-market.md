@@ -347,6 +347,7 @@ messages).
 | 5.19 | Custom AI actions in the selection menu | 5 | M | Done `da9ed97` |
 | 3.32 | Break up the oversized route files along feature seams | 3 | L | WIP — World Bible route split (2,145 → 596 lines); World Bible CSS split is 3.32a; next routes: Character Sheets, Workspace (+ context drawer), Lore |
 | 3.32a | Split the World Bible CSS module along component seams | 3 | M | — (after the 3.32 World Bible route PR merges) |
+| 3.33 | Code tour for maintainers | 3 | M | — (author request, 2026-11-07; stable half now, route sections after 3.32) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -456,6 +457,41 @@ bug before changing the Phase 5 board.
     general record, item description-first draft, import preview, review
     queue, category manager) at desktop width and at ≤620px, in light and
     dark themes, attached to the PR.
+
+- **3.33 Code tour for maintainers.** Author request (2026-11-07). The
+  active docs record rules and boundaries (`architecture-review.md`,
+  `domain-model.md`, `AGENTS.md`) but no map of where code lives and how it
+  connects. Write `docs/code-tour.md`: a 15–20 minute read for the author
+  first and for any coding agent second. It must not depend on a particular
+  AI tool or vendor. Link it from `docs/README.md` and from the `AGENTS.md`
+  read order.
+  - **Contents.**
+    1. Mental model: one diagram of route → hook → service → storage
+       (IndexedDB), the Electron host's provider bridge, and where
+       `packages/rules-engine` and `packages/rules-ui` sit.
+    2. Folder map: one line per top-level `apps/web/src` folder and per
+       `services/` folder (about 30), each marked core or peripheral.
+    3. Traced features, start to finish, naming each file in order: saving
+       a World Bible record; running a custom AI selection action
+       (switch check, prompt, provider, proposal, author approval);
+       replaying character state through the manuscript; backup and
+       restore.
+    4. Where data lives: IndexedDB stores, files on disk, which indexes
+       (RAG, Shodh) can be rebuilt and how.
+    5. Troubleshooting playbook: symptom → first place to look → the test
+       or smoke procedure that covers it.
+    6. Glossary of the app's own terms (canon, proposal, Shodh, RAG,
+       state ledger, compendium, coaching/prose switches, and so on).
+  - **Order.** Sections 1, 2 (outside the routes), 4, and 6 now. Route-level
+    maps and traces that pass through a route still being split wait for
+    that route's 3.32 PR, so the tour does not go stale on arrival.
+  - **Upkeep.** Add a standing rule to `AGENTS.md`: a slice that moves a
+    seam, renames a folder, or changes a traced path updates the tour in
+    the same PR.
+  - **Verify.** Documentation tier. Every file path and symbol named in the
+    tour is checked against the code (a script or a listed manual check);
+    each trace is followed once in the running app or the tests that cover
+    it.
 
 ### Phase 4 — Post-beta candidate
 
