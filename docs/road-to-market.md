@@ -345,7 +345,7 @@ messages).
 | 5.17 | Writing-flow stability + assistant continuity | 5 | L | Done `dc0460c` |
 | 5.18 | Per-project AI switches (coaching, prose) | 5 | M | Done `bee5089` |
 | 5.19 | Custom AI actions in the selection menu | 5 | M | Done `da9ed97` |
-| 3.32 | Break up the oversized route files along feature seams | 3 | L | WIP — World Bible route split (2,145 → 596 lines); World Bible CSS split is 3.32a; next routes: Workspace (+ context drawer), Lore, then Character Sheets after 3.34 |
+| 3.32 | Break up the oversized route files along feature seams | 3 | L | WIP — World Bible route split (2,145 → 596 lines); Lore route split (1,766 → 194 lines); World Bible CSS split is 3.32a; next routes: Workspace (+ context drawer), then Character Sheets after 3.34 |
 | 3.32a | Split the World Bible CSS module along component seams | 3 | M | — (after the 3.32 World Bible route PR merges) |
 | 3.33 | Code tour for maintainers | 3 | M | — (author request, 2026-11-07; stable half now, route sections after 3.32) |
 | 3.34 | One module per state-change kind, one change vocabulary (mechanics registry) | 3 | L | Done `fb53c2a` — CI flake to fix: Windows Desktop E2E `app-updates.e2e.ts` ("checks at startup once allowed…") timed out waiting for the update card once on PR #102, passed on rerun; unrelated to 3.34 |
