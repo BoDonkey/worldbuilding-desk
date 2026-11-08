@@ -349,7 +349,7 @@ messages).
 | 3.32a | Split the World Bible CSS module along component seams | 3 | M | Done `25d0b92` — 19 modules, largest 466 lines; 52 before/after screenshots pixel-identical |
 | 3.33 | Code tour for maintainers | 3 | M | — (author request, 2026-11-07; stable half now, route sections after 3.32) |
 | 3.34 | One module per state-change kind, one change vocabulary (mechanics registry) | 3 | L | Done `fb53c2a` — CI flake to fix: Windows Desktop E2E `app-updates.e2e.ts` ("checks at startup once allowed…") timed out waiting for the update card once on PR #102, passed on rerun; unrelated to 3.34 |
-| 3.34a | XP and levels through the scene ledger (first new kind on 3.34) | 3 | M | — (after 3.34) |
+| 3.34a | XP and levels through the scene ledger (first new kind on 3.34) | 3 | M | WIP |
 | 3.35 | Route every project-mode decision through project capabilities | 3 | S | — (author request, 2026-11-08; with or right after the 3.32 Workspace split) |
 | 3.36 | Game Simulation brief (design only) | 3 | S | Done `20cd067` |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
