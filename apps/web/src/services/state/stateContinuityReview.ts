@@ -14,10 +14,8 @@ import {
   manuscriptPlainText,
   normalizeCustodyText
 } from './manuscriptCustody';
-import {
-  findSheetForStateActor,
-  stateDeltaObservationToCommand
-} from './stateMutationDerivation';
+import {findSheetForStateActor} from './stateMutationDerivation';
+import {stateDeltaObservationToCommand} from './kinds';
 import {
   compareStateMutationEvents,
   replayCharacterState,

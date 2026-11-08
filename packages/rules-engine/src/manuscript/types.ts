@@ -1,4 +1,14 @@
 import type {WorldRuleset} from '../types/WorldRuleset';
+import type {
+  InventoryEquipStateMutationCommand,
+  InventoryQuantityStateMutationCommand,
+  LocationSetStateMutationCommand,
+  ResourceChangeStateMutationCommand,
+  ResourceSetStateMutationCommand,
+  StatChangeStateMutationCommand,
+  StatSetStateMutationCommand,
+  StatusStateMutationCommand
+} from './kinds';
 
 /*
  * Manuscript-time state model: accepted ledger events ordered by scene, never
@@ -9,63 +19,7 @@ import type {WorldRuleset} from '../types/WorldRuleset';
 export type StateMutationActorId = string;
 export type StateMutationInventoryQuantity = number;
 
-export type ResourceChangeStateMutationCommand = {
-  type: 'resource_change';
-  actorId: StateMutationActorId;
-  resourceDefinitionId: string;
-  delta: number;
-};
-
-export type ResourceSetStateMutationCommand = {
-  type: 'resource_set';
-  actorId: StateMutationActorId;
-  resourceDefinitionId: string;
-  value: number;
-};
-
-export type StatChangeStateMutationCommand = {
-  type: 'stat_change';
-  actorId: StateMutationActorId;
-  statDefinitionId: string;
-  delta: number | boolean | string;
-};
-
-export type StatSetStateMutationCommand = {
-  type: 'stat_set';
-  actorId: StateMutationActorId;
-  statDefinitionId: string;
-  value: number | boolean | string;
-};
-
-export type StatusStateMutationCommand = {
-  type: 'status_apply' | 'status_remove';
-  actorId: StateMutationActorId;
-  statusName: string;
-};
-
-export type InventoryQuantityStateMutationCommand = {
-  type: 'inventory_add' | 'inventory_remove' | 'inventory_consume';
-  actorId: StateMutationActorId;
-  itemName: string;
-  quantity?: StateMutationInventoryQuantity;
-  sourceEntityId?: string;
-  definitionId?: string;
-};
-
-export type InventoryEquipStateMutationCommand = {
-  type: 'inventory_equip' | 'inventory_unequip';
-  actorId: StateMutationActorId;
-  itemName: string;
-  sourceEntityId?: string;
-  definitionId?: string;
-};
-
-export type LocationSetStateMutationCommand = {
-  type: 'location_set';
-  actorId: StateMutationActorId;
-  locationName: string;
-};
-
+// Each command shape lives with its kind module in ./kinds.
 export type StateMutationCommand =
   | ResourceChangeStateMutationCommand
   | ResourceSetStateMutationCommand

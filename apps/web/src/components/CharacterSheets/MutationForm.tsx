@@ -1,38 +1,15 @@
+import {Fragment} from 'react';
+import {stateMutationCommandTypes} from '@worldbuilding-desk/rules-engine';
 import styles from '../../styles/CharacterSheetsRoute.module.css';
 import type {
   CharacterSheet,
+  StateMutationCommand,
   StoredRuleset,
   WritingDocument
 } from '../../entityTypes';
+import {getAppStateKind, type SheetFormField} from '../../services/state/kinds';
 
-export type MutationFormType =
-  | 'resource_change'
-  | 'resource_set'
-  | 'stat_change'
-  | 'stat_set'
-  | 'status_apply'
-  | 'status_remove'
-  | 'inventory_add'
-  | 'inventory_remove'
-  | 'inventory_consume'
-  | 'inventory_equip'
-  | 'inventory_unequip'
-  | 'location_set';
-
-const MUTATION_FORM_TYPES: Array<{value: MutationFormType; label: string}> = [
-  {value: 'resource_change', label: 'Change resource by'},
-  {value: 'resource_set', label: 'Set resource to'},
-  {value: 'stat_change', label: 'Change stat by'},
-  {value: 'stat_set', label: 'Set stat to'},
-  {value: 'status_apply', label: 'Add status'},
-  {value: 'status_remove', label: 'Remove status'},
-  {value: 'inventory_add', label: 'Add item'},
-  {value: 'inventory_remove', label: 'Remove item'},
-  {value: 'inventory_consume', label: 'Consume item'},
-  {value: 'inventory_equip', label: 'Equip item'},
-  {value: 'inventory_unequip', label: 'Unequip item'},
-  {value: 'location_set', label: 'Set location'}
-];
+export type MutationFormType = StateMutationCommand['type'];
 
 interface MutationFormProps {
   editingMutationEventId: string | null;
@@ -99,6 +76,150 @@ export function MutationForm({
   ruleset,
   selectedMutationStatDefinition
 }: MutationFormProps) {
+  const textFields: Record<
+    Extract<SheetFormField, {type: 'text'}>['value'],
+    {value: string; onChange: (value: string) => void}
+  > = {
+    statusName: {value: mutationStatusName, onChange: setMutationStatusName},
+    itemName: {value: mutationItemName, onChange: setMutationItemName},
+    locationName: {value: mutationLocationName, onChange: setMutationLocationName}
+  };
+
+  const renderField = (field: SheetFormField) => {
+    switch (field.type) {
+      case 'definition':
+        return field.source === 'resource' ? (
+          <div className={styles.inlineMarginBottom075rem}>
+            <label>
+              Resource
+              <br />
+              <select
+                value={mutationResourceDefinitionId}
+                onChange={(e) => setMutationResourceDefinitionId(e.target.value)}
+                className={styles.inlineWidth100}
+              >
+                <option value=''>Select a resource...</option>
+                {ruleset.resourceDefinitions.map((definition) => (
+                  <option key={definition.id} value={definition.id}>
+                    {definition.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : (
+          <div className={styles.inlineMarginBottom075rem}>
+            <label>
+              Stat
+              <br />
+              <select
+                value={mutationStatDefinitionId}
+                onChange={(e) => setMutationStatDefinitionId(e.target.value)}
+                className={styles.inlineWidth100}
+              >
+                <option value=''>Select a stat...</option>
+                {ruleset.statDefinitions.map((definition) => (
+                  <option key={definition.id} value={definition.id}>
+                    {definition.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        );
+      case 'resourceValue':
+        return (
+          <div className={styles.inlineMarginBottom075rem}>
+            <label>
+              {field.label}
+              <br />
+              <input
+                type='number'
+                value={mutationNumberValue}
+                onChange={(e) => setMutationNumberValue(e.target.value)}
+                className={styles.inlineWidth100}
+              />
+            </label>
+          </div>
+        );
+      case 'statValue':
+        return selectedMutationStatDefinition?.type === 'boolean' ? (
+          <div className={styles.inlineMarginBottom075rem}>
+            <label
+              className={`${styles.inlineDisplayFlex} ${styles.inlineGap05rem} ${styles.inlineAlignItemsCenter}`}
+            >
+              <input
+                type='checkbox'
+                checked={mutationBooleanValue}
+                onChange={(e) => setMutationBooleanValue(e.target.checked)}
+              />
+              Value
+            </label>
+          </div>
+        ) : selectedMutationStatDefinition?.type === 'text' ? (
+          <div className={styles.inlineMarginBottom075rem}>
+            <label>
+              {field.textLabel}
+              <br />
+              <input
+                type='text'
+                value={mutationTextValue}
+                onChange={(e) => setMutationTextValue(e.target.value)}
+                className={styles.inlineWidth100}
+              />
+            </label>
+          </div>
+        ) : (
+          <div className={styles.inlineMarginBottom075rem}>
+            <label>
+              {field.numberLabel}
+              <br />
+              <input
+                type='number'
+                value={mutationNumberValue}
+                onChange={(e) => setMutationNumberValue(e.target.value)}
+                className={styles.inlineWidth100}
+              />
+            </label>
+          </div>
+        );
+      case 'text': {
+        const binding = textFields[field.value];
+        return (
+          <div className={styles.inlineMarginBottom075rem}>
+            <label>
+              {field.label}
+              <br />
+              <input
+                type='text'
+                value={binding.value}
+                onChange={(e) => binding.onChange(e.target.value)}
+                placeholder={field.placeholder}
+                className={styles.inlineWidth100}
+              />
+            </label>
+          </div>
+        );
+      }
+      case 'quantity':
+        return (
+          <div className={styles.inlineMarginBottom075rem}>
+            <label>
+              Quantity
+              <br />
+              <input
+                type='number'
+                min={1}
+                value={mutationQuantity}
+                onChange={(e) => setMutationQuantity(e.target.value)}
+                className={styles.inlineWidth100}
+              />
+            </label>
+          </div>
+        );
+    }
+  };
+
   return (
     <>
       <h2 className={styles.inlineMarginTop0}>Record a detailed scene change</h2>
@@ -162,187 +283,18 @@ export function MutationForm({
             onChange={(e) => setMutationType(e.target.value as MutationFormType)}
             className={styles.inlineWidth100}
           >
-            {MUTATION_FORM_TYPES.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+            {stateMutationCommandTypes.map((type) => (
+              <option key={type} value={type}>
+                {getAppStateKind(type).sheetForm.label}
               </option>
             ))}
           </select>
         </label>
       </div>
 
-      {(mutationType === 'resource_change' ||
-        mutationType === 'resource_set') && (
-        <>
-          <div className={styles.inlineMarginBottom075rem}>
-            <label>
-              Resource
-              <br />
-              <select
-                value={mutationResourceDefinitionId}
-                onChange={(e) => setMutationResourceDefinitionId(e.target.value)}
-                className={styles.inlineWidth100}
-              >
-                <option value=''>Select a resource...</option>
-                {ruleset.resourceDefinitions.map((definition) => (
-                  <option key={definition.id} value={definition.id}>
-                    {definition.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className={styles.inlineMarginBottom075rem}>
-            <label>
-              {mutationType === 'resource_change' ? 'Delta' : 'Value'}
-              <br />
-              <input
-                type='number'
-                value={mutationNumberValue}
-                onChange={(e) => setMutationNumberValue(e.target.value)}
-                className={styles.inlineWidth100}
-              />
-            </label>
-          </div>
-        </>
-      )}
-
-      {(mutationType === 'stat_change' || mutationType === 'stat_set') && (
-        <>
-          <div className={styles.inlineMarginBottom075rem}>
-            <label>
-              Stat
-              <br />
-              <select
-                value={mutationStatDefinitionId}
-                onChange={(e) => setMutationStatDefinitionId(e.target.value)}
-                className={styles.inlineWidth100}
-              >
-                <option value=''>Select a stat...</option>
-                {ruleset.statDefinitions.map((definition) => (
-                  <option key={definition.id} value={definition.id}>
-                    {definition.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          {selectedMutationStatDefinition?.type === 'boolean' ? (
-            <div className={styles.inlineMarginBottom075rem}>
-              <label
-                className={`${styles.inlineDisplayFlex} ${styles.inlineGap05rem} ${styles.inlineAlignItemsCenter}`}
-              >
-                <input
-                  type='checkbox'
-                  checked={mutationBooleanValue}
-                  onChange={(e) => setMutationBooleanValue(e.target.checked)}
-                />
-                Value
-              </label>
-            </div>
-          ) : selectedMutationStatDefinition?.type === 'text' ? (
-            <div className={styles.inlineMarginBottom075rem}>
-              <label>
-                {mutationType === 'stat_change' ? 'Delta text' : 'Value'}
-                <br />
-                <input
-                  type='text'
-                  value={mutationTextValue}
-                  onChange={(e) => setMutationTextValue(e.target.value)}
-                  className={styles.inlineWidth100}
-                />
-              </label>
-            </div>
-          ) : (
-            <div className={styles.inlineMarginBottom075rem}>
-              <label>
-                {mutationType === 'stat_change' ? 'Delta' : 'Value'}
-                <br />
-                <input
-                  type='number'
-                  value={mutationNumberValue}
-                  onChange={(e) => setMutationNumberValue(e.target.value)}
-                  className={styles.inlineWidth100}
-                />
-              </label>
-            </div>
-          )}
-        </>
-      )}
-
-      {(mutationType === 'status_apply' ||
-        mutationType === 'status_remove') && (
-        <div className={styles.inlineMarginBottom075rem}>
-          <label>
-            Status name
-            <br />
-            <input
-              type='text'
-              value={mutationStatusName}
-              onChange={(e) => setMutationStatusName(e.target.value)}
-              placeholder='Poisoned'
-              className={styles.inlineWidth100}
-            />
-          </label>
-        </div>
-      )}
-
-      {(mutationType === 'inventory_add' ||
-        mutationType === 'inventory_remove' ||
-        mutationType === 'inventory_consume' ||
-        mutationType === 'inventory_equip' ||
-        mutationType === 'inventory_unequip') && (
-        <>
-          <div className={styles.inlineMarginBottom075rem}>
-            <label>
-              Item name
-              <br />
-              <input
-                type='text'
-                value={mutationItemName}
-                onChange={(e) => setMutationItemName(e.target.value)}
-                placeholder='Iron Key'
-                className={styles.inlineWidth100}
-              />
-            </label>
-          </div>
-          {(mutationType === 'inventory_add' ||
-            mutationType === 'inventory_remove' ||
-            mutationType === 'inventory_consume') && (
-            <div className={styles.inlineMarginBottom075rem}>
-              <label>
-                Quantity
-                <br />
-                <input
-                  type='number'
-                  min={1}
-                  value={mutationQuantity}
-                  onChange={(e) => setMutationQuantity(e.target.value)}
-                  className={styles.inlineWidth100}
-                />
-              </label>
-            </div>
-          )}
-        </>
-      )}
-
-      {mutationType === 'location_set' && (
-        <div className={styles.inlineMarginBottom075rem}>
-          <label>
-            Location
-            <br />
-            <input
-              type='text'
-              value={mutationLocationName}
-              onChange={(e) => setMutationLocationName(e.target.value)}
-              placeholder='South Gate'
-              className={styles.inlineWidth100}
-            />
-          </label>
-        </div>
-      )}
-
-
+      {getAppStateKind(mutationType).sheetForm.fields.map((field, index) => (
+        <Fragment key={`${field.type}-${index}`}>{renderField(field)}</Fragment>
+      ))}
     </>
   );
 }

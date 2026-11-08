@@ -3,6 +3,7 @@ import type {
   CompendiumEntry,
   StateMutationCommand
 } from '../../entityTypes';
+import {consumableEffectToCommand} from './kinds';
 
 export function findConsumableEntry(params: {
   entries: CompendiumEntry[];
@@ -33,19 +34,7 @@ export function buildConsumableCommands(params: {
     definitionId: params.itemReference?.definitionId
   }];
   params.definition.effects.forEach((effect) => {
-    commands.push(effect.type === 'stat_change'
-      ? {
-          type: 'stat_change',
-          actorId: params.actorId,
-          statDefinitionId: effect.definitionId,
-          delta: effect.delta
-        }
-      : {
-          type: 'resource_change',
-          actorId: params.actorId,
-          resourceDefinitionId: effect.definitionId,
-          delta: effect.delta
-        });
+    commands.push(consumableEffectToCommand({actorId: params.actorId, effect}));
   });
   if (params.definition.statusName?.trim()) {
     commands.push({
@@ -62,19 +51,7 @@ export function buildConsumableExpirationCommands(params: {
   definition: CompendiumConsumableDefinition;
 }): StateMutationCommand[] {
   const commands: StateMutationCommand[] = params.definition.effects.map((effect) =>
-    effect.type === 'stat_change'
-      ? {
-          type: 'stat_change',
-          actorId: params.actorId,
-          statDefinitionId: effect.definitionId,
-          delta: -effect.delta
-        }
-      : {
-          type: 'resource_change',
-          actorId: params.actorId,
-          resourceDefinitionId: effect.definitionId,
-          delta: -effect.delta
-        }
+    consumableEffectToCommand({actorId: params.actorId, effect, reverse: true})
   );
   if (params.definition.statusName?.trim()) {
     commands.push({
