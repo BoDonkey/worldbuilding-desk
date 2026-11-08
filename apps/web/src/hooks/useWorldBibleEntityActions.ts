@@ -28,6 +28,7 @@ import type {
 } from '../services/shodh/ShodhMemoryService';
 import type {ConfirmRequest} from './useConfirmDialog';
 import {describeError} from '../services/errors';
+import {indexWorldBibleEntity} from '../services/worldBible/indexWorldBibleEntity';
 
 type FeedbackState = {
   tone: 'success' | 'error';
@@ -173,28 +174,8 @@ export const useWorldBibleEntityActions = ({
           entityId: entity.id,
           aliases: aliasesToSave
         });
-        if (ragService) {
-          await ragService.indexDocument(
-            entity.id,
-            entity.name,
-            buildEntityContent(entity),
-            'worldbible',
-            {
-              tags: [activeCategory.slug],
-              entityIds: [entity.id]
-            }
-          );
-        }
-        if (shodhService) {
-          await shodhService.captureAutoMemory({
-            projectId: activeProject.id,
-            documentId: entity.id,
-            title: entity.name,
-            content: buildEntityContent(entity),
-            tags: ['worldbible', activeCategory.slug]
-          });
-          await refreshMemories();
-        }
+        await indexWorldBibleEntity(entity, activeCategory.slug, {ragService, shodhService});
+        if (shodhService) await refreshMemories();
 
         setEntities((prev) => {
           const idx = prev.findIndex((item) => item.id === id);
@@ -234,7 +215,6 @@ export const useWorldBibleEntityActions = ({
       activeProject,
       aliasMapByEntityId,
       alternativeNamesKey,
-      buildEntityContent,
       editingId,
       entities,
       fieldValues,

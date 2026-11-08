@@ -344,8 +344,9 @@ messages).
 | 5.16 | First-release dogfood polish | 5 | M | Done `9b242c1` |
 | 5.17 | Writing-flow stability + assistant continuity | 5 | L | Done `dc0460c` |
 | 5.18 | Per-project AI switches (coaching, prose) | 5 | M | Done `bee5089` |
-| 5.19 | Custom AI actions in the selection menu | 5 | M | WIP (author-approved pre-beta exception, 2026-11-07; after 5.18) |
-| 3.32 | Break up the oversized route files along feature seams | 3 | L | — (author-approved pre-beta exception, 2026-11-07; after 5.19) |
+| 5.19 | Custom AI actions in the selection menu | 5 | M | Done `da9ed97` |
+| 3.32 | Break up the oversized route files along feature seams | 3 | L | WIP — World Bible route split (2,145 → 596 lines); World Bible CSS split is 3.32a; next routes: Character Sheets, Workspace (+ context drawer), Lore |
+| 3.32a | Split the World Bible CSS module along component seams | 3 | M | — (after the 3.32 World Bible route PR merges) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -413,6 +414,48 @@ bug before changing the Phase 5 board.
   - **Verify.** Full-coverage tier per PR, with no test changes beyond
     import paths; `--update` the size baseline as files shrink, and drop
     each file from it once under 1,000 lines.
+
+- **3.32a Split the World Bible CSS module along component seams.**
+  Split out of 3.32 (2026-11-07) so visual changes can be reviewed apart from
+  the component split. Behavior-preserving: no visual change at any width or
+  theme.
+  - **Scope.** `apps/web/src/assets/components/WorldBibleRoute.module.css`
+    (2,487 lines, ~173 classes, imported by 28 components after the 3.32
+    route split). Move each component's rules into a module beside it, for
+    example `components/WorldBible/record/RecordNamesSection.module.css`,
+    following the `components/WorldBible/` and `record/` folders that 3.32
+    created. Group related components when they share most of their classes
+    (the import-draft family: `ImportDraftCard`, `ImportSectionPanel`,
+    `WorldBibleImportWorkspace`, `ImportDocumentPreviewDialog`).
+  - **Shared classes.** 41 classes are used by more than one file (most:
+    `reviewHint` ×7, `primaryButton` ×6, `reviewToolbarActions` ×5,
+    `formGroup` ×3, `castTask` ×3). Keep genuinely shared primitives in one
+    small `WorldBible/worldBibleShared.module.css` rather than copying them;
+    if one already exists in `styles/` or as a theme-level class, use that
+    instead. Do not duplicate a rule into two modules.
+  - **Cascade risks.** Five `@media` blocks (max-width 900px ×3, 620px ×2)
+    override earlier rules; each override must move with the rule it
+    overrides. Watch selectors that combine classes from different sections
+    (descendant or compound selectors) and the `:global(.tiptap-editor)` /
+    `:global(.ProseMirror)` rules under `.itemDescriptionField`. Splitting
+    changes stylesheet load order, so check any two rules of equal
+    specificity that target the same element.
+  - **Dead rules.** About 11 classes have no `styles.x` reference
+    (`castHeaderActions`, `categoryManager`, `characterImportReviewCard`,
+    `characterImportReviewList`, `fieldActionRow`, `helpPanel`,
+    `reviewFocusPanel`, `reviewFormNotice`, `reviewSummaryLabel`,
+    `reviewSummaryMeta`, `reviewSummaryPreview`). Confirm each is unused
+    (search for string class names and bracket access too) before deleting.
+  - **Rules.** Follow the Design System section of
+    `docs/product-blueprint.md`; keep existing theme tokens and values as
+    they are. Do not restyle while moving.
+  - **Targets.** The old module is deleted; no new CSS file over 600 lines;
+    the baseline entry for `WorldBibleRoute.module.css` is dropped.
+  - **Verify.** Full-coverage tier with no test changes. Before/after
+    screenshots of World Bible (category list, character record each tab,
+    general record, item description-first draft, import preview, review
+    queue, category manager) at desktop width and at ≤620px, in light and
+    dark themes, attached to the PR.
 
 ### Phase 4 — Post-beta candidate
 

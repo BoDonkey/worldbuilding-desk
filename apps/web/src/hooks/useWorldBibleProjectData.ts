@@ -1,4 +1,12 @@
-import {useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction} from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction
+} from 'react';
 import type {
   CanonicalFact,
   Character,
@@ -42,6 +50,7 @@ import {
   isCharacterCategory
 } from '../services/worldBible/worldBibleSummary';
 import {describeError} from '../services/errors';
+import {parseAlternativeNames} from '../services/worldBible/worldBibleEntityHelpers';
 
 interface WorldBibleFeedback {
   tone: 'success' | 'error';
@@ -439,8 +448,30 @@ export function useWorldBibleProjectData({
     );
   }, [entities, ragService]);
 
+  const categoryById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category])),
+    [categories]
+  );
+  /** Each record's indexed aliases, deduplicated the same way as typed alternative names. */
+  const aliasMapByEntityId = useMemo(() => {
+    const map = new Map<string, string[]>();
+    aliases.forEach((alias) => {
+      if (alias.targetType !== 'entity') {
+        return;
+      }
+      const current = map.get(alias.targetId) ?? [];
+      map.set(
+        alias.targetId,
+        parseAlternativeNames([...current, alias.alias].join(', '))
+      );
+    });
+    return map;
+  }, [aliases]);
+
   return {
     categories,
+    categoryById,
+    aliasMapByEntityId,
     categoriesLoaded: activeProject !== null && categoriesProjectId === activeProject.id,
     setCategories,
     entities,

@@ -8,24 +8,6 @@ import {AIProposalPreview} from '../common/AIProposalPreview';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
 
-/** The record form's AI helper toggle. The helper is AI coaching, so it hides with that switch (5.18). */
-export const WorldBibleRecordAiHelperToggle = ({authoring}: {authoring: ReturnType<typeof useWorldBibleAuthoringAssistant>}) => {
-  const {isRecordAiHelperOpen, setIsRecordAiHelperOpen, setAiHelperSelectedText, setAiHelperProposal} = authoring;
-  return (
-    <button
-      type='button'
-      onClick={() => {
-        setAiHelperSelectedText('');
-        setAiHelperProposal(null);
-        setIsRecordAiHelperOpen((value) => !value);
-      }}
-      aria-expanded={isRecordAiHelperOpen}
-    >
-      {isRecordAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
-    </button>
-  );
-};
-
 interface WorldBibleRecordAiHelperProps {
   activeProject: Project;
   projectSettings: ProjectSettings | null;
