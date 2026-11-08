@@ -345,9 +345,11 @@ messages).
 | 5.17 | Writing-flow stability + assistant continuity | 5 | L | Done `dc0460c` |
 | 5.18 | Per-project AI switches (coaching, prose) | 5 | M | Done `bee5089` |
 | 5.19 | Custom AI actions in the selection menu | 5 | M | Done `da9ed97` |
-| 3.32 | Break up the oversized route files along feature seams | 3 | L | WIP — World Bible route split (2,145 → 596 lines); World Bible CSS split is 3.32a; next routes: Character Sheets, Workspace (+ context drawer), Lore |
+| 3.32 | Break up the oversized route files along feature seams | 3 | L | WIP — World Bible route split (2,145 → 596 lines); World Bible CSS split is 3.32a; next routes: Workspace (+ context drawer), Lore, then Character Sheets after 3.34 |
 | 3.32a | Split the World Bible CSS module along component seams | 3 | M | — (after the 3.32 World Bible route PR merges) |
 | 3.33 | Code tour for maintainers | 3 | M | — (author request, 2026-11-07; stable half now, route sections after 3.32) |
+| 3.34 | One module per state-change kind (mechanics registry) | 3 | M | — (author request, 2026-11-08; before the 3.32 Character Sheets split) |
+| 3.34a | XP and levels through the scene ledger (first new kind on 3.34) | 3 | M | — (after 3.34) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -492,6 +494,74 @@ bug before changing the Phase 5 board.
     tour is checked against the code (a script or a listed manual check);
     each trace is followed once in the running app or the tests that cover
     it.
+
+- **3.34 One module per state-change kind (mechanics registry).** Author
+  request (2026-11-08). Applies to projects with game systems on (LitRPG
+  and the legacy Game Simulation mode); General Fiction is unaffected.
+  Stats, resources, and compendium rules are already author data. The
+  *kinds* of change a scene can record (`resource_change`/`_set`,
+  `stat_change`/`_set`, `status_apply`/`_remove`, `inventory_*`,
+  `location_set`) are not: each is handled by hand in 15–20 files.
+  Behavior-preserving: move each kind into one place so adding a kind means
+  one new module plus one registry line.
+  - **Today's touch points** (verify with
+    `grep -rln "'location_set'" apps packages`): the command types, Zod
+    schemas, and replay in `packages/rules-engine/src/manuscript/`; label
+    and before/after summary in `services/state/stateMutationPresentation.ts`;
+    `stateMutationDerivation.ts`, `positionedStateChange.ts`,
+    `consumableEffects.ts`, `stateContinuityReview.ts`;
+    `services/characters/characterSheetRuleset.ts` and
+    `characterSheetDefaults.ts`; the AI observation enum in
+    `services/worldEngine/types.ts` and `stateDeltaObservations.ts`;
+    `components/CharacterSheets/MutationForm.tsx`,
+    `components/Workspace/PositionedStateChangeComposer.tsx`, the
+    mutation-type switch in `routes/CharacterSheetsRoute.tsx`;
+    `services/dashboard/storyDashboard.ts`; test fixtures.
+  - **Shape.** Group kinds by family (resource, stat, status, inventory,
+    location). Each family has an engine module in
+    `packages/rules-engine/src/manuscript/kinds/` (schema, replay step,
+    label, summary; no UI) and an app module in
+    `apps/web/src/services/state/kinds/` (form fields, composer input,
+    sheet-ruleset mapping, AI observation mapping, any continuity checks).
+    Each registry is typed as a `Record` over the command `type` union, so
+    `tsc` fails when a kind lacks a piece. Derive the AI observation enum,
+    the form dropdown, and the discriminated-union schema from the
+    registry instead of hand lists.
+  - **Rules.** No stored-data change and no schema bump: command `type`
+    strings and shapes stay exactly as they are. The AI trust boundary is
+    unchanged; models still only propose observations, and registry code
+    validates them. Keep each module small; no pass-through wrappers.
+    Document "adding a kind" (a short checklist) in
+    `docs/domain-model.md` §3 and, once it exists, the 3.33 code tour.
+  - **Order.** Before the Character Sheets route split in 3.32, so the
+    route's mutation switch moves once.
+  - **Verify.** Full-coverage tier with no test changes beyond imports;
+    replay and presentation unit tests must pass unchanged.
+
+- **3.34a XP and levels through the scene ledger.** The first kind added
+  on 3.34, proving the structure. Today `CharacterSheet.level` and
+  `experience` are hand-edited sheet fields; stat blocks read them directly
+  (`services/workspace/statBlockResolution.ts`,
+  `services/state/characterSnapshot.ts`), so a scene cannot record "gained
+  250 XP" and earlier scenes cannot show the earlier level.
+  - **Scope.** A new `xp_gain` command (actor, amount, optional reason)
+    replayed in scene order; the sheet's stored `experience` and `level`
+    become the starting values. An optional author-defined level table on
+    the ruleset (thresholds, for example level 2 at 100 XP) derives the
+    level at any scene; without a table, level stays as the author sets it.
+    Stat blocks, the character snapshot, and the Character Sheets history
+    show replayed XP and level. Form, composer, and AI observation support
+    come from the 3.34 module, not separate edits.
+  - **Rules.** The level table is ruleset data; adding it is a ruleset and
+    snapshot schema change with a migration and a restorable backup per
+    4.2. AI may propose `xp_gain` observations only; the author accepts
+    them like any other state change. Level-ups never rewrite prose.
+  - **Out of scope.** Level-up rewards (stat points, unlocks), multiple XP
+    tracks, and XP for General Fiction.
+  - **Verify.** Full-coverage tier. Unit tests for replay (gains across
+    scenes, invalidated events, out-of-order scenes) and level derivation;
+    a Cypress spec that records XP in a scene and sees the level change in
+    a later scene's stat block.
 
 ### Phase 4 — Post-beta candidate
 
