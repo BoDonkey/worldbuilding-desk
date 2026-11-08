@@ -358,7 +358,7 @@ messages).
 | 3.34a | XP and levels through the scene ledger (first new kind on 3.34) | 3 | M | — (after 3.34) |
 | 3.35 | Route every project-mode decision through project capabilities | 3 | S | — (author request, 2026-11-08; with or right after the 3.32 Workspace split) |
 | 3.36 | Game Simulation brief (design only) | 3 | S | Done `20cd067` |
-| 3.37 | Places and maps brief (design only) | 3 | S | WIP — draft in `docs/places-and-maps-brief.md`, awaiting author sign-off |
+| 3.37 | Places and maps brief (design only) | 3 | S | Done `05f1ed6` |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
