@@ -1,7 +1,8 @@
 import type {EntityCategory} from '../../entityTypes';
 import {isCharacterCategory, isItemCategory} from '../../services/worldBible/worldBibleSummary';
 import {isSystemNegativeSpaceCategory} from '../../services/worldBible/systemNegativeSpace';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './WorldBibleCategoryOverview.module.css';
 import {CharacterIntakeTasks, type CharacterIntakeKind} from './CharacterIntakeTasks';
 
 interface WorldBibleCategoryOverviewProps {
@@ -30,7 +31,7 @@ export function WorldBibleCategoryOverview({
     <section className={styles.castPanel} aria-label={`${category.name} canon`}>
       <div className={styles.castHeader}>
         <div>
-          <div className={styles.castEyebrow}>{category.name} canon</div>
+          <div className={shared.castEyebrow}>{category.name} canon</div>
           <h2>{category.name}</h2>
           {isCharacter ? (
             <p>
@@ -52,8 +53,8 @@ export function WorldBibleCategoryOverview({
           )}
         </div>
       </div>
-      <div className={styles.castTaskGrid}>
-        <div className={styles.castTask}>
+      <div className={shared.castTaskGrid}>
+        <div className={shared.castTask}>
           <h3>Manual {singular}</h3>
           <p>
             {isItemCategory(category)
@@ -67,7 +68,7 @@ export function WorldBibleCategoryOverview({
         {isCharacter && (
           <CharacterIntakeTasks onStart={onStartCharacterIntake} fromDescription={aiCoaching} />
         )}
-        <div className={styles.castTask}>
+        <div className={shared.castTask}>
           <h3>Import {singular}</h3>
           <p>Import documents or pasted dossiers, then review each generated canon record.</p>
           <div className={styles.castTaskActions}>

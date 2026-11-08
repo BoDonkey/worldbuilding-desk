@@ -3,7 +3,7 @@ import {useCharacterLabData} from '../../hooks/useCharacterLabData';
 import {characterCardFileName} from '../../services/characterCards/characterCardExport';
 import {describeError} from '../../services/errors';
 import {triggerJsonDownload} from '../../utils/downloadJson';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
 
 /**
  * Downloads the character as a Tavern Character Card V2 JSON file (Slice 4.70),
@@ -29,7 +29,7 @@ export function CharacterCardExportButton({projectId, entityId}: {projectId: str
       <button type='button' onClick={exportCard} disabled={!lab.isLoaded}>
         Export character card
       </button>
-      <p className={styles.reviewHint}>
+      <p className={shared.reviewHint}>
         A SillyTavern character card (JSON) with this character&apos;s fields, aliases, and accepted facts; its
         Notes go in the card&apos;s creator notes. Pending proposals, Source Notes, and story state are left out.
       </p>

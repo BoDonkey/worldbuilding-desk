@@ -1,4 +1,4 @@
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import styles from './WorldBibleParentCanonBanner.module.css';
 
 interface WorldBibleParentCanonBannerProps {
   canonState: {

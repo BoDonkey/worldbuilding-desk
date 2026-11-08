@@ -3,7 +3,7 @@ import type {MemoryEntry} from '../../services/shodh/ShodhMemoryService';
 import type {useWorldBibleSelectedEntity} from '../../hooks/useWorldBibleSelectedEntity';
 import {buildCanonicalFactSummary} from '../../services/lore/canonicalFactActions';
 import {formatCanonicalFactValidity} from '../../services/lore/canonicalFactValidity';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import styles from './WorldBibleCharacterHealth.module.css';
 
 const formatFactValue = (fact: CanonicalFact): string =>
   typeof fact.value === 'string' ? fact.value : `${fact.value.label}: ${fact.value.value}`;

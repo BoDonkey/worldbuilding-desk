@@ -19,7 +19,7 @@ import {
   CHARACTER_IDENTITY_FIELD_KEYS,
   CHARACTER_NOTES_FIELD
 } from '../../../services/worldBible/worldBibleSummary';
-import styles from '../../../assets/components/WorldBibleRoute.module.css';
+import styles from './WorldBibleCharacterRecord.module.css';
 import {EntityFieldEditor} from '../EntityFieldEditor';
 import {WorldBibleCharacterSections} from '../WorldBibleCharacterSections';
 import {CharacterCardExportButton} from '../CharacterCardExportButton';

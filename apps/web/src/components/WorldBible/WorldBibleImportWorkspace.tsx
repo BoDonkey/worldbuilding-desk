@@ -12,7 +12,8 @@ import {AIAssistant} from '../AIAssistant/AIAssistant';
 import {ImportDraftCard} from './ImportDraftCard';
 import {ImportDocumentPreviewDialog} from './ImportDocumentPreviewDialog';
 import {getPlannedNewFieldLabels} from '../../services/worldBible/worldBibleImportParsing';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './WorldBibleImportDrafts.module.css';
 import {readAISwitches} from '../../services/llm/aiSwitches';
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
@@ -203,8 +204,8 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
             {unreadableCount > 0 ? ` · ${unreadableCount} unreadable` : ''}
           </p>
           {aiCoaching && isImportAiHelperOpen && (
-            <section className={styles.aiHelperPanel} aria-label='Import AI helper'>
-              <div className={styles.aiHelperHeader}>
+            <section className={shared.aiHelperPanel} aria-label='Import AI helper'>
+              <div className={shared.aiHelperHeader}>
                 <div>
                   <strong>Import AI helper</strong>
                   <p>

@@ -6,7 +6,8 @@ import type {
 import {deriveAiSectionLabel} from '../../hooks/useWorldBibleAuthoringAssistant';
 import {AIProposalPreview} from '../common/AIProposalPreview';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './WorldBibleRecordAiHelper.module.css';
 
 interface WorldBibleRecordAiHelperProps {
   activeProject: Project;
@@ -29,8 +30,8 @@ export const WorldBibleRecordAiHelper = ({
   return (
     <>
               {isRecordAiHelperOpen && (
-                <section className={styles.aiHelperPanel} aria-label='World Bible AI helper'>
-                  <div className={styles.aiHelperHeader}>
+                <section className={shared.aiHelperPanel} aria-label='World Bible AI helper'>
+                  <div className={shared.aiHelperHeader}>
                     <div>
                       <strong>AI helper</strong>
                       <p>

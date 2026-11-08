@@ -1,5 +1,6 @@
 import {getReviewResolutionLabel} from '../../../services/worldBible/worldBibleReviewHelpers';
-import styles from '../../../assets/components/WorldBibleRoute.module.css';
+import shared from '../worldBibleShared.module.css';
+import styles from './RecordMatchPanel.module.css';
 import type {OpenRecord, RecordEntityActions, RecordResolution, RecordVariant} from './recordTypes';
 
 interface RecordMatchPanelProps {
@@ -49,17 +50,17 @@ export function RecordMatchPanel({
                 <div className={styles.matchReasons}>
                   {match.reasons.join(' · ')}
                 </div>
-                <div className={styles.reviewHint}>
+                <div className={shared.reviewHint}>
                   Alias is safest when {currentCharacterLabel} is a nickname,
                   first-name reference, title, or alternate spelling for
                   {' '}{match.entity.name}.
                 </div>
               </div>
-              <div className={styles.reviewToolbarActions}>
+              <div className={shared.reviewToolbarActions}>
                 {editingId && (
                   <button
                     type='button'
-                    className={styles.primaryButton}
+                    className={shared.primaryButton}
                     onClick={() => void handleConvertEntityToAlias(match.entity)}
                     disabled={aliasingEntityTargetId === match.entity.id}
                   >
@@ -117,11 +118,11 @@ export function RecordMatchPanel({
               <div className={styles.matchReasons}>
                 {match.reasons.join(' · ')}
               </div>
-              <div className={styles.reviewHint}>
+              <div className={shared.reviewHint}>
                 Recommended: {getReviewResolutionLabel(match.recommendedResolution)}.
               </div>
             </div>
-            <div className={styles.reviewToolbarActions}>
+            <div className={shared.reviewToolbarActions}>
               <button type='button' onClick={() => onEdit(match.entity)}>
                 Open other record
               </button>

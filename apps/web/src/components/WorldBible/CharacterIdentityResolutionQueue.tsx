@@ -2,7 +2,8 @@ import {useState} from 'react';
 import type {WorldEntity} from '../../entityTypes';
 import type {CharacterIdentityResolutionItem} from '../../services/characters/characterIdentityResolution';
 import type {ReviewQueueItem} from '../../services/consistency';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './WorldBibleEntityCards.module.css';
 
 const classificationLabel = (
   classification: CharacterIdentityResolutionItem['classification']
@@ -29,14 +30,14 @@ export function CharacterIdentityResolutionQueue(props: {
     <section className={styles.identityQueue} aria-labelledby='character-identity-queue-title'>
       <div className={styles.identityQueueHeader}>
         <div>
-          <div className={styles.castEyebrow}>Legacy character intake</div>
+          <div className={shared.castEyebrow}>Legacy character intake</div>
           <h2 id='character-identity-queue-title'>Needs canon link</h2>
           <p>
             These older character capability or sheet records are not World Bible canon.
             Choose what each record means; nothing is linked or created automatically.
           </p>
         </div>
-        <span className={styles.categoryRailCount}>{props.items.length}</span>
+        <span className={shared.categoryRailCount}>{props.items.length}</span>
       </div>
 
       {props.items.length === 0 ? (
@@ -56,7 +57,7 @@ export function CharacterIdentityResolutionQueue(props: {
                 </div>
                 <p>{item.reason}</p>
                 {item.recordType === 'sheet' && (
-                  <p className={styles.reviewHint}>
+                  <p className={shared.reviewHint}>
                     The sheet remains mechanically usable, but it is not canon and cannot
                     record new state until linked.
                   </p>
@@ -84,14 +85,14 @@ export function CharacterIdentityResolutionQueue(props: {
                   </label>
                   <button
                     type='button'
-                    className={styles.primaryButton}
+                    className={shared.primaryButton}
                     disabled={isResolving || !targetId}
                     onClick={() => void props.onLink(item, targetId)}
                   >
                     Link existing
                   </button>
                 </div>
-                <div className={styles.entityActions}>
+                <div className={shared.entityActions}>
                   <button
                     type='button'
                     disabled={isResolving}
@@ -101,7 +102,7 @@ export function CharacterIdentityResolutionQueue(props: {
                   </button>
                   <button
                     type='button'
-                    className={styles.dismissButton}
+                    className={shared.dismissButton}
                     disabled={isResolving}
                     onClick={() => void props.onKeepSeparate(item)}
                   >
@@ -117,11 +118,11 @@ export function CharacterIdentityResolutionQueue(props: {
     <section className={styles.identityQueue} aria-labelledby='canon-review-queue-title'>
       <div className={styles.identityQueueHeader}>
         <div>
-          <div className={styles.castEyebrow}>Canon follow-up</div>
+          <div className={shared.castEyebrow}>Canon follow-up</div>
           <h2 id='canon-review-queue-title'>World Bible records to review</h2>
           <p>Finish imported records and confirm new aliases when you are ready.</p>
         </div>
-        <span className={styles.categoryRailCount}>{props.canonReviewItems.length}</span>
+        <span className={shared.categoryRailCount}>{props.canonReviewItems.length}</span>
       </div>
       {props.canonReviewItems.length === 0 ? (
         <p className={styles.emptyState}>No canon records need follow-up.</p>
@@ -138,7 +139,7 @@ export function CharacterIdentityResolutionQueue(props: {
                   <span className={styles.aliasMatchBadge}>Aliases need review</span>
                 )}
               </div>
-              <div className={styles.entityActions}>
+              <div className={shared.entityActions}>
                 <button
                   type='button'
                   onClick={() =>

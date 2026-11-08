@@ -1,4 +1,4 @@
-import styles from '../../../assets/components/WorldBibleRoute.module.css';
+import styles from './RecordSectionBuilder.module.css';
 import type {RecordAuthoring, RecordVariant} from './recordTypes';
 
 interface RecordSectionBuilderProps {

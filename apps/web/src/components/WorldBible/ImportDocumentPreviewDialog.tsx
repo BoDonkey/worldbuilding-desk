@@ -8,7 +8,7 @@ import {
   normalizeRichTextValue
 } from '../../services/worldBible/worldBibleEntityHelpers';
 import {getImportSourceKind} from '../../services/worldBible/worldBibleImportParsing';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import styles from './WorldBibleImportDrafts.module.css';
 
 interface ImportDocumentPreviewDialogProps {
   draft: WorldBibleImportDraft;

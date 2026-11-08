@@ -30,7 +30,8 @@ import {markdownToRichHtml} from '../../hooks/useWorldBibleImports';
 import {describeError} from '../../services/errors';
 import type {RAGProvider} from '../../services/rag/RAGService';
 import type {ShodhMemoryProvider} from '../../services/shodh/ShodhMemoryService';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './WorldBibleImportDrafts.module.css';
 
 type WikiLinkAction = 'ignore' | 'link' | 'alias';
 
@@ -335,8 +336,8 @@ export function PortableDataPanel(props: PortableDataPanelProps) {
         onChange={(event) => void handleFolder(event)}
         style={{display: 'none'}}
       />
-      <div className={styles.castTaskGrid}>
-        <div className={styles.castTask}>
+      <div className={shared.castTaskGrid}>
+        <div className={shared.castTask}>
           <h3>Export Markdown + CSV</h3>
           <p>
             Downloads a ZIP with one Markdown file per World Bible record, one spreadsheet
@@ -347,7 +348,7 @@ export function PortableDataPanel(props: PortableDataPanelProps) {
             {isExporting ? 'Exporting...' : 'Export Markdown + CSV'}
           </button>
         </div>
-        <div className={styles.castTask}>
+        <div className={shared.castTask}>
           <h3>Import Markdown Folder</h3>
           <p>
             Choose a folder of <code>.md</code> files. Before anything is saved, you choose
