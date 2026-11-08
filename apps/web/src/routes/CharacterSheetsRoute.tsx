@@ -49,9 +49,9 @@ import {
 import {
   buildDefaultResources,
   buildDefaultStats,
-  hashString,
-  summarizeMutationCommand
+  hashString
 } from '../services/characters/characterSheetDefaults';
+import {getAppStateKind, summarizeMutationCommand} from '../services/state/kinds';
 import {
   MutationForm,
   type MutationFormType
@@ -182,8 +182,8 @@ function CharacterSheetsRoute({
     mutationNumberValue, setMutationNumberValue, mutationTextValue, setMutationTextValue,
     mutationBooleanValue, setMutationBooleanValue, mutationStatusName, setMutationStatusName,
     mutationItemName, setMutationItemName, mutationQuantity, setMutationQuantity,
-    mutationLocationName, setMutationLocationName, isSavingMutation, setIsSavingMutation,
-    invalidatingMutationEventId, setInvalidatingMutationEventId,
+    mutationLocationName, setMutationLocationName, loadSheetFormValues,
+    isSavingMutation, setIsSavingMutation, invalidatingMutationEventId, setInvalidatingMutationEventId,
     editingMutationEventId, setEditingMutationEventId,
     reorderingMutationEventId, setReorderingMutationEventId,
     orderedDocuments, sceneOrderById, selectedMutationSheet, selectedMutationScene,
@@ -845,76 +845,12 @@ function CharacterSheetsRoute({
         setMutationTargetSheetId(matchingSheet.id);
       }
       setMutationSceneId(event.sceneId);
-      switch (command.type) {
-        case 'resource_change':
-          setMutationType('resource_change');
-          setMutationResourceDefinitionId(command.resourceDefinitionId);
-          setMutationNumberValue(String(command.delta));
-          break;
-        case 'resource_set':
-          setMutationType('resource_set');
-          setMutationResourceDefinitionId(command.resourceDefinitionId);
-          setMutationNumberValue(String(command.value));
-          break;
-        case 'stat_change':
-          setMutationType('stat_change');
-          setMutationStatDefinitionId(command.statDefinitionId);
-          if (typeof command.delta === 'boolean') {
-            setMutationBooleanValue(command.delta);
-            setMutationTextValue('');
-            setMutationNumberValue('0');
-          } else if (typeof command.delta === 'number') {
-            setMutationNumberValue(String(command.delta));
-            setMutationTextValue('');
-          } else {
-            setMutationTextValue(command.delta);
-            setMutationNumberValue('0');
-          }
-          break;
-        case 'stat_set':
-          setMutationType('stat_set');
-          setMutationStatDefinitionId(command.statDefinitionId);
-          if (typeof command.value === 'boolean') {
-            setMutationBooleanValue(command.value);
-            setMutationTextValue('');
-            setMutationNumberValue('0');
-          } else if (typeof command.value === 'number') {
-            setMutationNumberValue(String(command.value));
-            setMutationTextValue('');
-          } else {
-            setMutationTextValue(command.value);
-            setMutationNumberValue('0');
-          }
-          break;
-        case 'status_apply':
-        case 'status_remove':
-          setMutationType(command.type);
-          setMutationStatusName(command.statusName);
-          break;
-        case 'inventory_add':
-        case 'inventory_remove':
-        case 'inventory_consume':
-          setMutationType(command.type);
-          setMutationItemName(command.itemName);
-          setMutationQuantity(String(command.quantity ?? 1));
-          break;
-        case 'inventory_equip':
-        case 'inventory_unequip':
-          setMutationType(command.type);
-          setMutationItemName(command.itemName);
-          break;
-        case 'location_set':
-          setMutationType('location_set');
-          setMutationLocationName(command.locationName);
-          break;
-      }
+      setMutationType(command.type);
+      loadSheetFormValues(getAppStateKind(command.type).sheetForm.load(command));
     },
     [
-      sheets, setEditingMutationEventId, setMutationBooleanValue,
-      setMutationItemName, setMutationLocationName, setMutationNumberValue,
-      setMutationQuantity, setMutationResourceDefinitionId, setMutationSceneId,
-      setMutationStatDefinitionId, setMutationStatusName,
-      setMutationTargetSheetId, setMutationTextValue, setMutationType
+      sheets, loadSheetFormValues, setEditingMutationEventId, setMutationSceneId,
+      setMutationTargetSheetId, setMutationType
     ]
   );
 

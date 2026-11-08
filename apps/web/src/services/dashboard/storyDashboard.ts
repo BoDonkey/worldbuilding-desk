@@ -6,14 +6,9 @@ import type {
   WritingDocument
 } from '../../entityTypes';
 import {sortWritingDocuments} from '../storage';
+import {getAppStateKind, type StateChangeCategory} from '../state/kinds';
 
-export type StateChangeCategory =
-  | 'Attributes'
-  | 'Resources'
-  | 'Inventory'
-  | 'Equipment'
-  | 'Statuses'
-  | 'Locations';
+export type {StateChangeCategory};
 
 export interface SceneDashboardMetric {
   sceneId: string;
@@ -153,7 +148,7 @@ export function buildStoryDashboard(params: {
     event.commands.map((command) => ({event, command}))
   );
   const stateDistribution = STATE_CATEGORIES.flatMap((category) => {
-    const matching = knownCommands.filter(({command}) => commandCategory(command) === category);
+    const matching = knownCommands.filter(({command}) => getAppStateKind(command.type).dashboardCategory === category);
     if (matching.length === 0) return [];
     return [{
       category,
@@ -298,15 +293,6 @@ function normalizeManuscriptText(content: string): string {
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/&(?:quot|ldquo|rdquo);/g, '"');
-}
-
-function commandCategory(command: StateMutationCommand): StateChangeCategory {
-  if (command.type.startsWith('stat_')) return 'Attributes';
-  if (command.type.startsWith('resource_')) return 'Resources';
-  if (command.type === 'inventory_equip' || command.type === 'inventory_unequip') return 'Equipment';
-  if (command.type.startsWith('inventory_')) return 'Inventory';
-  if (command.type.startsWith('status_')) return 'Statuses';
-  return 'Locations';
 }
 
 function numericAxisId(command: StateMutationCommand): string | null {

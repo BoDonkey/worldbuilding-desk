@@ -12,11 +12,16 @@ import {
   type CharacterReplayState,
   type ReplayableCharacterTarget
 } from './stateReplay';
+import {
+  summarizeStateMutationCommand,
+  summarizeStateMutationEffects,
+  type StateMutationLabelMaps
+} from '@worldbuilding-desk/rules-engine';
 
-export interface StateMutationLabelMaps {
-  resourceDefinitionNameById?: Map<string, string>;
-  statDefinitionNameById?: Map<string, string>;
-}
+// Each kind's label and before/after summary live with its module in the
+// rules engine (Slice 3.34); this module keeps the app's import path.
+export {summarizeStateMutationCommand, summarizeStateMutationEffects};
+export type {StateMutationLabelMaps};
 
 export interface StateMutationPreview {
   before: CharacterReplayState;
@@ -56,109 +61,6 @@ function getSheetByActorId(characterSheets: CharacterSheet[]): Map<string, Chara
     }
   });
   return map;
-}
-
-function findInventoryQuantity(
-  state: CharacterReplayState,
-  itemName: string
-): number {
-  return (
-    state.inventory.items.find(
-      (item) => item.name.trim().toLowerCase() === itemName.trim().toLowerCase()
-    )?.quantity ?? 0
-  );
-}
-
-export function summarizeStateMutationCommand(params: {
-  command: StateMutationCommand;
-  labels?: StateMutationLabelMaps;
-}): string {
-  const {command, labels} = params;
-  const resourceLabels = labels?.resourceDefinitionNameById;
-  const statLabels = labels?.statDefinitionNameById;
-
-  switch (command.type) {
-    case 'resource_change': {
-      const label = resourceLabels?.get(command.resourceDefinitionId) ?? command.resourceDefinitionId;
-      return `${label} ${command.delta >= 0 ? '+' : ''}${command.delta}`;
-    }
-    case 'resource_set': {
-      const label = resourceLabels?.get(command.resourceDefinitionId) ?? command.resourceDefinitionId;
-      return `${label} set to ${command.value}`;
-    }
-    case 'stat_change': {
-      const label = statLabels?.get(command.statDefinitionId) ?? command.statDefinitionId;
-      return `${label} ${typeof command.delta === 'number' && command.delta >= 0 ? '+' : ''}${String(command.delta)}`;
-    }
-    case 'stat_set': {
-      const label = statLabels?.get(command.statDefinitionId) ?? command.statDefinitionId;
-      return `${label} set to ${String(command.value)}`;
-    }
-    case 'status_apply':
-      return `Apply status ${command.statusName}`;
-    case 'status_remove':
-      return `Remove status ${command.statusName}`;
-    case 'inventory_add':
-      return `Add ${command.itemName} x${command.quantity ?? 1}`;
-    case 'inventory_remove':
-      return `Remove ${command.itemName} x${command.quantity ?? 1}`;
-    case 'inventory_consume':
-      return `Consume ${command.itemName} x${command.quantity ?? 1}`;
-    case 'inventory_equip':
-      return `Equip ${command.itemName}`;
-    case 'inventory_unequip':
-      return `Unequip ${command.itemName}`;
-    case 'location_set':
-      return `Move to ${command.locationName}`;
-  }
-}
-
-export function summarizeStateMutationEffects(params: {
-  before: CharacterReplayState;
-  after: CharacterReplayState;
-  command: StateMutationCommand;
-  labels?: StateMutationLabelMaps;
-}): string[] {
-  const {before, after, command, labels} = params;
-  const resourceLabels = labels?.resourceDefinitionNameById;
-  const statLabels = labels?.statDefinitionNameById;
-
-  switch (command.type) {
-    case 'resource_change':
-    case 'resource_set': {
-      const label = resourceLabels?.get(command.resourceDefinitionId) ?? command.resourceDefinitionId;
-      const beforeValue = before.resources.current[command.resourceDefinitionId] ?? 0;
-      const afterValue = after.resources.current[command.resourceDefinitionId] ?? 0;
-      return [`${label}: ${beforeValue} -> ${afterValue}`];
-    }
-    case 'stat_change':
-    case 'stat_set': {
-      const label = statLabels?.get(command.statDefinitionId) ?? command.statDefinitionId;
-      return [
-        `${label}: ${String(before.stats[command.statDefinitionId] ?? 'unset')} -> ${String(
-          after.stats[command.statDefinitionId] ?? 'unset'
-        )}`
-      ];
-    }
-    case 'status_apply':
-    case 'status_remove':
-      return [`Statuses: ${after.statuses.join(', ') || 'none'}`];
-    case 'inventory_add':
-    case 'inventory_remove':
-    case 'inventory_consume':
-      return [`${command.itemName}: ${findInventoryQuantity(before, command.itemName)} -> ${findInventoryQuantity(after, command.itemName)}`];
-    case 'inventory_equip':
-    case 'inventory_unequip':
-      return [
-        `${command.itemName}: ${
-          after.inventory.equipped.includes(command.itemName) ? 'equipped' : 'unequipped'
-        }`
-      ];
-    case 'location_set':
-      return [
-        `Location: ${before.locationName || 'unset'} -> ${after.locationName || 'unset'}`
-      ];
-  }
 }
 
 export function buildStateMutationPreview(params: {

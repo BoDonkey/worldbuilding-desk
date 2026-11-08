@@ -1,3 +1,4 @@
+import {getStateMutationKind} from './kinds';
 import type {
   ActorResolutionReference,
   CharacterReplayState,
@@ -123,31 +124,6 @@ function matchesActor(
     .includes(resolvedCommandActorId);
 }
 
-function clampMinZero(value: number): number {
-  return value < 0 ? 0 : value;
-}
-
-function findInventoryItemIndex(
-  items: CharacterReplayState['inventory']['items'],
-  reference: {itemName: string; sourceEntityId?: string; definitionId?: string}
-): number {
-  if (reference.definitionId) {
-    const definitionMatch = items.findIndex(
-      (item) => item.definitionId === reference.definitionId
-    );
-    if (definitionMatch >= 0) return definitionMatch;
-  }
-  if (reference.sourceEntityId) {
-    const entityMatch = items.findIndex(
-      (item) => item.sourceEntityId === reference.sourceEntityId
-    );
-    if (entityMatch >= 0) return entityMatch;
-  }
-  return items.findIndex((item) =>
-    item.name.trim().toLowerCase() === reference.itemName.trim().toLowerCase()
-  );
-}
-
 export function applyStateMutationCommand(
   state: CharacterReplayState,
   command: StateMutationCommand
@@ -168,142 +144,20 @@ export function applyStateMutationCommand(
     locationName: state.locationName
   };
 
-  switch (command.type) {
-    case 'resource_change': {
-      const currentValue = next.resources.current[command.resourceDefinitionId] ?? 0;
-      const maxValue = next.resources.max[command.resourceDefinitionId];
-      const updatedValue = currentValue + command.delta;
-      next.resources.current[command.resourceDefinitionId] =
-        typeof maxValue === 'number'
-          ? Math.min(clampMinZero(updatedValue), maxValue)
-          : clampMinZero(updatedValue);
-      return next;
-    }
-    case 'resource_set': {
-      const maxValue = next.resources.max[command.resourceDefinitionId];
-      next.resources.current[command.resourceDefinitionId] =
-        typeof maxValue === 'number'
-          ? Math.min(clampMinZero(command.value), maxValue)
-          : clampMinZero(command.value);
-      return next;
-    }
-    case 'stat_change': {
-      const currentValue = next.stats[command.statDefinitionId];
-      if (typeof currentValue === 'number' && typeof command.delta === 'number') {
-        next.stats[command.statDefinitionId] = currentValue + command.delta;
-      } else {
-        next.stats[command.statDefinitionId] = command.delta;
-      }
-      return next;
-    }
-    case 'stat_set':
-      next.stats[command.statDefinitionId] = command.value;
-      return next;
-    case 'status_apply':
-      if (!next.statuses.includes(command.statusName)) {
-        next.statuses.push(command.statusName);
-      }
-      return next;
-    case 'status_remove':
-      next.statuses = next.statuses.filter((status) => status !== command.statusName);
-      return next;
-    case 'inventory_add': {
-      const existingIndex = findInventoryItemIndex(next.inventory.items, command);
-      const quantity = command.quantity ?? 1;
-      if (existingIndex >= 0) {
-        next.inventory.items[existingIndex].quantity += quantity;
-        next.inventory.items[existingIndex].sourceEntityId ??= command.sourceEntityId;
-        next.inventory.items[existingIndex].definitionId ??= command.definitionId;
-      } else {
-        next.inventory.items.push({
-          name: command.itemName,
-          quantity,
-          sourceEntityId: command.sourceEntityId,
-          definitionId: command.definitionId
-        });
-      }
-      return next;
-    }
-    case 'inventory_remove':
-    case 'inventory_consume': {
-      const existingIndex = findInventoryItemIndex(next.inventory.items, command);
-      if (existingIndex < 0) {
-        return next;
-      }
-      const quantity = command.quantity ?? 1;
-      const remaining = next.inventory.items[existingIndex].quantity - quantity;
-      if (remaining > 0) {
-        next.inventory.items[existingIndex].quantity = remaining;
-      } else {
-        next.inventory.items.splice(existingIndex, 1);
-      }
-      if (command.type === 'inventory_remove') {
-        next.inventory.equipped = next.inventory.equipped.filter(
-          (name) => name !== command.itemName
-        );
-      }
-      return next;
-    }
-    case 'inventory_equip':
-      if (!next.inventory.equipped.includes(command.itemName)) {
-        next.inventory.equipped.push(command.itemName);
-      }
-      return next;
-    case 'inventory_unequip':
-      next.inventory.equipped = next.inventory.equipped.filter(
-        (name) => name !== command.itemName
-      );
-      return next;
-    case 'location_set':
-      next.locationName = command.locationName;
-      return next;
-  }
+  getStateMutationKind(command.type).apply(next, command);
+  return next;
 }
 
 export function validateStateMutationCommandAgainstState(params: {
   state: CharacterReplayState;
   command: StateMutationCommand;
 }): string[] {
-  const {state, command} = params;
-
-  switch (command.type) {
-    case 'resource_change': {
-      const currentValue = state.resources.current[command.resourceDefinitionId] ?? 0;
-      const nextValue = currentValue + command.delta;
-      if (nextValue < 0) {
-        return [
-          `Resource "${command.resourceDefinitionId}" would drop below zero (${currentValue} + ${command.delta}).`
-        ];
-      }
-      return [];
-    }
-    case 'resource_set':
-      return command.value < 0
-        ? [`Resource "${command.resourceDefinitionId}" cannot be set below zero.`]
-        : [];
-    case 'inventory_remove':
-    case 'inventory_consume': {
-      const existingIndex = findInventoryItemIndex(state.inventory.items, command);
-      const existing = existingIndex >= 0 ? state.inventory.items[existingIndex] : undefined;
-      const quantity = command.quantity ?? 1;
-      if (!existing) {
-        return [`Item "${command.itemName}" is not present in inventory.`];
-      }
-      if (existing.quantity < quantity) {
-        return [
-          `Item "${command.itemName}" only has quantity ${existing.quantity}, cannot remove ${quantity}.`
-        ];
-      }
-      return [];
-    }
-    case 'inventory_equip': {
-      const existingIndex = findInventoryItemIndex(state.inventory.items, command);
-      const existing = existingIndex >= 0 ? state.inventory.items[existingIndex] : undefined;
-      return existing ? [] : [`Item "${command.itemName}" is not present in inventory.`];
-    }
-    default:
-      return [];
-  }
+  return (
+    getStateMutationKind(params.command.type).validateAgainstState?.(
+      params.state,
+      params.command
+    ) ?? []
+  );
 }
 
 export function replayCharacterState(params: {

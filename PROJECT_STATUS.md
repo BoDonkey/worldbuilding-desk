@@ -412,6 +412,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 
 ### Optional Game/System Layers
 - Standalone `rules-engine` package with stats, resources, formulas, effects, and dice.
+- Each kind of scene state change (resource, stat, status, inventory,
+  location) lives in one engine module and one app module, with typed
+  registries driving replay, validation, labels, the Character Sheets form, the
+  Workspace composer, the AI observation enum, and the story dashboard.
+  Consumable effects become commands only through these modules, and
+  rules-engine `Effect`s on stats or resource values can be translated to
+  commands (not yet used by any rule path). Checklist for adding a kind:
+  `docs/domain-model.md` §3.
 - Ruleset builder and runtime stat/resource evaluation.
 - Settlement progression, synergy logic, and compendium systems.
 - The Mechanics/Compendium route and its four extracted tab components now use
