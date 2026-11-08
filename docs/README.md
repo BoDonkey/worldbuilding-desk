@@ -48,9 +48,10 @@ Other files:
   hidden Game Simulation mode (adventures, playthroughs, sessions, trust
   boundary in play). Design only; not a commitment to build. Structural
   slices check against it (3.34, 3.35).
-- `docs/places-and-maps-brief.md` — draft design brief for place records,
-  containment, connections, per-map coordinates, distance, travel checks, and
-  an optional map surface. Design only; awaiting author sign-off (3.37).
+- `docs/places-and-maps-brief.md` — author-approved design brief for place
+  records, containment, connections, per-map coordinates and distance,
+  movement checks, and the imported-image map surface (3.37). Built by
+  slices 4.76–4.81 before the beta.
 - `docs/character-experience-design-review.md` — accepted decision record for
   unifying characters around one canonical World Bible identity; its durable
   contract and journey tests are folded into the authorities above, while the

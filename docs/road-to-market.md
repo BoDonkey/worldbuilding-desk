@@ -326,6 +326,12 @@ messages).
 | 4.73 | Alternative replies | 4 | M | Done `82dacc8` |
 | 4.74 | Rolling Character Lab summaries | 4 | M | Done `545a7d3` |
 | 4.75 | Local reply length from server context | 4 | S | Done `4bf1e2a` |
+| 4.76 | Places: containment and connections | 4 | M | — (before beta; brief 3.37) |
+| 4.77 | Places: positions refer to place records | 4 | M | — (after 4.76) |
+| 4.78 | Places: where-is-everyone view + movement checks | 4 | M | — (after 4.77) |
+| 4.79 | Maps and placements (data, distance) | 4 | L | — (after 4.76) |
+| 4.80 | Map surface: image import, pins, scene view, export | 4 | L | — (after 4.78, 4.79) |
+| 4.81 | Grid and hex maps | 4 | M | — (after 4.80) |
 | 5.1 | Auto-update decision + implementation | 5 | M | Done `c1c4f33` + `7357671` + `4efa1d1` + `a56e5dd` |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | In progress (author-approved exception to the Phase 5 gate, 2026-10-31) — data folder moved to `SagaSpine` with a one-time migration and packaged test; builds stay unsigned through the beta by author decision; signing (macOS first) before paid launch |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | Done `9d748f4` + `613a8e3` + `88eb908` + `5ad6a77` |
@@ -637,13 +643,75 @@ bug before changing the Phase 5 board.
     connections? Where do coordinates live, and how is distance measured?
     What story time do travel checks need? Which checks, and are they
     warnings? What is the map surface's input and output? Where does AI stop?
-  - **Decided so far.** Coordinates are needed eventually; they are stored
-    per map (placements), not globally; the map is an extension built last;
-    maps are imported images with pins, not drawn in the app.
-  - **Then.** Turn the brief's draft slices (§ 10) into board rows once the
-    author picks a phase. Link the brief from `docs/README.md`.
+  - **Decided (2026-11-08).** Coordinates are needed; they are stored per
+    map (placements), not globally; the map is an extension built last, from
+    imported images with pins; all of it comes before the beta; no story
+    time between scenes for now; one parent per place, nested to any depth;
+    distance units per map.
+  - **Then.** Slices 4.76–4.81 on the board. Link the brief from
+    `docs/README.md`.
   - **Rules.** No code. Not a commitment to build.
   - **Verify.** Documentation tier; the author signs off on the brief.
+
+### Phase 4 — Places and maps (before beta)
+
+Design: `docs/places-and-maps-brief.md` (3.37). Each slice follows the
+State rules in `docs/architecture-review.md` and the trust boundary in the
+brief's § 9: AI only proposes positions, places, parents, and connections.
+Movement checks are review findings, never blocks.
+
+- **4.76 Places: containment and connections.** Brief § 3. A location record
+  may name one parent location (nested to any depth; cycles refused). Places
+  may be linked by connections (kind, optional authored distance in the
+  author's words plus a number and unit, optional travel times by mode,
+  two-way unless marked one-way). Edit both in the World Bible location
+  record. Project schema bump with migration and restorable backup per 4.2;
+  portable export (4.29) and backups carry the new data.
+  - **Verify.** Full-coverage tier; unit tests for cycle refusal and
+    containment lookups; e2e for editing a parent and a connection.
+
+- **4.77 Places: positions refer to place records.** Brief § 3. Add an
+  optional place record id to `location_set` (through the 3.34 kind modules;
+  the name stays as label and fallback). One-time matching of existing
+  free-text positions by name and alias where unambiguous; everything else
+  stays text and is offered for review. The "two places at once" check and
+  the existing location continuity check (1.2b, 4.26) become
+  containment-aware and compare ids when both sides have one.
+  - **Verify.** Full-coverage tier; replay tests for old free-text entries
+    and new id entries side by side; migration test for the matching.
+
+- **4.78 Places: where-is-everyone view + movement checks.** Brief § 7.
+  Show each character's position at a chosen scene and a character's path
+  over a range of scenes, derived from the ledger by replay. Add review
+  findings for a move with no connection or route and no travel cue
+  ("teleporting"), and for a position that matches no place record (offer to
+  create or link). No story time; the "too fast" check is not in scope.
+  - **Verify.** Full-coverage tier; e2e for the view and each new finding.
+
+- **4.79 Maps and placements (data, distance).** Brief §§ 4–5. Map records
+  (name, optional image reference, distance unit, scale, optional parent
+  placement) and placements (place, map, x, y). Author-set unit conversions.
+  Distance service: authored connection, then route, then straight line,
+  always returning its source; figures in different units without a
+  conversion are shown side by side, never compared. No map surface yet;
+  placements can be entered as numbers in the location record. Schema bump,
+  migration, backup, and portable export as in 4.76.
+  - **Verify.** Full-coverage tier; unit tests for each distance source,
+    cross-map distance through parent placements, and unit conversion.
+
+- **4.80 Map surface: image import, pins, scene view, export.** Brief § 8.
+  Import an image as a map background (size limit with a clear message;
+  backups, vaults, and export carry it). Pin place records onto it to create
+  placements, show who is where at a chosen scene, and export the pinned map
+  as an image. No drawing tools. Follows the Design System in
+  `docs/product-blueprint.md`; keyboard-usable pin placement.
+  - **Verify.** Full-coverage tier; e2e for import, pin, scene switch, and
+    export; screenshots at desktop and ≤620px, light and dark.
+
+- **4.81 Grid and hex maps.** Brief § 4. Optional per-map grid or hex
+  setting; distance on that map is counted in squares or hexes. For dungeon
+  and tactical maps in LitRPG and later Game Simulation.
+  - **Verify.** Full-coverage tier; unit tests for grid and hex distance.
 
 ### Phase 4 — Post-beta candidate
 
