@@ -183,4 +183,25 @@ describe('storyDashboard', () => {
       mechanicsEnabled: false
     }).mechanics).toBeNull();
   });
+
+  it('counts XP gains as a progression category and an advancement axis', () => {
+    const documents = [document('scene-1', 0, 'one two'), document('scene-2', 1, 'three four')];
+    const events = [
+      event('xp-1', 'scene-1', [{type: 'xp_gain', actorId: 'mira', amount: 100}]),
+      event('xp-2', 'scene-2', [
+        {type: 'xp_gain', actorId: 'mira', amount: 50, reason: 'Quest'},
+        {type: 'xp_gain', actorId: 'mira', amount: -10, reason: 'Correction'}
+      ])
+    ];
+    const dashboard = buildStoryDashboard({documents, cards: [], events, ruleset, mechanicsEnabled: true});
+
+    expect(dashboard.stateDistribution).toContainEqual(
+      expect.objectContaining({category: 'Progression', commandCount: 3, eventCount: 2})
+    );
+    expect(dashboard.mechanics!.axes).toContainEqual(
+      expect.objectContaining({axisId: 'progression:xp', label: 'XP', kind: 'progression', commandCount: 3})
+    );
+    expect(dashboard.mechanics!.advancementChangeCount).toBe(2);
+    expect(dashboard.mechanics!.advancementIntervals.map((interval) => interval.axisLabel)).toEqual(['XP']);
+  });
 });

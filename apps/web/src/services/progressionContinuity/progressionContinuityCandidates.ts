@@ -127,6 +127,7 @@ function commandTargetsAdvancementAxis(
   resourceNameById: Map<string, string>,
   statNameById: Map<string, string>
 ): boolean {
+  if (command.type === 'xp_gain') return true;
   if (command.type === 'resource_change' || command.type === 'resource_set') {
     return ADVANCEMENT_NAME.test(resourceNameById.get(command.resourceDefinitionId) ?? command.resourceDefinitionId);
   }

@@ -21,6 +21,7 @@ const snapshotFor = (level: number, health: number): CharacterSnapshot => ({
   sheetId: 'sheet-pin-oren',
   name: 'Oren Pin',
   level,
+  experience: 0,
   stats: [],
   resources: [{id: 'hp', label: 'Health', current: health, max: 40}],
   inventory: [],

@@ -182,11 +182,23 @@ change; the mutation ledger says when it changed.
 - Tracked fields come from existing ruleset `statDefinitions` /
   `resourceDefinitions` — no parallel field-definition system.
 - Field taxonomy: snapshot stats, resources (current/max), statuses,
-  inventory/equipment, descriptive state (location, allegiance, disguise).
+  inventory/equipment, progression (XP and level), descriptive state
+  (location, allegiance, disguise).
 - Command set (typed, explicit, `set` vs `change` never conflated):
   `resource_set`, `resource_change`, `stat_set`, `stat_change`,
   `status_apply`, `status_remove`, `inventory_add`, `inventory_remove`,
-  `inventory_consume`, `inventory_equip`, `inventory_unequip`, `location_set`.
+  `inventory_consume`, `inventory_equip`, `inventory_unequip`, `location_set`,
+  `xp_gain`.
+- Progression (3.34a): a sheet's `level` and `experience` are starting
+  values. Accepted `xp_gain` commands (actor, amount, optional reason; a
+  negative amount corrects an earlier gain, and XP never drops below zero)
+  add to the XP in scene order. An optional ruleset `levelTable` (rows of
+  `level` ≥ 2 and total `experience`) derives the level: the highest row
+  reached, never below the sheet's starting level. Without a table the level
+  stays as the author set it. Level-ups never rewrite prose, and no reward
+  (stat points, unlocks) follows from them. The snapshot, stat cards, inserted
+  stat blocks (as of the end of the scene being edited), and Character Sheets
+  history show the replayed values.
 - `StateMutationEvent`s are scene-scoped, explicitly ordered
   (`sceneOrder` → `sceneSequence` → `sourceRevision` → `createdAt`),
   replayable, and invalidatable when source scenes change; invalidated events
@@ -211,7 +223,7 @@ change; the mutation ledger says when it changed.
   validation live in `packages/rules-engine/src/manuscript/`; persistence and
   project lookups stay in the web app.
 - Each kind of change has one module per side, grouped by family (resource,
-  stat, status, inventory, location). The engine module
+  stat, status, inventory, location, progression). The engine module
   (`packages/rules-engine/src/manuscript/kinds/`) holds the command type,
   schema, replay step, state and ruleset checks, label, and before/after
   summary; no UI. The app module (`apps/web/src/services/state/kinds/`) holds

@@ -21,7 +21,8 @@ const state = (withPotion: boolean): CharacterReplayState => ({
       : [],
     equipped: []
   },
-  statuses: []
+  statuses: [],
+  progression: {experience: 0, level: 1, startingLevel: 1, levelTable: []}
 });
 const approvedEntry: CompendiumEntry = {
   id: 'potion', projectId: 'project-1', name: 'Health Potion', domain: 'artifact',

@@ -249,6 +249,27 @@ export function PositionedStateChangeComposer({
                       )}
                     </label>
                   </>
+                ) : input.type === 'amount' ? (
+                  <>
+                    <label>
+                      {input.valueLabel}
+                      <input
+                        type='number'
+                        value={draft.value ?? ''}
+                        onChange={(event) => updateDraft(draft.id, {value: event.target.value})}
+                        placeholder={input.valuePlaceholder}
+                      />
+                    </label>
+                    <label>
+                      {input.noteLabel}
+                      <input
+                        type='text'
+                        value={draft.name ?? ''}
+                        onChange={(event) => updateDraft(draft.id, {name: event.target.value})}
+                        placeholder={input.notePlaceholder}
+                      />
+                    </label>
+                  </>
                 ) : (
                   <>
                     <label>

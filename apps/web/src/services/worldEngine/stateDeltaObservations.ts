@@ -57,6 +57,16 @@ const INVENTORY_PATTERNS: Array<{
   }
 ];
 
+// "gained 250 XP", "earns 1,200 experience points".
+const XP_PATTERN = {
+  operation: 'xp_gain' as const,
+  pattern: String.raw`(?:gained|gains|earned|earns|received|receives|was awarded|is awarded)\s+(?<amount>\d[\d,]*)\s*(?:xp|exp|experience(?:\s+points)?)\b`,
+  confidence: 0.8
+};
+
+/** An inventory target that starts with an XP amount ("250 XP for the kill") is not an item. */
+const XP_TARGET = /^\s*(?:[\d,]+\s*)?(?:xp|exp|experience)\b/i;
+
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -148,6 +158,9 @@ export function extractStateDeltaObservations(
         if (!targetSurface) {
           continue;
         }
+        if (XP_TARGET.test(targetSurface)) {
+          continue;
+        }
         const normalizedTarget = normalizeTarget(targetSurface);
         if (!normalizedTarget?.target) {
           continue;
@@ -180,6 +193,33 @@ export function extractStateDeltaObservations(
         );
       }
     });
+  });
+
+  characterRefs.forEach((character, characterIndex) => {
+    const regex = new RegExp(
+      String.raw`\b${escapeRegex(character.name)}\b\s+${XP_PATTERN.pattern}`,
+      'gi'
+    );
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(input.text)) !== null) {
+      const amount = Number.parseInt((match.groups?.amount ?? '').replace(/,/g, ''), 10);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      const start = match.index;
+      const end = start + match[0].length;
+      observations.push(
+        ObservationProposalSchema.parse({
+          id: makeStateObservationId(input.projectId, XP_PATTERN.operation, start, end, characterIndex * 100 + 99),
+          projectId: input.projectId,
+          type: 'state_delta_candidate',
+          operation: XP_PATTERN.operation,
+          actor: character.id,
+          amount,
+          confidence: XP_PATTERN.confidence,
+          evidence: {start, end, text: input.text.slice(start, end)},
+          createdAt: Date.now()
+        })
+      );
+    }
   });
 
   return observations.sort((a, b) => a.evidence.start - b.evidence.start);

@@ -2,8 +2,8 @@
   "apps/web/src/components/Editor/EditorWithAI.tsx": 1134,
   "apps/web/src/components/Settings/AISettings.tsx": 1080,
   "apps/web/src/components/Workspace/WorkspaceContextDrawer.tsx": 1284,
-  "apps/web/src/routes/CharacterSheetsRoute.tsx": 2041,
-  "apps/web/src/routes/WorkspaceRoute.tsx": 1838,
+  "apps/web/src/routes/CharacterSheetsRoute.tsx": 2042,
+  "apps/web/src/routes/WorkspaceRoute.tsx": 1841,
   "apps/web/src/services/consistency/ConsistencyEngineService.ts": 1250,
   "apps/web/src/styles/WorkspaceRoute.module.css": 2349
 }

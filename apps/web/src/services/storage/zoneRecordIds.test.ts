@@ -59,7 +59,7 @@ describe('zone record ids (schema 8)', () => {
     await transactionToPromise(tx);
     db.close();
 
-    expect((await getProjectById(projectId))?.storageSchemaVersion).toBe(8);
+    expect((await getProjectById(projectId))?.storageSchemaVersion).toBe(9);
     const profiles = await getZoneAffinityProfilesByProject(projectId);
     expect(profiles).toHaveLength(1);
     expect(profiles[0].id).not.toContain('emberglass');

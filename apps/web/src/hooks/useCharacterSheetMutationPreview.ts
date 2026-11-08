@@ -8,7 +8,7 @@ import type {
 } from '../entityTypes';
 import {sortWritingDocuments} from '../services/storage';
 import {buildCharacterSheetMutationCommand} from '../services/characters/characterSheetRuleset';
-import {replayCharacterState} from '../services/state/stateReplay';
+import {getAcceptedStateMutationEvents, replayCharacterState} from '../services/state/stateReplay';
 import {buildStateMutationPreview} from '../services/state/stateMutationPresentation';
 import type {ActorResolution} from '../services/characters/characterIdentity';
 import type {SheetFormValues} from '../services/state/kinds';
@@ -251,6 +251,37 @@ export const useCharacterSheetMutationPreview = (params: {
     );
   }, [actorResolutions, selectedMutationSheet, stateMutationEvents]);
 
+  // Level and XP after each accepted XP change, replayed in manuscript order.
+  const progressionAfterEventId = useMemo(() => {
+    const labels = new Map<string, string>();
+    if (!selectedMutationSheet) return labels;
+    const accepted = getAcceptedStateMutationEvents(stateMutationEvents);
+    accepted.forEach((event, index) => {
+      if (!selectedSheetMutationEvents.includes(event)) return;
+      if (!event.commands.some((command) => command.type === 'xp_gain')) return;
+      const {level, experience} = replayCharacterState({
+        sheet: selectedMutationSheet,
+        ruleset,
+        events: accepted.slice(0, index + 1),
+        target: {
+          actorId: selectedMutationActorId,
+          characterId: selectedMutationSheet.characterId,
+          sheetId: selectedMutationSheet.id
+        },
+        actorResolutions
+      }).progression;
+      labels.set(event.id, `Now level ${level} · ${experience} XP`);
+    });
+    return labels;
+  }, [
+    actorResolutions,
+    ruleset,
+    selectedMutationActorId,
+    selectedMutationSheet,
+    selectedSheetMutationEvents,
+    stateMutationEvents
+  ]);
+
   const selectedSheetMutationHistory = useMemo(
     () =>
       selectedSheetMutationEvents.map((event) => {
@@ -275,10 +306,11 @@ export const useCharacterSheetMutationPreview = (params: {
           canMoveDown:
             sceneIndex !== -1 && sceneIndex < sameSceneOrdered.length - 1,
           staleness,
-          stalenessLabel: describeStateMutationEventStaleness(staleness)
+          stalenessLabel: describeStateMutationEventStaleness(staleness),
+          progressionLabel: progressionAfterEventId.get(event.id) ?? null
         };
       }),
-    [orderedDocuments, selectedSheetMutationEvents]
+    [orderedDocuments, progressionAfterEventId, selectedSheetMutationEvents]
   );
   return {
     mutationTargetSheetId, setMutationTargetSheetId,

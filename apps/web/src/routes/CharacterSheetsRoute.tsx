@@ -1333,7 +1333,7 @@ function CharacterSheetsRoute({
             className={`${styles.inlineDisplayGrid} ${styles.inlineGridTemplateColumns1fr1fr} ${styles.inlineGap075rem} ${styles.inlineMarginBottom075rem}`}
           >
             <label>
-              Level *
+              Starting level *
               <br />
               <input
                 type='number'
@@ -1346,7 +1346,7 @@ function CharacterSheetsRoute({
             </label>
 
             <label>
-              Experience *
+              Starting XP *
               <br />
               <input
                 type='number'
@@ -1908,7 +1908,7 @@ function CharacterSheetsRoute({
             ) : (
               <ul className={`${styles.inlineListStyleNone} ${styles.inlinePadding0} ${styles.inlineMargin0}`}>
                 {selectedSheetMutationHistory.map(
-                  ({event, canMoveUp, canMoveDown, staleness, stalenessLabel}) => (
+                  ({event, canMoveUp, canMoveDown, staleness, stalenessLabel, progressionLabel}) => (
                   <li
                     key={event.id}
                     className={`${styles.mutationEvent} ${
@@ -1949,6 +1949,7 @@ function CharacterSheetsRoute({
                               {summarizeMutationCommand(command)}
                             </li>
                           ))}
+                          {progressionLabel && <li>{progressionLabel}</li>}
                         </ul>
                       </div>
                       <div>

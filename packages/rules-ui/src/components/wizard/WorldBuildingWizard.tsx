@@ -2,11 +2,13 @@ import React, {useMemo, useState} from 'react';
 import type {
   WorldRuleset,
   StatDefinition,
-  ResourceDefinition
+  ResourceDefinition,
+  LevelThreshold
 } from '@worldbuilding-desk/rules-engine';
-import {createEmptyRuleset} from '@worldbuilding-desk/rules-engine';
+import {createEmptyRuleset, normalizeLevelTable} from '@worldbuilding-desk/rules-engine';
 import {StatSystemStep} from './StatSystemStep';
 import {ResourceSystemStep} from './ResourceSystemStep';
+import {LevelTableStep} from './LevelTableStep';
 
 export interface WorldBuildingWizardProps {
   onComplete: (ruleset: WorldRuleset) => void;
@@ -19,6 +21,7 @@ interface WizardData {
   description: string;
   stats: StatDefinition[];
   resources: ResourceDefinition[];
+  levelTable: LevelThreshold[];
 }
 
 function buildDataSignature(data: WizardData): string {
@@ -26,7 +29,8 @@ function buildDataSignature(data: WizardData): string {
     name: data.name,
     description: data.description,
     stats: data.stats,
-    resources: data.resources
+    resources: data.resources,
+    levelTable: data.levelTable
   });
 }
 
@@ -40,7 +44,8 @@ export function WorldBuildingWizard({
     name: initialRuleset?.name || '',
     description: initialRuleset?.description || '',
     stats: initialRuleset?.statDefinitions || [],
-    resources: initialRuleset?.resourceDefinitions || []
+    resources: initialRuleset?.resourceDefinitions || [],
+    levelTable: initialRuleset?.levelTable || []
   };
   const [draft, setDraft] = useState<WizardData>(initialDraft);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -69,12 +74,15 @@ export function WorldBuildingWizard({
 
     const baseRuleset =
       initialRuleset || createEmptyRuleset(draft.name.trim() || 'My World');
+    // Rows without a whole level of 2+ or a non-negative XP total are dropped.
+    const levelTable = normalizeLevelTable(draft.levelTable);
     const finalRuleset: WorldRuleset = {
       ...baseRuleset,
       name: draft.name,
       description: draft.description,
       statDefinitions: draft.stats,
       resourceDefinitions: draft.resources,
+      levelTable: levelTable.length > 0 ? levelTable : undefined,
       updatedAt: Date.now()
     };
 
@@ -145,6 +153,21 @@ export function WorldBuildingWizard({
                 Add at least one stat to unlock Resources.
               </p>
             )}
+          </div>
+
+          <div
+            className={`wizard-section-card ${isStatsUnlocked ? '' : 'locked'}`}
+            aria-disabled={!isStatsUnlocked}
+          >
+            <LevelTableStep
+              levelTable={draft.levelTable}
+              onChange={(levelTable) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  levelTable
+                }))
+              }
+            />
           </div>
         </div>
       </div>
