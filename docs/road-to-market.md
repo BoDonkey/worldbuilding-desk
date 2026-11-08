@@ -351,7 +351,7 @@ messages).
 | 3.34 | One module per state-change kind, one change vocabulary (mechanics registry) | 3 | L | — (author request, 2026-11-08; after 3.36 if possible; before the 3.32 Character Sheets split) |
 | 3.34a | XP and levels through the scene ledger (first new kind on 3.34) | 3 | M | — (after 3.34) |
 | 3.35 | Route every project-mode decision through project capabilities | 3 | S | — (author request, 2026-11-08; with or right after the 3.32 Workspace split) |
-| 3.36 | Game Simulation brief (design only) | 3 | S | — (author request, 2026-11-08; author-led; before 3.34 if possible) |
+| 3.36 | Game Simulation brief (design only) | 3 | S | Done `20cd067` |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -530,7 +530,11 @@ bug before changing the Phase 5 board.
     Each registry is typed as a `Record` over the command `type` union, so
     `tsc` fails when a kind lacks a piece. Derive the AI observation enum,
     the form dropdown, and the discriminated-union schema from the
-    registry instead of hand lists.
+    registry instead of hand lists. Kind modules turn input into commands
+    but never decide whether a command is proposed or applied (the caller
+    does), and do not read scene fields (`sceneId`, `sceneOrder`,
+    `scenePosition`), so Game Simulation sessions can reuse them
+    (`docs/game-simulation-brief.md` § 8).
   - **One change vocabulary.** Three shapes describe "change a value"
     today: the ledger commands above; Compendium consumable effects
     (`CompendiumConsumableEffect` in `entityTypes.ts`, turned into commands

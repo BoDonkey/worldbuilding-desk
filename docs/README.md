@@ -44,6 +44,10 @@ Other files:
   resume checkpoint, and A–G results log for roadmap slice 1.1.
 - `apps/web/editor-config.md` — developer reference for TipTap editor/toolbar
   customization (moved from the repo root).
+- `docs/game-simulation-brief.md` — author-approved design brief for the
+  hidden Game Simulation mode (adventures, playthroughs, sessions, trust
+  boundary in play). Design only; not a commitment to build. Structural
+  slices check against it (3.34, 3.35).
 - `docs/character-experience-design-review.md` — accepted decision record for
   unifying characters around one canonical World Bible identity; its durable
   contract and journey tests are folded into the authorities above, while the

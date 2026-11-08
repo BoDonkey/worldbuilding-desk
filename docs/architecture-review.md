@@ -215,7 +215,9 @@ Slices 3.34–3.36):
 - **One change vocabulary.** Every path that changes state (the manual form,
   the Workspace composer, AI observations, consumables, Compendium rewards,
   and later authored rules) produces ledger commands through the state-change
-  kind modules (3.34). Do not add another effect or command shape.
+  kind modules (3.34). Do not add another effect or command shape. Kind
+  modules build commands; the caller decides whether they are proposed or
+  applied.
 - **Ordering through replay.** New code does not sort or compare events by
   `sceneOrder` / `scenePosition` itself; it uses
   `compareStateMutationEvents` and replay's `upTo…` parameters. Existing call
@@ -227,6 +229,9 @@ Slices 3.34–3.36):
 - **Mode through capabilities.** Decisions that differ by project mode go
   through `getProjectCapabilities` in `apps/web/src/projectMode.ts`; no new
   direct `projectMode` comparisons elsewhere (3.35).
+
+What Game Simulation would need from these rules is in
+`docs/game-simulation-brief.md` (design only; not a commitment to build).
 
 Primary reference: `docs/domain-model.md` (§ state model and AI proposal
 boundary).
