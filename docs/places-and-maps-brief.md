@@ -26,8 +26,8 @@ behind it is correct and checkable.
 - **Continuity review** (1.2b, 4.26) flags prose that puts a character
   somewhere other than the ledger says, without a movement cue in between.
   It compares names as text.
-- **Sheet-free state** for general fiction is a post-beta candidate (4.27).
-  Until it lands, only characters with a sheet carry location state.
+- **Sheet-free state** for general fiction (4.27) is not built yet. Until
+  it lands, only characters with a sheet carry location state.
 - **No in-story time.** Scenes have an order, not a date or an elapsed time.
 - **World Canvas** is a text brainstorming surface, not a spatial one.
 
@@ -152,9 +152,8 @@ the "too fast" check are not scheduled.
 | 4.80 Map surface | Image import, pinning, scene-time view, image export | 4.78, 4.79 |
 | 4.81 Grid and hex maps | Per-map grid or hex setting, distance in squares or hexes | 4.80 |
 
-Note: general-fiction characters without a sheet carry no state until
-sheet-free state (4.27, post-beta) lands, so 4.77–4.78 reach them only then.
-When 4.77 starts, decide whether 4.27 moves before the beta too.
+4.27 (sheet-free state for general fiction) comes after 4.76 and before
+4.77, so positions reach characters without a sheet from the start.
 
 ## 11. Decisions
 
@@ -170,3 +169,4 @@ Recorded with the author on 2026-11-08:
 - One parent per place is enough, as long as parents can themselves have
   parents (§ 3).
 - Distance units are set per map (§ 4).
+- 4.27 (sheet-free state) moves before the beta, ahead of 4.77 (§ 10).

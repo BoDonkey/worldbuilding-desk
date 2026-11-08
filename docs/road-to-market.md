@@ -274,7 +274,7 @@ messages).
 | 4.24 | Fact-anchored canon contradiction detection | 4 | M | Done `ffcd1bd` |
 | 4.25 | Persisted, incremental project review | 4 | M | Done `d6e5ddd` |
 | 4.26 | State-backed continuity checks | 4 | M | Done `bd255cd` |
-| 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — post-beta candidate because it expands state ownership and persistence beyond sheets/rulesets; descriptive location/custody for canonical characters, not required by mechanics-only 4.26 |
+| 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — (before beta, author decision 2026-11-08; after 4.76, before 4.77, so place positions reach general fiction) |
 | 4.28 | Manuscript-order validity for canon facts | 4 | M | Done `42c86de` |
 | 4.29 | Portable Markdown/CSV export + Markdown-folder import | 4 | M | Done `7cd6895` |
 | 4.30 | World Canvas — record, view mode, premise, lenses, questions (WC-1) | 4 | M | Done `f9f3e54` |
@@ -653,7 +653,7 @@ bug before changing the Phase 5 board.
   - **Rules.** No code. Not a commitment to build.
   - **Verify.** Documentation tier; the author signs off on the brief.
 
-### Phase 4 — Places and maps (before beta)
+### Phase 4 — Places, positions, and maps (before beta)
 
 Design: `docs/places-and-maps-brief.md` (3.37). Each slice follows the
 State rules in `docs/architecture-review.md` and the trust boundary in the
@@ -669,6 +669,26 @@ Movement checks are review findings, never blocks.
   portable export (4.29) and backups carry the new data.
   - **Verify.** Full-coverage tier; unit tests for cycle refusal and
     containment lookups; e2e for editing a parent and a connection.
+
+- **4.27 Sheet-free descriptive state for general fiction.** Moved before
+  the beta (author decision, 2026-11-08) so place positions (4.77–4.80)
+  reach characters without a sheet. Build after 4.76 and before 4.77. Let
+  canonical characters carry descriptive state (location, custody of named
+  items, and later allegiance/disguise) without a ruleset or
+  `CharacterSheet`: a minimal replay target keyed by World Bible entity id,
+  the existing `location_set` / `inventory_*` commands only (through the
+  3.34 kind modules), and the same accepted-ledger, scene-ordered,
+  invalidatable rules as mechanics state. Derivation stops discarding
+  sheet-less observations; the Workspace acquisition proposal (4.16b) and
+  Character continuity section gain the state-only path for general
+  fiction; 4.26's checks then apply to every project mode. Project and
+  snapshot schema bump with a migration and restorable backup per 4.2.
+  Update `docs/domain-model.md` §3 (subject scope) and the smoke procedures.
+  Do not add stats or resources to general fiction; this is descriptive
+  state only.
+  - **Verify.** Full-coverage tier; replay tests for a sheet-less character
+    beside a sheeted one; migration and backup-restore tests; e2e for the
+    general-fiction acquisition proposal and continuity section.
 
 - **4.77 Places: positions refer to place records.** Brief § 3. Add an
   optional place record id to `location_set` (through the 3.34 kind modules;
@@ -713,21 +733,6 @@ Movement checks are review findings, never blocks.
   and tactical maps in LitRPG and later Game Simulation.
   - **Verify.** Full-coverage tier; unit tests for grid and hex distance.
 
-### Phase 4 — Post-beta candidate
-
-- **4.27 Sheet-free descriptive state for general fiction.** Post-beta
-  candidate. Let canonical characters carry descriptive state (location,
-  custody of named items, and later allegiance/disguise) without a ruleset or
-  `CharacterSheet`: a minimal replay target keyed by World Bible entity id,
-  the existing `location_set` / `inventory_*` commands only, and the same
-  accepted-ledger, scene-ordered, invalidatable rules as mechanics state.
-  Derivation stops discarding sheet-less observations; the Workspace
-  acquisition proposal (4.16b) and Character continuity section gain the
-  state-only path for general fiction; 4.26's checks then apply to every
-  project mode. Project and snapshot schema bump with a migration and
-  restorable backup per 4.2. Update `docs/domain-model.md` §3 (subject scope)
-  and the smoke procedures. Do not add stats or resources to general
-  fiction; this is descriptive state only.
 ### Phase 5 — Release engineering
 
 - **5.2 Code signing + notarization.** Author decision (2026-10-31): builds
