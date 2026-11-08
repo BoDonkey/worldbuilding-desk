@@ -352,6 +352,7 @@ messages).
 | 3.34a | XP and levels through the scene ledger (first new kind on 3.34) | 3 | M | — (after 3.34) |
 | 3.35 | Route every project-mode decision through project capabilities | 3 | S | — (author request, 2026-11-08; with or right after the 3.32 Workspace split) |
 | 3.36 | Game Simulation brief (design only) | 3 | S | Done `20cd067` |
+| 3.37 | Places and maps brief (design only) | 3 | S | WIP — draft in `docs/places-and-maps-brief.md`, awaiting author sign-off |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -624,6 +625,24 @@ bug before changing the Phase 5 board.
     `docs/architecture-review.md` against the brief and note any change
     needed. Link the brief from `docs/README.md`.
   - **Rules.** No code. Not a commitment to build Game Simulation.
+  - **Verify.** Documentation tier; the author signs off on the brief.
+
+- **3.37 Places and maps brief (design only).** Author request
+  (2026-11-08). LitRPG and Game Simulation need to know where places are
+  and where characters are, and a graphical map was raised as a later
+  extension. Today `location_set` stores places as free text and locations
+  have no hierarchy, connections, or coordinates. Write
+  `docs/places-and-maps-brief.md` with the author.
+  - **Questions.** How do positions refer to places? Containment and
+    connections? Where do coordinates live, and how is distance measured?
+    What story time do travel checks need? Which checks, and are they
+    warnings? What is the map surface's input and output? Where does AI stop?
+  - **Decided so far.** Coordinates are needed eventually; they are stored
+    per map (placements), not globally; the map is an extension built last;
+    maps are imported images with pins, not drawn in the app.
+  - **Then.** Turn the brief's draft slices (§ 10) into board rows once the
+    author picks a phase. Link the brief from `docs/README.md`.
+  - **Rules.** No code. Not a commitment to build.
   - **Verify.** Documentation tier; the author signs off on the brief.
 
 ### Phase 4 — Post-beta candidate

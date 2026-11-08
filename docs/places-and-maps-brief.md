@@ -1,0 +1,169 @@
+# Places and Maps Brief
+
+Status: design brief, **draft for author sign-off** (slice 3.37). Not a
+commitment to build. It records how places, character positions, distances,
+and maps should fit the existing model, so the location work done before the
+map does not need to be redone later.
+
+## 1. Why
+
+LitRPG and Game Simulation projects need to know **where places are** and
+**where characters are**. Prose writers benefit from the same thing at a
+smaller scale: "she was in the capital yesterday, how is she at the border
+today?" Tools such as World Anvil offer interactive maps with pins. The
+desk's strength is continuity, so a map here is only useful when the data
+behind it is correct and checkable.
+
+## 2. What exists today
+
+- **Location is a World Bible category** (default slug `locations`). Records
+  have no hierarchy and no connections to each other.
+- **Character position is a state change.** `location_set` records "actor X
+  is now at Y" in the scene ledger, with the place stored as free text
+  (`locationName`). "Ember Archive", "the Archive", and "ember archive" are
+  three different places to the ledger.
+- **Continuity review** (1.2b, 4.26) flags prose that puts a character
+  somewhere other than the ledger says, without a movement cue in between.
+  It compares names as text.
+- **Sheet-free state** for general fiction is a post-beta candidate (4.27).
+  Until it lands, only characters with a sheet carry location state.
+- **No in-story time.** Scenes have an order, not a date or an elapsed time.
+- **World Canvas** is a text brainstorming surface, not a spatial one.
+
+## 3. Places
+
+- **A place is a World Bible record**, as today. No new record type.
+- **Containment.** A place may name one parent place: a tavern inside a
+  district, inside a city, inside a region. One parent only; a place that
+  straddles two regions picks one. Being in the tavern implies being in the
+  city.
+- **Connections.** Two places may be linked by a connection (road, river,
+  portal, stairway). A connection may carry an **authored distance** and/or
+  **travel times** by mode ("3 days on foot, 1 by horse"). Connections are
+  two-way unless marked one-way.
+- **Positions refer to records.** `location_set` gains a place **record id**.
+  The free-text name stays as the fallback and as the label for places that
+  have no record yet. Existing free-text entries are matched to records by
+  name and alias where the match is unambiguous; anything else stays text
+  and is offered for review, never guessed.
+
+## 4. Maps and coordinates
+
+Coordinates belong to a **map**, not to a place.
+
+- **A map** is a project record: a name, an optional background image, a
+  **scale** (map units per real unit, such as 1 pixel = 0.5 miles), the
+  unit name, and an optional **parent placement** (the city map sits at a
+  point on the region map).
+- **A placement** says "place X is at (x, y) on map M". A place can have
+  placements on several maps at different scales: the tavern is a building
+  on the city map and part of a dot on the region map.
+- **Extent.** A placement is a point first. Areas (a region's outline) are a
+  later addition and must not be required for any check.
+- **No global grid.** There is no single world coordinate space. Distances
+  are measured within one map, or across maps through their parent
+  placements.
+- **Grid or hex** is an optional per-map setting for gaming use (dungeons,
+  tactical zones). It changes how distance is measured on that map, not the
+  placement model.
+
+## 5. Distance
+
+When the app needs a distance or travel time between two places, it uses the
+most trusted source available:
+
+1. **Authored** distance or travel time on a direct connection.
+2. **Route**: the shortest chain of connections, adding up the authored legs.
+3. **Straight line** from placements on a shared map, times the map's scale
+   ("as the crow flies").
+
+The source is always shown with the answer ("3 days, authored on the
+Kingsroad" versus "about 40 miles in a straight line"). A straight-line
+figure never overrides an authored one.
+
+## 6. Time between scenes
+
+Travel checks need to know how much story time passes between two scenes.
+Today nothing records that. Options:
+
+- **A. Optional in-story time tag per scene** ("day 12", "three days
+  later"). Ordering stays by scene order, as the Game Simulation brief
+  (§ 4) requires; the tag is never an ordering key.
+- **B. No time.** Checks only flag movement with no travel cue in the prose,
+  as today, and show the distance so the author can judge.
+
+Recommendation: start with B, design A so it can be added without a schema
+change to positions.
+
+## 7. Checks (warnings, never blocks)
+
+All of these are continuity findings the author can accept, fix, or dismiss,
+like current review findings.
+
+- **Two places at once**: one character at two places in the same scene,
+  unless one contains the other.
+- **Teleporting**: a move between places with no connection or route and no
+  travel cue in the prose.
+- **Too fast** (needs § 6 option A): a move faster than the fastest known
+  travel time.
+- **Unknown place**: a position that matches no record (offer to create one
+  or link to an existing record).
+
+## 8. The map surface (an extension)
+
+The graphical map is an optional surface on top of the data, in the same
+spirit as the game-systems toggles.
+
+- **Input**: import an image made elsewhere (Inkarnate, Wonderdraft, a hand
+  drawing, a scan) and **pin** place records onto it, which creates
+  placements. Drawing tools are out of scope.
+- **View**: show who is where at any chosen scene, with a character's path
+  over a range of scenes.
+- **Output**: export the pinned map as an image, and placements as data in
+  the portable export (4.29 format) and backups.
+- Images live in the project, so backups, vaults, and export must carry
+  them; large images need a size limit and a clear message.
+
+## 9. Trust boundary
+
+Unchanged. AI may **propose** a position ("Mira arrives at the Ember
+Archive"), a new place, a parent, or a connection, as an observation the
+author accepts. AI never places pins, sets scales, or writes distances
+directly. Inside a Game Simulation playthrough, movement follows that brief's
+§ 6 rules.
+
+## 10. Draft slices
+
+Numbers are placeholders until the author decides the phase.
+
+| Slice | What | Needs |
+|---|---|---|
+| A. Place records in the ledger | `location_set` by record id, name fallback, one-time matching with review; containment-aware "two places at once" | 3.34 (done) |
+| B. Containment and connections | Parent place, connections with authored distance and travel times, editing in the World Bible location record | A |
+| C. Where-is-everyone view | Positions at a chosen scene, a character's path, teleport and unknown-place checks | A, B |
+| D. Maps and placements (data) | Map and placement records, scale, parent placement, straight-line distance, portable export and backup | B |
+| E. Map surface | Image import, pinning, scene-time view, image export | D |
+| F. Travel time | In-story time tag per scene (§ 6 A) and the "too fast" check | C, author decision |
+| G. Grid and hex maps | Per-map grid setting for gaming | E, Game Simulation |
+
+General fiction gets A–C only once 4.27 (sheet-free state) lands; until then
+they apply to characters with sheets.
+
+## 11. Decisions
+
+Recorded with the author on 2026-11-08:
+
+- Coordinates and distances are needed eventually; connections alone are not
+  enough. The model plans for them from the start (§ 4, § 5).
+- Coordinates are per map, through placements; there is no global grid.
+- The map is an extension built last, on top of correct location data.
+- Maps are imported images with pins, not drawn in the app.
+
+Open for the author:
+
+1. **Phase.** Are A–C wanted before launch for LitRPG, or post-beta with
+   D–G?
+2. **Time (§ 6).** Start without in-story time (recommended), or add the
+   per-scene time tag with slice C?
+3. **Containment.** Is one parent per place enough?
+4. **Units.** One distance unit per project, or per map?
