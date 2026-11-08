@@ -209,6 +209,25 @@ Proposal extraction must remain separate from accepted mutation persistence.
 Do not create parallel field-definition or item-schema systems when the current
 ruleset/state models can be extended.
 
+Rules that keep state open to new modes (author decision, 2026-11-08; see
+Slices 3.34–3.36):
+
+- **One change vocabulary.** Every path that changes state (the manual form,
+  the Workspace composer, AI observations, consumables, Compendium rewards,
+  and later authored rules) produces ledger commands through the state-change
+  kind modules (3.34). Do not add another effect or command shape.
+- **Ordering through replay.** New code does not sort or compare events by
+  `sceneOrder` / `scenePosition` itself; it uses
+  `compareStateMutationEvents` and replay's `upTo…` parameters. Existing call
+  sites move over when they are next changed. A future timeline (sessions,
+  turns, in-story time) should then need changes in replay, not everywhere.
+- **Subject by id.** New kinds and replay code identify whose state changes by
+  actor id and do not assume a `CharacterSheet`, so parties, settlements, or
+  sheet-free characters (4.27) can hold state later.
+- **Mode through capabilities.** Decisions that differ by project mode go
+  through `getProjectCapabilities` in `apps/web/src/projectMode.ts`; no new
+  direct `projectMode` comparisons elsewhere (3.35).
+
 Primary reference: `docs/domain-model.md` (§ state model and AI proposal
 boundary).
 

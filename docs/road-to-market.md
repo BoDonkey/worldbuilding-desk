@@ -348,8 +348,10 @@ messages).
 | 3.32 | Break up the oversized route files along feature seams | 3 | L | WIP — World Bible route split (2,145 → 596 lines); World Bible CSS split is 3.32a; next routes: Workspace (+ context drawer), Lore, then Character Sheets after 3.34 |
 | 3.32a | Split the World Bible CSS module along component seams | 3 | M | — (after the 3.32 World Bible route PR merges) |
 | 3.33 | Code tour for maintainers | 3 | M | — (author request, 2026-11-07; stable half now, route sections after 3.32) |
-| 3.34 | One module per state-change kind (mechanics registry) | 3 | M | — (author request, 2026-11-08; before the 3.32 Character Sheets split) |
+| 3.34 | One module per state-change kind, one change vocabulary (mechanics registry) | 3 | L | — (author request, 2026-11-08; after 3.36 if possible; before the 3.32 Character Sheets split) |
 | 3.34a | XP and levels through the scene ledger (first new kind on 3.34) | 3 | M | — (after 3.34) |
+| 3.35 | Route every project-mode decision through project capabilities | 3 | S | — (author request, 2026-11-08; with or right after the 3.32 Workspace split) |
+| 3.36 | Game Simulation brief (design only) | 3 | S | — (author request, 2026-11-08; author-led; before 3.34 if possible) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -495,8 +497,10 @@ bug before changing the Phase 5 board.
     each trace is followed once in the running app or the tests that cover
     it.
 
-- **3.34 One module per state-change kind (mechanics registry).** Author
-  request (2026-11-08). Applies to projects with game systems on (LitRPG
+- **3.34 One module per state-change kind, one change vocabulary
+  (mechanics registry).** Author request (2026-11-08). Part of
+  future-proofing for Game Simulation (see 3.36 and the Ruleset and State
+  rules in `docs/architecture-review.md`). Applies to projects with game systems on (LitRPG
   and the legacy Game Simulation mode); General Fiction is unaffected.
   Stats, resources, and compendium rules are already author data. The
   *kinds* of change a scene can record (`resource_change`/`_set`,
@@ -527,14 +531,31 @@ bug before changing the Phase 5 board.
     `tsc` fails when a kind lacks a piece. Derive the AI observation enum,
     the form dropdown, and the discriminated-union schema from the
     registry instead of hand lists.
+  - **One change vocabulary.** Three shapes describe "change a value"
+    today: the ledger commands above; Compendium consumable effects
+    (`CompendiumConsumableEffect` in `entityTypes.ts`, turned into commands
+    by `buildConsumableCommands` / `buildConsumableExpirationCommands` in
+    `services/state/consumableEffects.ts`) and milestone rewards
+    (`CompendiumRewardEffect`); and the rules engine's field-path `Effect`
+    (`packages/rules-engine/src/types/Effect.ts`). Per Decision 5 of
+    `docs/archive/rules-engine-plan.md`, make the kind modules the only
+    path from any of them to ledger commands: each family module exposes
+    the translation from an effect to its commands. Move consumables onto
+    it with no behavior change. Add the translation for engine `Effect`
+    targets that map cleanly to a kind (for example a resource's current
+    value), with unit tests, so rule-proposed commands (R4 in the plan) can
+    use it later; a target that does not map returns "not translatable"
+    rather than a guess. Stored effect shapes stay as they are; this is
+    translation only.
   - **Rules.** No stored-data change and no schema bump: command `type`
     strings and shapes stay exactly as they are. The AI trust boundary is
     unchanged; models still only propose observations, and registry code
     validates them. Keep each module small; no pass-through wrappers.
     Document "adding a kind" (a short checklist) in
     `docs/domain-model.md` §3 and, once it exists, the 3.33 code tour.
-  - **Order.** Before the Character Sheets route split in 3.32, so the
-    route's mutation switch moves once.
+  - **Order.** After 3.36 if possible, so the module shape is checked
+    against the brief. Before the Character Sheets route split in 3.32, so
+    the route's mutation switch moves once.
   - **Verify.** Full-coverage tier with no test changes beyond imports;
     replay and presentation unit tests must pass unchanged.
 
@@ -562,6 +583,44 @@ bug before changing the Phase 5 board.
     scenes, invalidated events, out-of-order scenes) and level derivation;
     a Cypress spec that records XP in a scene and sees the level change in
     a later scene's stat block.
+
+- **3.35 Route every project-mode decision through project capabilities.**
+  Author request (2026-11-08). `getProjectCapabilities` in
+  `apps/web/src/projectMode.ts` already answers "what can this project
+  do?", but 28 checks in 7 files compare the mode directly
+  (`routes/WorkspaceRoute.tsx` ×10, `services/worldBible/worldCanvasDerived.ts`
+  ×6, `components/WorldBible/WorldCanvasView.tsx` ×4,
+  `services/workspace/statBlockResolution.ts` ×2, `routes/CorkboardRoute.tsx`,
+  `routes/WorldCanvasRoute.tsx`, `services/onboarding/firstRun.ts`; verify
+  with `grep -rnE "projectMode *[!=]==|isGeneralFiction" apps/web/src`).
+  Behavior-preserving.
+  - **Scope.** Give each distinct decision a named capability (for example
+    "inserts live stat blocks" rather than `projectMode === 'litrpg'`), set
+    per mode in `projectMode.ts`, and replace the direct checks. Turning a
+    mode on or changing what it does then means editing one table.
+  - **Rules.** No stored-data change. No new direct mode comparison outside
+    `projectMode.ts` (standing rule in `docs/architecture-review.md`).
+  - **Order.** With or right after the 3.32 Workspace split, so
+    `WorkspaceRoute.tsx`'s checks move once.
+  - **Verify.** Full-coverage tier; add unit tests for the capability table
+    for each mode, including Game Simulation.
+
+- **3.36 Game Simulation brief (design only).** Author request
+  (2026-11-08). Game Simulation is hidden for the first release and has no
+  written definition, so restructuring for it would be guesswork. Write
+  `docs/game-simulation-brief.md` (1–3 pages) with the author: the agent
+  drafts questions and options, and the author decides.
+  - **Questions.** Who uses it (game master, players, solo play)? What is a
+    session, and does play produce manuscript text or stand apart from it?
+    What does time mean (scenes, sessions, turns, in-story days)? Who holds
+    state (characters, party, settlement, world)? What happens automatically
+    and what is only proposed (the trust boundary)? What carries over from
+    LitRPG, and what is out of scope?
+  - **Then.** Check 3.34, 3.35, and the Ruleset and State rules in
+    `docs/architecture-review.md` against the brief and note any change
+    needed. Link the brief from `docs/README.md`.
+  - **Rules.** No code. Not a commitment to build Game Simulation.
+  - **Verify.** Documentation tier; the author signs off on the brief.
 
 ### Phase 4 — Post-beta candidate
 
