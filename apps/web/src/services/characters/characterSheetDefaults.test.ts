@@ -3,9 +3,9 @@ import type {StateMutationCommand, StoredRuleset} from '../../entityTypes';
 import {
   buildDefaultResources,
   buildDefaultStats,
-  hashString,
-  summarizeMutationCommand
+  hashString
 } from './characterSheetDefaults';
+import {summarizeMutationCommand} from '../state/kinds';
 
 const ruleset = {
   id: 'rules',

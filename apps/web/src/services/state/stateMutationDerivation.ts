@@ -1,6 +1,5 @@
 import type {
   CharacterSheet,
-  StateMutationCommand,
   StateMutationEvent,
   StoredRuleset
 } from '../../entityTypes';
@@ -12,6 +11,7 @@ import {
   validateStateMutationEventForRuleset
 } from './stateReplay';
 import {validateStateMutationEvent} from './stateMutationSchemas';
+import {stateDeltaObservationToCommand} from './kinds';
 
 export function findSheetForStateActor(
   actor: string | undefined,
@@ -28,59 +28,6 @@ export function findSheetForStateActor(
         sheet.characterId === actor
     ) ?? null
   );
-}
-
-export function stateDeltaObservationToCommand(
-  observation: Extract<ObservationProposal, {type: 'state_delta_candidate'}>,
-  actorId: string
-): StateMutationCommand | null {
-  switch (observation.operation) {
-    case 'location_set':
-      return observation.target
-        ? {
-            type: 'location_set',
-            actorId,
-            locationName: observation.target
-          }
-        : null;
-    case 'inventory_add':
-    case 'inventory_remove':
-    case 'inventory_consume':
-      return observation.target
-        ? {
-            type: observation.operation,
-            actorId,
-            itemName: observation.target,
-            quantity:
-              typeof observation.amount === 'number' && observation.amount > 0
-                ? Math.floor(observation.amount)
-                : undefined
-          }
-        : null;
-    case 'inventory_equip':
-    case 'inventory_unequip':
-      return observation.target
-        ? {
-            type: observation.operation,
-            actorId,
-            itemName: observation.target
-          }
-        : null;
-    case 'status_apply':
-    case 'status_remove':
-      return observation.target
-        ? {
-            type: observation.operation,
-            actorId,
-            statusName: observation.target
-          }
-        : null;
-    case 'resource_change':
-    case 'resource_set':
-    case 'stat_change':
-    case 'stat_set':
-      return null;
-  }
 }
 
 export function buildDerivedStateMutationEvents(params: {

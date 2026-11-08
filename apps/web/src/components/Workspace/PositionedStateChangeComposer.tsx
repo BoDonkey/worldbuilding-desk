@@ -11,68 +11,34 @@ import {
   type PositionedChangeDraft,
   type PositionedChangeKind
 } from '../../services/state/positionedStateChange';
+import {stateMutationCommandTypes} from '@worldbuilding-desk/rules-engine';
+import {getAppStateKind} from '../../services/state/kinds';
 import styles from '../../styles/WorkspaceRoute.module.css';
 import {inventoryChoicesForChange} from './positionedStateChangeInventory';
 
-const CHANGE_TYPES: Array<{value: PositionedChangeKind; label: string}> = [
-  {value: 'stat_change', label: 'Change stat'},
-  {value: 'stat_set', label: 'Set stat'},
-  {value: 'resource_change', label: 'Change resource'},
-  {value: 'resource_set', label: 'Set resource'},
-  {value: 'status_apply', label: 'Apply status'},
-  {value: 'status_remove', label: 'Remove status'},
-  {value: 'inventory_add', label: 'Add inventory'},
-  {value: 'inventory_remove', label: 'Remove inventory'},
-  {value: 'inventory_consume', label: 'Consume inventory'},
-  {value: 'inventory_equip', label: 'Equip item'},
-  {value: 'inventory_unequip', label: 'Unequip item'},
-  {value: 'location_set', label: 'Set location'}
-];
-const BASIC_CHANGE_TYPES = CHANGE_TYPES.filter((entry) =>
-  ['stat_change', 'stat_set', 'resource_change', 'resource_set'].includes(entry.value)
-).map((entry) => ({
-  ...entry,
-  label: entry.value.endsWith('_set')
-    ? `Set to (${entry.value.startsWith('stat_') ? 'stat' : 'resource'})`
-    : `Change by (${entry.value.startsWith('stat_') ? 'stat' : 'resource'})`
-}));
-
-const draftFromCommand = (command: StateMutationCommand): PositionedChangeDraft => {
-  const base = {id: crypto.randomUUID(), kind: command.type};
-  switch (command.type) {
-    case 'stat_change':
-      return {...base, definitionId: command.statDefinitionId, value: String(command.delta)};
-    case 'stat_set':
-      return {...base, definitionId: command.statDefinitionId, value: String(command.value)};
-    case 'resource_change':
-      return {...base, definitionId: command.resourceDefinitionId, value: String(command.delta)};
-    case 'resource_set':
-      return {...base, definitionId: command.resourceDefinitionId, value: String(command.value)};
-    case 'status_apply':
-    case 'status_remove':
-      return {...base, name: command.statusName};
-    case 'inventory_add':
-    case 'inventory_remove':
-    case 'inventory_consume':
-      return {
-        ...base,
-        name: command.itemName,
-        quantity: String(command.quantity ?? 1),
-        sourceEntityId: command.sourceEntityId,
-        definitionId: command.definitionId
-      };
-    case 'inventory_equip':
-    case 'inventory_unequip':
-      return {
-        ...base,
-        name: command.itemName,
-        sourceEntityId: command.sourceEntityId,
-        definitionId: command.definitionId
-      };
-    case 'location_set':
-      return {...base, name: command.locationName};
-  }
+const composerInput = (kind: PositionedChangeKind) => getAppStateKind(kind).composer.input;
+const definitionSource = (kind: PositionedChangeKind): 'stat' | 'resource' | null => {
+  const input = composerInput(kind);
+  return input.type === 'definition' ? input.source : null;
 };
+
+// Stats lead the list, matching the composer's default change.
+const CHANGE_TYPES: Array<{value: PositionedChangeKind; label: string}> = stateMutationCommandTypes
+  .map((value) => ({value, label: getAppStateKind(value).composer.label}))
+  .sort((a, b) =>
+    Number(definitionSource(b.value) === 'stat') - Number(definitionSource(a.value) === 'stat')
+  );
+const BASIC_CHANGE_TYPES = CHANGE_TYPES.flatMap((entry) => {
+  const input = composerInput(entry.value);
+  return input.type === 'definition' ? [{...entry, label: input.basicLabel}] : [];
+});
+const BASIC_KINDS = new Set(BASIC_CHANGE_TYPES.map((entry) => entry.value));
+
+const draftFromCommand = (command: StateMutationCommand): PositionedChangeDraft => ({
+  id: crypto.randomUUID(),
+  kind: command.type,
+  ...getAppStateKind(command.type).composer.load(command)
+});
 
 const newDraft = (ruleset: StoredRuleset | null): PositionedChangeDraft => ({
   id: crypto.randomUUID(),
@@ -116,7 +82,7 @@ export function PositionedStateChangeComposer({
 }: PositionedStateChangeComposerProps) {
   const [label, setLabel] = useState(existingEvent?.label ?? initialLabel ?? '');
   const [showAdvanced, setShowAdvanced] = useState(Boolean(
-    existingEvent || (initialCommands?.length ?? 0) > 1 || initialCommands?.some((command) => !['stat_change', 'stat_set', 'resource_change', 'resource_set'].includes(command.type))
+    existingEvent || (initialCommands?.length ?? 0) > 1 || initialCommands?.some((command) => !BASIC_KINDS.has(command.type))
   ));
   const [drafts, setDrafts] = useState<PositionedChangeDraft[]>(
     existingEvent?.commands.length
@@ -178,28 +144,8 @@ export function PositionedStateChangeComposer({
 
       <div className={styles.changeComposerRows}>
         {drafts.map((draft, index) => {
-          const needsDefinition = [
-            'stat_change',
-            'stat_set',
-            'resource_change',
-            'resource_set'
-          ].includes(draft.kind);
-          const needsQuantity = [
-            'inventory_add',
-            'inventory_remove',
-            'inventory_consume'
-          ].includes(draft.kind);
-          const nameLabel = draft.kind === 'location_set'
-            ? 'Location'
-            : draft.kind.startsWith('status_')
-              ? 'Status'
-              : 'Item';
-          const usesInventoryChoice = [
-            'inventory_remove',
-            'inventory_consume',
-            'inventory_equip',
-            'inventory_unequip'
-          ].includes(draft.kind);
+          const input = composerInput(draft.kind);
+          const usesInventoryChoice = input.type === 'name' && input.inventoryChoice;
           const inventoryChoices = usesInventoryChoice
             ? inventoryChoicesForChange({
                 kind: draft.kind,
@@ -207,7 +153,7 @@ export function PositionedStateChangeComposer({
                 currentName: draft.name
               })
             : [];
-          const selectedStatDefinition = draft.kind.startsWith('stat_')
+          const selectedStatDefinition = definitionSource(draft.kind) === 'stat'
             ? ruleset?.statDefinitions.find(
                 (definition) => definition.id === draft.definitionId
               ) ?? null
@@ -234,13 +180,14 @@ export function PositionedStateChangeComposer({
                     value={draft.kind}
                     onChange={(event) => {
                       const kind = event.target.value as PositionedChangeKind;
+                      const source = definitionSource(kind);
                       updateDraft(draft.id, {
                         kind,
-                        definitionId: kind.startsWith('stat_')
+                        definitionId: source === 'stat'
                           ? (showAdvanced
                               ? ruleset?.statDefinitions[0]?.id
                               : ruleset?.statDefinitions.find((definition) => definition.type === 'number')?.id) ?? ''
-                          : kind.startsWith('resource_')
+                          : source === 'resource'
                             ? ruleset?.resourceDefinitions[0]?.id ?? ''
                             : undefined,
                         value: '',
@@ -254,17 +201,17 @@ export function PositionedStateChangeComposer({
                     ))}
                   </select>
                 </label>
-                {needsDefinition ? (
+                {input.type === 'definition' ? (
                   <>
                     <label>
-                      {draft.kind.startsWith('stat_') ? 'Stat' : 'Resource'}
+                      {input.source === 'stat' ? 'Stat' : 'Resource'}
                       <select
                         value={draft.definitionId ?? ''}
                         onChange={(event) =>
                           updateDraft(draft.id, {definitionId: event.target.value})
                         }
                       >
-                        {(draft.kind.startsWith('stat_')
+                        {(input.source === 'stat'
                           ? showAdvanced
                             ? ruleset?.statDefinitions
                             : ruleset?.statDefinitions.filter((definition) => definition.type === 'number')
@@ -277,7 +224,7 @@ export function PositionedStateChangeComposer({
                       </select>
                     </label>
                     <label>
-                      {draft.kind.endsWith('_set') ? 'New value' : 'Change'}
+                      {input.valueLabel}
                       {selectedStatDefinition?.type === 'boolean' ? (
                         <select
                           value={draft.value ?? 'true'}
@@ -296,7 +243,7 @@ export function PositionedStateChangeComposer({
                           placeholder={
                             selectedStatDefinition?.type === 'text'
                               ? 'New text value'
-                              : draft.kind.endsWith('_set') ? '20' : '+10 or -10'
+                              : input.valuePlaceholder
                           }
                         />
                       )}
@@ -305,7 +252,7 @@ export function PositionedStateChangeComposer({
                 ) : (
                   <>
                     <label>
-                      {nameLabel}
+                      {input.label}
                       {usesInventoryChoice ? (
                         <select
                           value={draft.name ?? ''}
@@ -333,7 +280,7 @@ export function PositionedStateChangeComposer({
                         />
                       )}
                     </label>
-                    {needsQuantity && (
+                    {input.quantity && (
                       <label>
                         Quantity
                         <input

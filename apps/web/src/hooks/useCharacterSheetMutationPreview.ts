@@ -1,16 +1,17 @@
-import {useMemo, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import type {
   CharacterSheet,
+  StateMutationCommand,
   StateMutationEvent,
   StoredRuleset,
   WritingDocument
 } from '../entityTypes';
-import type {MutationFormType} from '../components/CharacterSheets/MutationForm';
 import {sortWritingDocuments} from '../services/storage';
 import {buildCharacterSheetMutationCommand} from '../services/characters/characterSheetRuleset';
 import {replayCharacterState} from '../services/state/stateReplay';
 import {buildStateMutationPreview} from '../services/state/stateMutationPresentation';
 import type {ActorResolution} from '../services/characters/characterIdentity';
+import type {SheetFormValues} from '../services/state/kinds';
 import {
   describeStateMutationEventStaleness,
   getStateMutationEventStaleness
@@ -27,7 +28,7 @@ export const useCharacterSheetMutationPreview = (params: {
   const [mutationTargetSheetId, setMutationTargetSheetId] = useState('');
   const [mutationSceneId, setMutationSceneId] = useState('');
   const [mutationType, setMutationType] =
-    useState<MutationFormType>('resource_change');
+    useState<StateMutationCommand['type']>('resource_change');
   const [mutationStatDefinitionId, setMutationStatDefinitionId] = useState('');
   const [mutationResourceDefinitionId, setMutationResourceDefinitionId] =
     useState('');
@@ -47,6 +48,19 @@ export const useCharacterSheetMutationPreview = (params: {
   const [reorderingMutationEventId, setReorderingMutationEventId] = useState<
     string | null
   >(null);
+
+  /** Shows a kind's form values; fields the kind leaves out keep their value. */
+  const loadSheetFormValues = useCallback((values: Partial<SheetFormValues>) => {
+    if (values.resourceDefinitionId !== undefined) setMutationResourceDefinitionId(values.resourceDefinitionId);
+    if (values.statDefinitionId !== undefined) setMutationStatDefinitionId(values.statDefinitionId);
+    if (values.numberValue !== undefined) setMutationNumberValue(values.numberValue);
+    if (values.textValue !== undefined) setMutationTextValue(values.textValue);
+    if (values.booleanValue !== undefined) setMutationBooleanValue(values.booleanValue);
+    if (values.statusName !== undefined) setMutationStatusName(values.statusName);
+    if (values.itemName !== undefined) setMutationItemName(values.itemName);
+    if (values.quantity !== undefined) setMutationQuantity(values.quantity);
+    if (values.locationName !== undefined) setMutationLocationName(values.locationName);
+  }, []);
 
   const orderedDocuments = useMemo(
     () => sortWritingDocuments(documents),
@@ -274,7 +288,8 @@ export const useCharacterSheetMutationPreview = (params: {
     mutationNumberValue, setMutationNumberValue, mutationTextValue, setMutationTextValue,
     mutationBooleanValue, setMutationBooleanValue, mutationStatusName, setMutationStatusName,
     mutationItemName, setMutationItemName, mutationQuantity, setMutationQuantity,
-    mutationLocationName, setMutationLocationName, isSavingMutation, setIsSavingMutation,
+    mutationLocationName, setMutationLocationName, loadSheetFormValues,
+    isSavingMutation, setIsSavingMutation,
     invalidatingMutationEventId, setInvalidatingMutationEventId,
     editingMutationEventId, setEditingMutationEventId,
     reorderingMutationEventId, setReorderingMutationEventId,

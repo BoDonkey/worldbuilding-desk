@@ -210,6 +210,48 @@ change; the mutation ledger says when it changed.
 - The command types, schemas, ordering, application, replay, and ruleset
   validation live in `packages/rules-engine/src/manuscript/`; persistence and
   project lookups stay in the web app.
+- Each kind of change has one module per side, grouped by family (resource,
+  stat, status, inventory, location). The engine module
+  (`packages/rules-engine/src/manuscript/kinds/`) holds the command type,
+  schema, replay step, state and ruleset checks, label, and before/after
+  summary; no UI. The app module (`apps/web/src/services/state/kinds/`) holds
+  the Character Sheets form fields, the Workspace composer input, editing an
+  existing command, the AI observation mapping, the history label, and the
+  dashboard category. Each side has a registry (`stateMutationKinds`,
+  `appStateKinds`) typed over the whole command union, so `tsc` fails when a
+  kind lacks a piece. The form and composer dropdowns, the discriminated-union
+  schema, and the AI observation enum all come from the registries. Kind
+  modules build commands; they never decide whether a command is proposed or
+  applied (the caller does) and never read scene fields.
+- One change vocabulary: Compendium consumable effects become commands only
+  through the kind modules (`consumableEffectToCommand`), and rules-engine
+  `Effect`s through `translateEffectToStateMutationCommand`, which maps
+  `stats.<id>` and `resources.current.<id>` with plain values and reports
+  anything else (formulas, min/max limits, other targets or operations) as
+  not translatable. Stored effect shapes are unchanged.
+
+### Adding a state-change kind
+
+1. Engine: add the command type, its Zod schema, and its registry entries
+   (`apply`, `label`, `summarizeEffects`, plus `validateAgainstState`,
+   `validateIds`, or `validateValueTypes` when they apply) to the family's
+   module in `manuscript/kinds/`, or to a new family module.
+2. Engine: add the type to the `StateMutationCommand` union in
+   `manuscript/types.ts`. A new family also needs one spread line each in
+   `stateMutationKinds` and `StateMutationCommandSchema` in `kinds/index.ts`.
+3. App: add the kind's entry (form fields, composer input, `fromObservation`,
+   history label, dashboard category) to the family module in
+   `services/state/kinds/`. A new family needs one spread line in
+   `appStateKinds`. Forms reuse the existing field types; a kind that needs a
+   new kind of input adds it to `SheetFormField` or `ComposerInputSpec` and
+   the renderer in `MutationForm` or `PositionedStateChangeComposer`.
+4. Run `tsc`: any missing piece fails to compile. Add replay and
+   presentation unit tests for the new kind.
+
+Checks that are about one particular kind (for example the continuity
+review's location and item conflicts, or stat/resource-only views such as the
+basic sheet panel) still name those kinds directly. They are not lists of
+every kind, so a new kind does not need to touch them.
 - Authored game rules (`WorldRuleset.rules`) are typed by `GameRuleSchema`.
   Every ruleset write moves rules that fail the schema into
   `quarantinedRules`, kept verbatim with their validation issues. Quarantined

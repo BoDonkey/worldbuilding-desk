@@ -4,6 +4,7 @@ import type {
   StateMutationCommand,
   StoredRuleset
 } from '../../entityTypes';
+import {getAppStateKind} from '../state/kinds';
 
 export type CharacterSheetMutationCommandInput = {
   actorId: string;
@@ -24,96 +25,18 @@ export function buildCharacterSheetMutationCommand(
 ): StateMutationCommand | null {
   const actorId = input.actorId.trim();
   if (!actorId) return null;
-  const numericValue = Number(input.numberValue);
-  const quantity = Math.max(1, Number(input.quantity) || 1);
-  const itemName = input.itemName.trim();
-  const statusName = input.statusName.trim();
-  const locationName = input.locationName.trim();
-
-  switch (input.mutationType) {
-    case 'resource_change':
-      return input.resourceDefinition && Number.isFinite(numericValue)
-        ? {
-            type: 'resource_change',
-            actorId,
-            resourceDefinitionId: input.resourceDefinition.id,
-            delta: numericValue
-          }
-        : null;
-    case 'resource_set':
-      return input.resourceDefinition && Number.isFinite(numericValue)
-        ? {
-            type: 'resource_set',
-            actorId,
-            resourceDefinitionId: input.resourceDefinition.id,
-            value: numericValue
-          }
-        : null;
-    case 'stat_change':
-      if (!input.statDefinition) return null;
-      if (input.statDefinition.type === 'number' && Number.isFinite(numericValue)) {
-        return {
-          type: 'stat_change',
-          actorId,
-          statDefinitionId: input.statDefinition.id,
-          delta: numericValue
-        };
-      }
-      if (input.statDefinition.type === 'boolean') {
-        return {
-          type: 'stat_change',
-          actorId,
-          statDefinitionId: input.statDefinition.id,
-          delta: input.booleanValue
-        };
-      }
-      return {
-        type: 'stat_change',
-        actorId,
-        statDefinitionId: input.statDefinition.id,
-        delta: input.textValue
-      };
-    case 'stat_set':
-      if (!input.statDefinition) return null;
-      if (input.statDefinition.type === 'number' && Number.isFinite(numericValue)) {
-        return {
-          type: 'stat_set',
-          actorId,
-          statDefinitionId: input.statDefinition.id,
-          value: numericValue
-        };
-      }
-      if (input.statDefinition.type === 'boolean') {
-        return {
-          type: 'stat_set',
-          actorId,
-          statDefinitionId: input.statDefinition.id,
-          value: input.booleanValue
-        };
-      }
-      return {
-        type: 'stat_set',
-        actorId,
-        statDefinitionId: input.statDefinition.id,
-        value: input.textValue
-      };
-    case 'status_apply':
-    case 'status_remove':
-      return statusName
-        ? {type: input.mutationType, actorId, statusName}
-        : null;
-    case 'inventory_add':
-    case 'inventory_remove':
-    case 'inventory_consume':
-      return itemName
-        ? {type: input.mutationType, actorId, itemName, quantity}
-        : null;
-    case 'inventory_equip':
-    case 'inventory_unequip':
-      return itemName ? {type: input.mutationType, actorId, itemName} : null;
-    case 'location_set':
-      return locationName ? {type: 'location_set', actorId, locationName} : null;
-  }
+  return getAppStateKind(input.mutationType).sheetForm.build({
+    actorId,
+    statDefinition: input.statDefinition,
+    resourceDefinition: input.resourceDefinition,
+    numericValue: Number(input.numberValue),
+    textValue: input.textValue,
+    booleanValue: input.booleanValue,
+    quantity: Math.max(1, Number(input.quantity) || 1),
+    statusName: input.statusName.trim(),
+    itemName: input.itemName.trim(),
+    locationName: input.locationName.trim()
+  });
 }
 
 export function reconcileCharacterStats(

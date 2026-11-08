@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {stateMutationCommandTypes} from '@worldbuilding-desk/rules-engine';
 import type {
   ExtractProposalInput,
   ExtractedProposal,
@@ -56,20 +57,8 @@ export const StateDeltaObservationProposalSchema = z.object({
   id: z.string().min(1),
   projectId: z.string().min(1),
   type: z.literal('state_delta_candidate'),
-  operation: z.enum([
-    'inventory_add',
-    'inventory_remove',
-    'inventory_consume',
-    'inventory_equip',
-    'inventory_unequip',
-    'location_set',
-    'status_apply',
-    'status_remove',
-    'stat_change',
-    'stat_set',
-    'resource_change',
-    'resource_set'
-  ]),
+  // Every state-change kind; registry code turns each into a command or drops it.
+  operation: z.enum(stateMutationCommandTypes),
   actor: z.string().min(1).optional(),
   target: z.string().min(1).optional(),
   stat: z.string().min(1).optional(),
