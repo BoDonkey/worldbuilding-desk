@@ -1,6 +1,6 @@
 import type {EntityCategory} from '../../entityTypes';
 import {WorldBibleRichTextField} from '../WorldBibleRichTextField';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
 
 interface EntityFieldEditorProps {
   field: EntityCategory['fieldSchema'][number];
@@ -20,7 +20,7 @@ export function EntityFieldEditor({
   };
 
   return (
-    <div className={styles.formGroup}>
+    <div className={shared.formGroup}>
       {field.type === 'textarea' ? (
         <WorldBibleRichTextField
           label={field.label}
@@ -47,9 +47,9 @@ export function EntityFieldEditor({
               ))}
             </select>
           ) : field.type === 'multiselect' ? (
-            <div className={styles.multiselectContainer}>
+            <div className={shared.multiselectContainer}>
               {field.options?.map((option) => (
-                <label key={option} className={styles.multiselectOption}>
+                <label key={option} className={shared.multiselectOption}>
                   <input
                     type='checkbox'
                     checked={(fieldValues[field.key] || '')

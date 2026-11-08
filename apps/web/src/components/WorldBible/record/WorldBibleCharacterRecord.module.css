@@ -1,0 +1,13 @@
+@media (max-width: 900px) {
+  .identityGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.identityGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(7.5rem, 0.65fr) minmax(9rem, 0.85fr);
+  gap: 0.75rem;
+  align-items: start;
+  margin-bottom: 0.75rem;
+}

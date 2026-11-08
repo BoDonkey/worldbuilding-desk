@@ -1,5 +1,5 @@
 import type {LoreDocument, WorldEntity} from '../../entityTypes';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
 
 interface WorldBibleLinkedSourceNoteProps {
   entity: WorldEntity;
@@ -16,8 +16,8 @@ export const WorldBibleLinkedSourceNote = ({
   compactCopy = false,
   onOpen
 }: WorldBibleLinkedSourceNoteProps) => (
-  <section className={styles.canonSection} aria-label='Linked Source Note'>
-    <div className={styles.canonSectionHeader}>
+  <section className={shared.canonSection} aria-label='Linked Source Note'>
+    <div className={shared.canonSectionHeader}>
       <div>
         <strong>Linked Source Note</strong>
         <span>
@@ -34,7 +34,7 @@ export const WorldBibleLinkedSourceNote = ({
             : 'Create linked document'}
       </button>
     </div>
-    <div className={styles.reviewHint}>
+    <div className={shared.reviewHint}>
       {linkedDocument ? `Linked to "${linkedDocument.title}".` : 'No linked Source Note yet.'}
     </div>
   </section>

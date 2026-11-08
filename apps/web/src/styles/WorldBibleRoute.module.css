@@ -1,0 +1,54 @@
+.container {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.routeShell {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.routeShellRailCollapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.categoryRailToggle {
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
+  box-shadow: var(--button-shadow);
+}
+
+.categoryRailToggle:hover:not(:disabled) {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.mainColumn {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .routeShell {
+    grid-template-columns: 1fr;
+  }
+}
+
+.noProject {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.noProject strong {
+  color: var(--color-accent);
+}

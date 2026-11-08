@@ -1,0 +1,421 @@
+.categoryRailCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.reviewToolbarActions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.reviewToolbarActions button {
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 0.38rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.reviewToolbarActions button:hover:not(:disabled) {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.reviewToolbarActions .primaryButton {
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.reviewToolbarActions .primaryButton:hover:not(:disabled) {
+  background: var(--button-primary-bg-hover);
+}
+
+.reviewHint {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.55rem;
+}
+
+.castEyebrow {
+  margin-bottom: 0.3rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.castTask p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.castTaskGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.castTask {
+  display: grid;
+  grid-template-rows: auto minmax(3em, auto) auto;
+  gap: 0.65rem;
+  align-content: start;
+  padding: 0.9rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+}
+
+.castTask h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.castTask button {
+  justify-self: start;
+}
+
+.castTask button {
+  border: 1px solid var(--button-primary-border);
+  border-radius: 12px;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  box-shadow: var(--button-shadow);
+}
+
+.castTask button:hover:not(:disabled) {
+  background: var(--button-primary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.castTask button:disabled {
+  border-color: var(--button-secondary-border);
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+}
+
+@media (max-width: 900px) {
+  .content {
+    flex-direction: column;
+  }
+  .formSection {
+    max-width: none;
+    width: 100%;
+  }
+}
+
+.content {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.castContent {
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+.formSection {
+  max-width: 760px;
+  flex: 1 1 620px;
+}
+
+.castContent .formSection {
+  width: 100%;
+  max-width: 860px;
+  justify-self: center;
+}
+
+.castContent .form {
+  background: var(--surface-panel);
+  border-color: var(--surface-border-soft);
+  box-shadow: 0 18px 45px color-mix(in srgb, var(--color-shadow) 24%, transparent);
+}
+
+.form {
+  background-color: var(--color-bg-secondary);
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 18px 45px color-mix(in srgb, var(--color-shadow) 38%, transparent);
+}
+
+.form h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.itemDraftPanel {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel-elevated);
+}
+
+.itemDescriptionField .formGroup,
+.itemDraftPanel > .formGroup {
+  margin-bottom: 0;
+}
+
+.itemDescriptionField :global(.tiptap-editor),
+.itemDescriptionField :global(.ProseMirror) {
+  min-height: 280px;
+}
+
+.aiHelperPanel {
+  position: fixed;
+  top: 5rem;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 30;
+  width: min(34rem, calc(100vw - 2rem));
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+  box-shadow: 0 24px 70px color-mix(in srgb, var(--color-shadow) 34%, transparent);
+}
+
+.aiHelperHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.aiHelperHeader strong {
+  display: block;
+  color: var(--color-text-primary);
+}
+
+.aiHelperHeader p {
+  margin: 0.25rem 0 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .aiHelperPanel {
+    top: auto;
+    right: 0.75rem;
+    bottom: calc(74px + env(safe-area-inset-bottom));
+    left: 0.75rem;
+    width: auto;
+    max-height: min(42rem, calc(100vh - 7rem));
+  }
+}
+
+.formGroup {
+  margin-bottom: 0.75rem;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.formGroup input,
+.formGroup textarea,
+.formGroup select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.formGroup textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.15rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.formActions button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  cursor: pointer;
+  background-color: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  box-shadow: var(--button-shadow);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.formActions button:hover:not(:disabled) {
+  background-color: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.canonSection {
+  margin-top: 1rem;
+  padding: 0.9rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-panel-elevated) 80%, var(--surface-panel) 20%);
+}
+
+.canonSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+.canonSectionHeader strong {
+  display: block;
+  color: var(--color-text-primary);
+}
+
+.canonSectionHeader span {
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+}
+
+.canonSectionHeader button {
+  flex: 0 0 auto;
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 0.38rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.canonSectionHeader button:hover:not(:disabled) {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.formActions .primaryButton {
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border-color: var(--button-primary-border);
+}
+
+.formActions .primaryButton:hover {
+  background-color: var(--button-primary-bg-hover);
+}
+
+.dismissButton {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+}
+
+.entityActions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.entityActions button {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  cursor: pointer;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.entityActions button:hover {
+  background-color: var(--color-bg-tertiary);
+}
+
+.entityActions .primaryButton {
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.entityActions .primaryButton:hover {
+  background: var(--button-primary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.entityActions .deleteButton {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.entityActions .deleteButton:hover {
+  background-color: var(--color-error);
+  color: var(--color-on-accent);
+}
+
+.categoryActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.categoryActions button {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.categoryActions button:hover {
+  background-color: var(--color-bg-tertiary);
+}
+
+.categoryActions .deleteButton {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.categoryActions .deleteButton:hover {
+  background-color: var(--color-error);
+  color: var(--color-on-accent);
+}

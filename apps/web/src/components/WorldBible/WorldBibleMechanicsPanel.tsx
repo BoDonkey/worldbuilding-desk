@@ -2,7 +2,8 @@ import {useEffect, useId, useRef, useState} from 'react';
 import type {CharacterSheet, StateMutationEvent, StoredRuleset} from '../../entityTypes';
 import type {FirstTrackedValueKind} from '../../services/characters';
 import {replayCharacterState} from '../../services/state/stateReplay';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './WorldBibleCharacterSections.module.css';
 import {PinStatsButton} from '../CharacterSheets/PinStatsButton';
 import {useMechanicsDraft} from '../../hooks/useMechanicsDraft';
 
@@ -69,7 +70,7 @@ export function WorldBibleMechanicsPanel({
               Mechanics are optional. Add one useful value when you want the story
               to remember how this character changes from scene to scene.
             </p>
-            <button type='button' className={styles.primaryButton} onClick={() => { touchedRef.current = true; setIsAdding(true); }}>
+            <button type='button' className={shared.primaryButton} onClick={() => { touchedRef.current = true; setIsAdding(true); }}>
               Add mechanics
             </button>
           </div>
@@ -97,9 +98,9 @@ export function WorldBibleMechanicsPanel({
               Confirming creates this project’s tracking setup and attaches one sheet
               to this canonical character. Nothing is written until you confirm.
             </p>
-            <div className={styles.reviewToolbarActions}>
+            <div className={shared.reviewToolbarActions}>
               <button type='button' onClick={() => { touchedRef.current = true; void discardDraft(); setIsAdding(false); }} disabled={isSaving}>Cancel</button>
-              <button type='button' className={styles.primaryButton} disabled={isSaving} onClick={() => {
+              <button type='button' className={shared.primaryButton} disabled={isSaving} onClick={() => {
                 const value = Number(defaultValue);
                 if (!name.trim() || !Number.isFinite(value)) {
                   setError('Enter a name and valid starting value.');
@@ -147,11 +148,11 @@ export function WorldBibleMechanicsPanel({
         ))}
         <div><span>Recorded scene changes</span><strong>{stateEventCount}</strong></div>
       </div>
-      <div className={styles.reviewToolbarActions}>
+      <div className={shared.reviewToolbarActions}>
         {characterSheet ? (
-          <button type='button' className={styles.primaryButton} onClick={onRecordChange}>Record a scene change</button>
+          <button type='button' className={shared.primaryButton} onClick={onRecordChange}>Record a scene change</button>
         ) : (
-          <button type='button' className={styles.primaryButton} onClick={onAddSheet} disabled={isOpeningSheet}>
+          <button type='button' className={shared.primaryButton} onClick={onAddSheet} disabled={isOpeningSheet}>
             {isOpeningSheet ? 'Adding…' : 'Add mechanics to this character'}
           </button>
         )}

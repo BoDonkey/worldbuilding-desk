@@ -1,0 +1,41 @@
+.castPanel {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel);
+}
+
+.castHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.castHeader h2 {
+  margin: 0 0 0.4rem 0;
+}
+
+.castHeader p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.castHeader p {
+  min-height: 3em;
+}
+
+.castTaskActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .castHeader {
+    display: grid;
+  }
+}

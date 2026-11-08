@@ -4,7 +4,8 @@ import type {WorldEntity} from '../../../entityTypes';
 import type {useWorldCanvas} from '../../../hooks/useWorldCanvas';
 import {isItemCategory} from '../../../services/worldBible/worldBibleSummary';
 import {isSystemNegativeSpaceCategory} from '../../../services/worldBible/systemNegativeSpace';
-import styles from '../../../assets/components/WorldBibleRoute.module.css';
+import shared from '../worldBibleShared.module.css';
+import styles from './WorldBibleRecordEditor.module.css';
 import {WorldBibleRecordAiHelper} from '../WorldBibleRecordAiHelper';
 import {WorldBibleLinkedSourceNote} from '../WorldBibleLinkedSourceNote';
 import {
@@ -89,8 +90,8 @@ export function WorldBibleRecordEditor(props: WorldBibleRecordEditorProps) {
   };
 
   return (
-    <div className={styles.formSection}>
-      <form ref={recordFormRef} onSubmit={handleSubmit} className={styles.form}>
+    <div className={shared.formSection}>
+      <form ref={recordFormRef} onSubmit={handleSubmit} className={shared.form}>
         <div className={styles.formHeadingRow}>
           <h2>
             {isCharacterLike
@@ -122,7 +123,7 @@ export function WorldBibleRecordEditor(props: WorldBibleRecordEditorProps) {
         )}
 
         {isCharacterLike && (
-          <div className={styles.reviewHint}>
+          <div className={shared.reviewHint}>
             This is the character's canonical home. Use the sections below for
             story-facing canon and any optional capabilities attached to it.
           </div>
@@ -151,7 +152,7 @@ export function WorldBibleRecordEditor(props: WorldBibleRecordEditorProps) {
             )}
             <button
               type='button'
-              className={styles.dismissButton}
+              className={shared.dismissButton}
               onClick={() => setHandoffGuidance(null)}
             >
               Dismiss
@@ -179,10 +180,10 @@ export function WorldBibleRecordEditor(props: WorldBibleRecordEditorProps) {
           />
         )}
 
-        <div className={styles.formActions}>
+        <div className={shared.formActions}>
           <button
             type='submit'
-            className={styles.primaryButton}
+            className={shared.primaryButton}
             disabled={isSubmittingEntity}
           >
             {isSubmittingEntity

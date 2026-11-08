@@ -1,7 +1,8 @@
 import {useEffect, useRef} from 'react';
 import type {EntityCategory, WorldEntity} from '../../../entityTypes';
 import {ALTERNATIVE_NAMES_KEY} from '../../../services/worldBible/worldBibleEntityHelpers';
-import styles from '../../../assets/components/WorldBibleRoute.module.css';
+import shared from '../worldBibleShared.module.css';
+import styles from './RecordNamesSection.module.css';
 import type {WorldBibleRecordDraft} from './useWorldBibleRecordDraft';
 import type {OpenRecord, RecordEntityActions, RecordResolution, RecordVariant} from './recordTypes';
 import {RecordNameResolver} from './RecordNameResolver';
@@ -79,10 +80,10 @@ export function RecordNamesSection({
 
   return (
     <section
-      className={styles.canonSection}
+      className={shared.canonSection}
       aria-label={isCharacter ? 'Canonical names and aliases' : 'Names and aliases'}
     >
-      <div className={styles.canonSectionHeader}>
+      <div className={shared.canonSectionHeader}>
         <div>
           <strong>{isCharacter ? 'Canon and aliases' : 'Names and aliases'}</strong>
           <span>
@@ -100,7 +101,7 @@ export function RecordNamesSection({
       </div>
 
       {showNameInput && (
-        <div className={styles.formGroup}>
+        <div className={shared.formGroup}>
           <label>
             Name
             <input
@@ -111,7 +112,7 @@ export function RecordNamesSection({
             />
           </label>
           {isCanonicalRenameDraft && selectedEntity && (
-            <div className={styles.reviewHint}>
+            <div className={shared.reviewHint}>
               Saving this rename will keep <strong>{selectedEntity.name}</strong> as an
               alternative name.
             </div>
@@ -119,7 +120,7 @@ export function RecordNamesSection({
         </div>
       )}
 
-      <div className={styles.formGroup}>
+      <div className={shared.formGroup}>
         <label>
           Alternative names
           <textarea
@@ -140,7 +141,7 @@ export function RecordNamesSection({
           />
         </label>
         {isCharacter && (
-          <div className={styles.reviewHint}>
+          <div className={shared.reviewHint}>
             Use alternative names for short forms like first-name references,
             titles, nicknames, and prior canonical forms after a rename.
           </div>
