@@ -1,9 +1,10 @@
-import type {RefObject} from 'react';
+import {useRef} from 'react';
+import {useEscapeToClose} from '../../hooks/useEscapeToClose';
+import {useFocusTrap} from '../../hooks/useFocusTrap';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface WorkspaceMemoryModalProps {
   isOpen: boolean;
-  dialogRef: RefObject<HTMLDivElement | null>;
   draft: string;
   isSaving: boolean;
   setDraft: (draft: string) => void;
@@ -12,8 +13,11 @@ interface WorkspaceMemoryModalProps {
 }
 
 export const WorkspaceMemoryModal = ({
-  isOpen, dialogRef, draft, isSaving, setDraft, onClose, onSave
+  isOpen, draft, isSaving, setDraft, onClose, onSave
 }: WorkspaceMemoryModalProps) => {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useEscapeToClose(onClose, isOpen);
+  useFocusTrap(dialogRef, isOpen);
   if (!isOpen) return null;
   return (
     <div ref={dialogRef} role='dialog' aria-modal='true' className={styles.modalOverlay}>

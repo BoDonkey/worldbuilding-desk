@@ -1,4 +1,7 @@
-import type {Dispatch, RefObject, SetStateAction} from 'react';
+import {useRef} from 'react';
+import type {Dispatch, SetStateAction} from 'react';
+import {useEscapeToClose} from '../../hooks/useEscapeToClose';
+import {useFocusTrap} from '../../hooks/useFocusTrap';
 import type {
   CharacterSheet, StatBlockGroup, StatBlockInsertMode, StatBlockScopePreset,
   StatBlockSourceType, StatBlockStyle, WorldEntity
@@ -8,7 +11,6 @@ import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface WorkspaceStatBlockModalProps {
   isOpen: boolean;
-  dialogRef: RefObject<HTMLDivElement | null>;
   statBlocks: ReturnType<typeof useWorkspaceStatBlocks>;
   pendingRebindToken: string | null;
   sourceType: StatBlockSourceType;
@@ -34,7 +36,7 @@ interface WorkspaceStatBlockModalProps {
 
 export const WorkspaceStatBlockModal = (props: WorkspaceStatBlockModalProps) => {
   const {
-    isOpen: isStatBlockModalOpen, dialogRef: statBlockDialogRef, statBlocks,
+    isOpen: isStatBlockModalOpen, statBlocks,
     pendingRebindToken: pendingStatBlockRebindToken,
     sourceType: statBlockSourceType, setSourceType: setStatBlockSourceType,
     characterSheets, selectedCharacterId: selectedStatCharacterId,
@@ -54,6 +56,9 @@ export const WorkspaceStatBlockModal = (props: WorkspaceStatBlockModalProps) => 
     handleInsertStatBlock, handleToggleStatSelection, handleToggleResourceSelection,
     handleSaveStatGroup, handleDeleteStatGroup, closeStatBlockModal
   } = statBlocks;
+  const statBlockDialogRef = useRef<HTMLDivElement | null>(null);
+  useEscapeToClose(closeStatBlockModal, isStatBlockModalOpen);
+  useFocusTrap(statBlockDialogRef, isStatBlockModalOpen);
   return (
     <>
       {isStatBlockModalOpen && (

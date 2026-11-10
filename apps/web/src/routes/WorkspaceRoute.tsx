@@ -8,14 +8,12 @@ import {
   useRef
 } from 'react';
 import {useLocation, useNavigate} from 'react-router';
-import type {ChapterCard, WritingDocument} from '../entityTypes';
+import type {WritingDocument} from '../entityTypes';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
 import {useWorkspaceConsistency} from '../hooks/useWorkspaceConsistency';
 import {useWorkspaceDocuments} from '../hooks/useWorkspaceDocuments';
 import {useWorkspaceStatBlocks} from '../hooks/useWorkspaceStatBlocks';
-import {useEscapeToClose} from '../hooks/useEscapeToClose';
-import {useFocusTrap} from '../hooks/useFocusTrap';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {
   DEFAULT_PARTY_SYNERGY_RULES,
@@ -24,11 +22,11 @@ import {
   getEffectiveStatValue,
   getPartySynergySuggestions
 } from '../services/compendium';
-import {
-  getSeriesBibleConfig,
-  promoteDocumentToParent,
-  syncChildWithParent
-} from '../services/seriesBible/SeriesBibleService';
+import {getSeriesBibleConfig} from '../services/seriesBible/SeriesBibleService';
+import {useWorkspaceResolverNotice} from '../hooks/useWorkspaceResolverNotice';
+import {useWorkspaceChapterCardLinks} from '../hooks/useWorkspaceChapterCardLinks';
+import {useWorkspaceCharacterStatPeek} from '../hooks/useWorkspaceCharacterStatPeek';
+import {useWorkspaceSeriesCanon} from '../hooks/useWorkspaceSeriesCanon';
 import {getWorldEngine} from '../services/worldEngine';
 import {useWorkspaceDrawers} from '../hooks/useWorkspaceDrawers';
 import {useWorkspaceCommands} from '../hooks/useWorkspaceCommands';
@@ -64,9 +62,7 @@ import {CanonPanel} from '../components/Workspace/CanonPanel';
 import {UnknownEntityPanel} from '../components/Workspace/UnknownEntityPanel';
 import {WorkspaceReviewSurfacePopover} from '../components/Workspace/WorkspaceReviewSurfacePopover';
 import {WorkspaceManualWorldCapturePopover} from '../components/Workspace/WorkspaceManualWorldCapturePopover';
-import {PositionedStateChangeComposer} from '../components/Workspace/PositionedStateChangeComposer';
-import {SceneInventoryCapture} from '../components/Workspace/SceneInventoryCapture';
-import {SceneConsumptionCapture} from '../components/Workspace/SceneConsumptionCapture';
+import {WorkspaceSceneStateDialogs} from '../components/Workspace/WorkspaceSceneStateDialogs';
 import {
   getStateMutationEventStaleness
 } from '../services/state/stateMutationStaleness';
@@ -74,14 +70,11 @@ import {
   type EditorTextSnapshot,
   type StateMutationTextAnchor
 } from '../services/state/stateMutationAnchor';
-import {resolveReusableItem} from '../services/state/itemStateAuthoringService';
 import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
-import {useChapterCardSceneActions} from '../hooks/useChapterCardSceneActions';
 import {useSceneRosterPreferences} from '../hooks/useSceneRosterPreferences';
-import {isItemCategory} from '../services/worldBible/worldBibleSummary';
 import {buildKnownLoreHighlights} from '../services/consistency/knownLoreHighlights';
 import {PageHeader} from '../components/PageHeader';
 import {RouteFeedback} from '../components/common';
@@ -92,20 +85,9 @@ import {
   type PendingInventoryCapture,
   type PendingPositionedChange
 } from '../hooks/useWorkspaceSceneRoster';
-import {describeError} from '../services/errors';
-import {findCardsForScene} from '../services/workspace/chapterCardSceneLinks';
-import {
-  buildCharacterPeekTargets,
-  resolveCharacterStatCardTemplate
-} from '../services/state/characterPeek';
 import {getSceneOrder} from '../services/state/characterSnapshot';
 import {WorkspaceCharacterLabDialogs} from '../components/Workspace/WorkspaceCharacterLabDialogs';
 import {WorkspaceSceneDraftEntry} from '../components/Workspace/WorkspaceSceneDraftEntry';
-import {useWorkspaceUiStore} from '../store/workspaceUiStore';
-import {
-  CHARACTER_STAT_PEEK_EVENT,
-  type CharacterStatPeekRequestDetail
-} from '../commands/characterStatPeek';
 
 declare global {
   interface Window {
@@ -121,14 +103,7 @@ function WorkspaceRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
   const location = useLocation();
-  const positionedChangeDialogRef = useRef<HTMLDivElement | null>(null);
-  const inventoryCaptureDialogRef = useRef<HTMLDivElement | null>(null);
-  const statBlockDialogRef = useRef<HTMLDivElement | null>(null);
-  const scratchpadDialogRef = useRef<HTMLDivElement | null>(null);
-  const corkboardDialogRef = useRef<HTMLDivElement | null>(null);
   const sceneTitleInputRef = useRef<HTMLInputElement | null>(null);
-  const exportDialogRef = useRef<HTMLDivElement | null>(null);
-  const memoryDialogRef = useRef<HTMLDivElement | null>(null);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
   const [loadedDocumentsProjectId, setLoadedDocumentsProjectId] = useState<
     string | null
@@ -142,10 +117,6 @@ function WorkspaceRoute() {
     tone: FeedbackTone;
     message: string;
   } | null>(null);
-  const [isPromotingDocument, setIsPromotingDocument] = useState(false);
-  const [isSyncingCanon, setIsSyncingCanon] = useState(false);
-  const [creatingLinkedSceneCardId, setCreatingLinkedSceneCardId] = useState<string | null>(null);
-  const [focusCorkboardCardId, setFocusCorkboardCardId] = useState<string | null>(null);
   const corkboard = useWorkspaceCorkboard(activeProject?.id ?? null);
   const {
     isScratchpadModalOpen,
@@ -232,13 +203,6 @@ function WorkspaceRoute() {
   const closeScratchpadModal = useCallback(() => {
     setScratchpadModalOpen(false);
   }, [setScratchpadModalOpen]);
-  const openCorkboardModal = useCallback(() => {
-    setCorkboardModalOpen(true);
-  }, [setCorkboardModalOpen]);
-  const closeCorkboardModal = useCallback(() => {
-    setCorkboardModalOpen(false);
-    setFocusCorkboardCardId(null);
-  }, [setCorkboardModalOpen]);
   const lastAutosaveErrorRef = useRef<string | null>(null);
   const persistDocRef = useRef<Parameters<typeof useWorkspaceDocuments>[0]['persistDocRef']['current']>(null);
   const refreshDeferredReviewRef =
@@ -589,190 +553,19 @@ function WorkspaceRoute() {
     setReviewBannerDismissed(false);
     await handleRunConsistencyReview();
   }, [handleRunConsistencyReview]);
-  const openResolverNoticeDestination = useCallback(() => {
-    if (!resolverNotice) {
-      return;
-    }
-    if (resolverNotice.destination === 'character-sheet-create') {
-      navigate('/sheets', {
-        state: {
-          prefillCharacterId: resolverNotice.targetId,
-          autoCreateSheetForCharacterId: resolverNotice.targetId
-        }
-      });
-      return;
-    }
-    if (resolverNotice.destination === 'character-sheets') {
-      navigate('/sheets', {
-        state: {
-          prefillCharacterId: resolverNotice.targetId
-        }
-      });
-      return;
-    }
-    if (resolverNotice.destination === 'characters') {
-      navigate('/world-bible', {
-        state: {focusCategorySlug: 'characters'}
-      });
-      return;
-    }
-    navigate('/world-bible', {
-      state: resolverNotice.targetId
-        ? {
-            focusEntityId: resolverNotice.targetId,
-            focus:
-              resolverNotice.primaryLabel === 'Review Character Match'
-                ? 'aliases'
-                : 'general',
-            handoffKind:
-              resolverNotice.primaryLabel === 'Review Character Match'
-                ? 'character-canonicalization'
-                : undefined,
-            handoffSourceName:
-              resolverNotice.primaryLabel === 'Review Character Match'
-                ? resolverNotice.sourceName
-                : undefined,
-            handoffMatchEntityId: resolverNotice.matchEntityId
-          }
-        : undefined
-    });
-  }, [navigate, resolverNotice]);
-  const resolverNoticePrimaryLabel =
-    resolverNotice?.primaryLabel ??
-    (resolverNotice?.destination === 'character-sheet-create'
-      ? 'Create Character Sheet'
-      : resolverNotice?.destination === 'character-sheets'
-      ? 'Open Character Sheet'
-      : resolverNotice?.destination === 'characters'
-        ? 'Open World Bible Characters'
-        : 'View in World Bible');
   const clearFeedback = useCallback(() => setFeedback(null), []);
   const pushToast = useNotificationStore((state) => state.pushToast);
-  const updateCorkboardCard = corkboard.updateCorkboardCard;
-  const updateLinkedSceneIds = useCallback(
-    (cardId: string, sceneIds: string[]) => updateCorkboardCard(
-      cardId,
-      {sceneIds},
-      {persistImmediately: true}
-    ),
-    [updateCorkboardCard]
-  );
-  const {createLinkedScene, retryLink} = useChapterCardSceneActions({
+  useWorkspaceResolverNotice({resolverNotice, setResolverNotice, navigate});
+  const chapterCardLinks = useWorkspaceChapterCardLinks({
+    corkboard,
+    setCorkboardModalOpen,
     createDocument: handleNewDocument,
-    updateCard: updateLinkedSceneIds
+    selectedDocument,
+    sceneTitleInputRef,
+    navigate,
+    location
   });
-  const focusSceneTitle = useCallback(() => {
-    window.requestAnimationFrame(() => sceneTitleInputRef.current?.focus());
-    window.setTimeout(() => sceneTitleInputRef.current?.focus(), 50);
-    window.setTimeout(() => sceneTitleInputRef.current?.focus(), 150);
-  }, []);
-  const showLinkedSceneResult = useCallback(async (
-    card: ChapterCard,
-    result: Awaited<ReturnType<typeof createLinkedScene>>
-  ) => {
-    if (!result.document) return;
-    closeCorkboardModal();
-    focusSceneTitle();
-    const cardName = card.title.trim() || 'Untitled chapter';
-    if (result.linked) {
-      pushToast({message: `Scene created and linked to ${cardName}.`});
-      return;
-    }
-    const document = result.document;
-    pushToast({
-      tone: 'error',
-      message: `Scene created but not linked to ${cardName}.`,
-      durationMs: null,
-      action: {
-        label: 'Link now',
-        onSelect: () => {
-          void retryLink(card, document).then((linked) => {
-            pushToast(linked
-              ? {message: `Linked ${document.title} to ${cardName}.`}
-              : {tone: 'error', message: `Could not link ${document.title} to ${cardName}.`});
-          });
-        }
-      }
-    });
-  }, [closeCorkboardModal, focusSceneTitle, pushToast, retryLink]);
-  const handleCreateLinkedScene = useCallback(async (card: ChapterCard) => {
-    if (creatingLinkedSceneCardId) return;
-    setCreatingLinkedSceneCardId(card.id);
-    try {
-      await showLinkedSceneResult(card, await createLinkedScene(card));
-    } finally {
-      setCreatingLinkedSceneCardId(null);
-    }
-  }, [createLinkedScene, creatingLinkedSceneCardId, showLinkedSceneResult]);
-
-  const linkedChapterCards = useMemo(
-    () => selectedDocument
-      ? findCardsForScene(corkboard.corkboardCards, selectedDocument.id)
-      : [],
-    [corkboard.corkboardCards, selectedDocument]
-  );
-  const handleOpenChapterCard = useCallback((cardId: string) => {
-    setFocusCorkboardCardId(cardId);
-    setCorkboardModalOpen(true);
-  }, [setCorkboardModalOpen]);
-  const handleOpenChapterCardRoute = useCallback((cardId: string) => {
-    navigate('/corkboard', {state: {focusCardId: cardId}});
-  }, [navigate]);
-
-  useEffect(() => {
-    const state = location.state as {createLinkedSceneCardId?: string} | null;
-    const cardId = state?.createLinkedSceneCardId;
-    if (!cardId || corkboard.corkboardStatus !== 'saved') return;
-    navigate(location.pathname, {replace: true, state: {}});
-    const card = corkboard.corkboardCards.find((entry) => entry.id === cardId);
-    if (card) void handleCreateLinkedScene(card);
-  }, [
-    corkboard.corkboardCards,
-    corkboard.corkboardStatus,
-    handleCreateLinkedScene,
-    location.pathname,
-    location.state,
-    navigate
-  ]);
-  const openResolverNoticeDestinationRef = useRef(openResolverNoticeDestination);
-  useEffect(() => {
-    openResolverNoticeDestinationRef.current = openResolverNoticeDestination;
-  }, [openResolverNoticeDestination]);
-  useEffect(() => {
-    if (!resolverNotice) {
-      return;
-    }
-    let dismissedByUser = false;
-    const toastId = pushToast({
-      tone: 'info',
-      message: resolverNotice.message,
-      durationMs: null,
-      action: {
-        label: resolverNoticePrimaryLabel,
-        onSelect: () => openResolverNoticeDestinationRef.current()
-      },
-      onDismiss: () => {
-        dismissedByUser = true;
-        setResolverNotice(null);
-      }
-    });
-    return () => {
-      if (!dismissedByUser) {
-        useNotificationStore.setState((state) => ({
-          toasts: state.toasts.filter((toast) => toast.id !== toastId)
-        }));
-      }
-    };
-  }, [resolverNotice, resolverNoticePrimaryLabel, pushToast, setResolverNotice]);
-  useEffect(() => {
-    if (!resolverNotice) {
-      return;
-    }
-    const timeoutId = window.setTimeout(() => {
-      setResolverNotice((current) => (current === resolverNotice ? null : current));
-    }, resolverNotice.primaryLabel === 'Review Character Match' ? 7200 : 4200);
-    return () => window.clearTimeout(timeoutId);
-  }, [resolverNotice, setResolverNotice]);
+  const {openCorkboardModal, closeCorkboardModal} = chapterCardLinks;
   useLayoutEffect(() => {
     persistDocRef.current = persistDoc;
     refreshDeferredReviewRef.current = refreshDeferredReview;
@@ -882,33 +675,9 @@ function WorkspaceRoute() {
     getStatBlockTokenPresentation,
     getStatBlockPreviewData,
     handleRefreshStatTemplates,
-    openStatBlockRebind,
-    closeStatBlockModal
+    openStatBlockRebind
   } = statBlocks;
-  const {
-    sceneRosterModel,
-    addSceneRosterEntry,
-    inventoryCaptureCharacters,
-    inventoryCaptureContexts,
-    openSelectionInventoryCapture,
-    saveSelectionInventoryCapture,
-    saveSelectionConsumptionCapture,
-    openDetectedItemStateProposal,
-    sceneRosterTimeline,
-    hideSceneRosterEntry,
-    recordSceneRosterChangeHere,
-    consumeSceneRosterItemHere,
-    expireSceneRosterTimelineEvent,
-    editSceneRosterTimelineEvent,
-    invalidateSceneRosterTimelineEvent,
-    reanchorSceneRosterTimelineEvent,
-    pendingPositionedSheet,
-    positionedChangeBefore,
-    savePositionedChange,
-    selectedSceneTimeline,
-    getCharacterStatSnapshot,
-    getCharacterStatSnapshotAt
-  } = useWorkspaceSceneRoster({
+  const sceneRoster = useWorkspaceSceneRoster({
     activeProject,
     selectedDocument,
     documents,
@@ -943,6 +712,23 @@ function WorkspaceRoute() {
     setFeedback,
     requestConfirm
   });
+  const {
+    sceneRosterModel,
+    addSceneRosterEntry,
+    openSelectionInventoryCapture,
+    openDetectedItemStateProposal,
+    sceneRosterTimeline,
+    hideSceneRosterEntry,
+    recordSceneRosterChangeHere,
+    consumeSceneRosterItemHere,
+    expireSceneRosterTimelineEvent,
+    editSceneRosterTimelineEvent,
+    invalidateSceneRosterTimelineEvent,
+    reanchorSceneRosterTimelineEvent,
+    selectedSceneTimeline,
+    getCharacterStatSnapshot,
+    getCharacterStatSnapshotAt
+  } = sceneRoster;
   const editStateMutationReviewItem = useCallback(
     (item: (typeof stateMutationReviewItems)[number]) => {
       const document = documents.find((entry) => entry.id === item.sceneId);
@@ -977,72 +763,19 @@ function WorkspaceRoute() {
   const showGameSystems = capabilities.canUseGameSystems;
   const showRuleAuthoring = capabilities.canUseRuleAuthoring;
   const isGeneralFictionProject = capabilities.isGeneralFiction;
-  const characterPeekTargets = useMemo(
-    () => buildCharacterPeekTargets({sheets: characterSheets, entities, aliases}),
-    [aliases, characterSheets, entities]
-  );
-  const statBlockPreferences = projectSettings?.statBlockPreferences;
-  const characterStatPeek = useMemo(
-    () =>
-      showGameSystems && selectedDocument
-        ? {
-            targets: characterPeekTargets,
-            getSnapshot: getCharacterStatSnapshot,
-            template: resolveCharacterStatCardTemplate(statBlockPreferences),
-            sceneTitle: selectedDocument.title || 'Untitled scene'
-          }
-        : undefined,
-    [
-      characterPeekTargets,
-      getCharacterStatSnapshot,
-      selectedDocument,
-      showGameSystems,
-      statBlockPreferences
-    ]
-  );
-  const setWorkspaceStatContext = useWorkspaceUiStore((s) => s.setWorkspaceStatContext);
-  useEffect(() => {
-    if (!activeProject || !showGameSystems || !selectedDocument || selectedSceneOrder <= 0) {
-      setWorkspaceStatContext(null);
-      return;
-    }
-    setWorkspaceStatContext({
-      projectId: activeProject.id,
-      sceneId: selectedDocument.id,
-      sceneTitle: selectedDocument.title || 'Untitled scene',
-      sceneOrder: selectedSceneOrder,
-      cursorPosition: sceneCursorPosition,
-      getSnapshot: getCharacterStatSnapshotAt
-    });
-  }, [
+  const {characterStatPeek, statPeekRequest} = useWorkspaceCharacterStatPeek({
     activeProject,
-    getCharacterStatSnapshotAt,
-    sceneCursorPosition,
+    showGameSystems,
     selectedDocument,
     selectedSceneOrder,
-    setWorkspaceStatContext,
-    showGameSystems
-  ]);
-  useEffect(() => () => setWorkspaceStatContext(null), [setWorkspaceStatContext]);
-  const [statPeekRequest, setStatPeekRequest] = useState<{
-    sheetId: string;
-    token: number;
-  } | null>(null);
-  useEffect(() => {
-    if (!characterStatPeek) return;
-    const onStatPeekRequest = (event: Event) => {
-      const detail = (event as CustomEvent<CharacterStatPeekRequestDetail>).detail;
-      if (!detail || detail.handled) return;
-      if (!characterStatPeek.targets.some((target) => target.sheetId === detail.sheetId)) return;
-      detail.handled = true;
-      setStatPeekRequest((current) => ({
-        sheetId: detail.sheetId,
-        token: (current?.token ?? 0) + 1
-      }));
-    };
-    window.addEventListener(CHARACTER_STAT_PEEK_EVENT, onStatPeekRequest);
-    return () => window.removeEventListener(CHARACTER_STAT_PEEK_EVENT, onStatPeekRequest);
-  }, [characterStatPeek]);
+    sceneCursorPosition,
+    characterSheets,
+    entities,
+    aliases,
+    statBlockPreferences: projectSettings?.statBlockPreferences,
+    getCharacterStatSnapshot,
+    getCharacterStatSnapshotAt
+  });
   const reviewBannerTitle = hasBlockingUnknownGuardrailIssues
     ? isGeneralFictionProject
       ? 'This scene has names or places to review before strict save.'
@@ -1103,29 +836,6 @@ function WorkspaceRoute() {
     () => buildKnownLoreHighlights({entities, aliases, categories}),
     [aliases, categories, entities]
   );
-  const pendingInventoryResolution = useMemo(
-    () => pendingInventoryCapture
-      ? resolveReusableItem({
-          itemName: pendingInventoryCapture.itemName,
-          categories,
-          entities,
-          compendiumEntries
-        })
-      : null,
-    [categories, compendiumEntries, entities, pendingInventoryCapture]
-  );
-  const exactReusableInventoryEntity = pendingInventoryResolution?.status === 'exact' &&
-    pendingInventoryResolution.sourceEntityId
-    ? entities.find(
-        (entity) => entity.id === pendingInventoryResolution.sourceEntityId
-      ) ?? null
-    : null;
-  const pendingConsumableEntry = pendingInventoryResolution?.status === 'exact' &&
-    pendingInventoryResolution.definitionId
-    ? compendiumEntries.find(
-        (entry) => entry.id === pendingInventoryResolution.definitionId
-      ) ?? null
-    : null;
   const toolbarActions = useMemo(
     () => showGameSystems ? [
       {
@@ -1170,44 +880,24 @@ function WorkspaceRoute() {
     }
   }, [showGameSystems, activeContextView, setActiveContextView]);
 
-  const isPositionedChangeDialogOpen = Boolean(
-    pendingPositionedChange && pendingPositionedSheet && positionedChangeBefore
-  );
-  const closePositionedChangeDialog = useCallback(() => {
-    setPendingPositionedChange(null);
-  }, [setPendingPositionedChange]);
-
-  const isInventoryCaptureDialogOpen = Boolean(pendingInventoryCapture);
-  const closeInventoryCaptureDialog = useCallback(() => {
-    setPendingInventoryCapture(null);
-  }, [setPendingInventoryCapture]);
 
   const isMemoryDialogOpen = Boolean(isMemoryModalOpen && selectedDocument);
   const closeMemoryDialog = useCallback(() => {
     setMemoryModalOpen(false);
   }, [setMemoryModalOpen]);
 
-  useEscapeToClose(closeScratchpadModal, isScratchpadModalOpen);
-  useFocusTrap(scratchpadDialogRef, isScratchpadModalOpen);
 
-  useEscapeToClose(closeCorkboardModal, isCorkboardModalOpen);
-  useFocusTrap(corkboardDialogRef, isCorkboardModalOpen);
 
-  useEscapeToClose(closeStatBlockModal, isStatBlockModalOpen);
-  useFocusTrap(statBlockDialogRef, isStatBlockModalOpen);
 
-  useEscapeToClose(closeExportModal, isExportModalOpen);
-  useFocusTrap(exportDialogRef, isExportModalOpen);
-
-  useEscapeToClose(closeMemoryDialog, isMemoryDialogOpen);
-  useFocusTrap(memoryDialogRef, isMemoryDialogOpen);
-
-  useEscapeToClose(closePositionedChangeDialog, isPositionedChangeDialogOpen);
-  useFocusTrap(positionedChangeDialogRef, isPositionedChangeDialogOpen);
-
-  useEscapeToClose(closeInventoryCaptureDialog, isInventoryCaptureDialogOpen);
-  useFocusTrap(inventoryCaptureDialogRef, isInventoryCaptureDialogOpen);
-
+  const {isPromotingDocument, handlePromoteDocument, isSyncingCanon, handleCanonSync} =
+    useWorkspaceSeriesCanon({
+      activeProject,
+      seriesBibleConfig,
+      selectedDocument,
+      setCanonState,
+      addSystemHistory,
+      setFeedback
+    });
 
   useWorkspaceCommands({
     handleNewDocument,
@@ -1237,59 +927,6 @@ function WorkspaceRoute() {
     []
   );
 
-  const handlePromoteDocument = useCallback(async () => {
-    if (
-      !seriesBibleConfig?.parentProjectId ||
-      !selectedDocument
-    ) {
-      return;
-    }
-    setIsPromotingDocument(true);
-    setFeedback(null);
-    try {
-      await promoteDocumentToParent({
-        parentProjectId: seriesBibleConfig.parentProjectId,
-        documentId: selectedDocument.id,
-        title: selectedDocument.title || 'Untitled scene',
-        content: selectedDocument.content,
-        type: 'scene',
-        tags: ['scene']
-      });
-      setFeedback({tone: 'success', message: 'Scene promoted to parent canon.'});
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to promote scene.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsPromotingDocument(false);
-    }
-  }, [seriesBibleConfig?.parentProjectId, selectedDocument]);
-
-  const handleCanonSync = useCallback(async () => {
-    if (!activeProject) return;
-    setIsSyncingCanon(true);
-    setFeedback(null);
-    try {
-      const updated = await syncChildWithParent(activeProject.id);
-      if (updated) {
-        setCanonState((prev) => ({
-          ...prev,
-          childLastSynced: updated.lastSyncedCanon
-        }));
-      }
-      setFeedback({tone: 'success', message: 'Canon sync state updated.'});
-      addSystemHistory({
-        category: 'consistency',
-        message: 'Canon sync state marked as updated.'
-      });
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to mark canon as synced.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsSyncingCanon(false);
-    }
-  }, [activeProject, addSystemHistory, setCanonState]);
 
   if (!activeProject) {
     return (
@@ -1392,9 +1029,9 @@ function WorkspaceRoute() {
             {activeProject.name}
             {selectedDocument ? ` · ${selectedDocument.title || 'Untitled scene'}` : ''}
             <WorkspaceChapterCardContext
-              cards={linkedChapterCards}
-              onOpenCard={handleOpenChapterCard}
-              onOpenCorkboard={handleOpenChapterCardRoute}
+              cards={chapterCardLinks.linkedChapterCards}
+              onOpenCard={chapterCardLinks.handleOpenChapterCard}
+              onOpenCorkboard={chapterCardLinks.handleOpenChapterCardRoute}
             />
           </span>
         }
@@ -1683,92 +1320,24 @@ function WorkspaceRoute() {
 
       </WorkspaceDrawerLayout>
 
-      {pendingPositionedChange && pendingPositionedSheet && positionedChangeBefore && (
-        <div
-          ref={positionedChangeDialogRef}
-          role='dialog'
-          aria-modal='true'
-          aria-label='Record positioned state change'
-          onClick={() => setPendingPositionedChange(null)}
-          className={styles.modalOverlay}
-        >
-          <div onClick={(event) => event.stopPropagation()}>
-            <PositionedStateChangeComposer
-              key={pendingPositionedChange.event?.id ?? `new-${sceneCursorPosition}`}
-              characterName={pendingPositionedChange.character.name}
-              sceneTitle={selectedDocument?.title || 'Current scene'}
-              cursorPosition={pendingPositionedChange.event?.scenePosition ?? sceneCursorPosition}
-              actorId={pendingPositionedSheet.characterEntityId ?? ''}
-              ruleset={ruleset}
-              before={positionedChangeBefore}
-              existingEvent={pendingPositionedChange.event}
-              initialLabel={pendingPositionedChange.initialLabel}
-              initialCommands={pendingPositionedChange.initialCommands}
-              isSaving={isSavingPositionedChange}
-              onCancel={() => setPendingPositionedChange(null)}
-              onSave={(input) => void savePositionedChange(input)}
-            />
-          </div>
-        </div>
-      )}
-
-      {pendingInventoryCapture && (
-        <div
-          ref={inventoryCaptureDialogRef}
-          role='dialog'
-          aria-modal='true'
-          aria-label={pendingInventoryCapture.action === 'consume'
-            ? 'Record selected item use'
-            : 'Add selected item to inventory'}
-          onClick={() => setPendingInventoryCapture(null)}
-          className={styles.modalOverlay}
-        >
-          <div onClick={(event) => event.stopPropagation()}>
-            {pendingInventoryCapture.action === 'consume' ? (
-              <SceneConsumptionCapture
-                key={`consume:${pendingInventoryCapture.position}:${pendingInventoryCapture.itemName}`}
-                itemName={pendingInventoryCapture.itemName}
-                evidenceText={pendingInventoryCapture.evidenceText}
-                contexts={inventoryCaptureContexts}
-                suggestedSheetId={pendingInventoryCapture.suggestedSheetId}
-                ruleset={ruleset}
-                approvedEntry={pendingConsumableEntry}
-                itemReference={{
-                  sourceEntityId: pendingInventoryResolution?.status === 'exact'
-                    ? pendingInventoryResolution.sourceEntityId
-                    : undefined,
-                  definitionId: pendingInventoryResolution?.status === 'exact'
-                    ? pendingInventoryResolution.definitionId
-                    : undefined
-                }}
-                exactReusableItem={exactReusableInventoryEntity}
-                reusableItemMatches={pendingInventoryResolution?.entityMatches ?? []}
-                canCreateReusableItem={categories.some(isItemCategory)}
-                isSaving={isSavingInventoryCapture}
-                onCancel={() => setPendingInventoryCapture(null)}
-                onSave={(input) => void saveSelectionConsumptionCapture(input)}
-              />
-            ) : (
-              <SceneInventoryCapture
-                key={`acquire:${pendingInventoryCapture.position}:${pendingInventoryCapture.itemName}`}
-                itemName={pendingInventoryCapture.itemName}
-                characters={inventoryCaptureCharacters}
-                evidenceText={pendingInventoryCapture.evidenceText}
-                suggestedSheetId={pendingInventoryCapture.suggestedSheetId}
-                exactReusableItem={exactReusableInventoryEntity}
-                reusableItemMatches={pendingInventoryResolution?.entityMatches ?? []}
-                canCreateReusableItem={categories.some(isItemCategory)}
-                isSaving={isSavingInventoryCapture}
-                onCancel={() => setPendingInventoryCapture(null)}
-                onSave={(input) => void saveSelectionInventoryCapture(input)}
-              />
-            )}
-          </div>
-        </div>
-      )}
+      <WorkspaceSceneStateDialogs
+        sceneRoster={sceneRoster}
+        sceneTitle={selectedDocument?.title || 'Current scene'}
+        sceneCursorPosition={sceneCursorPosition}
+        ruleset={ruleset}
+        categories={categories}
+        entities={entities}
+        compendiumEntries={compendiumEntries}
+        pendingPositionedChange={pendingPositionedChange}
+        setPendingPositionedChange={setPendingPositionedChange}
+        isSavingPositionedChange={isSavingPositionedChange}
+        pendingInventoryCapture={pendingInventoryCapture}
+        setPendingInventoryCapture={setPendingInventoryCapture}
+        isSavingInventoryCapture={isSavingInventoryCapture}
+      />
 
       <WorkspaceStatBlockModal
-        isOpen={isStatBlockModalOpen} dialogRef={statBlockDialogRef}
+        isOpen={isStatBlockModalOpen}
         statBlocks={statBlocks} pendingRebindToken={pendingStatBlockRebindToken}
         sourceType={statBlockSourceType} setSourceType={setStatBlockSourceType}
         characterSheets={characterSheets} selectedCharacterId={selectedStatCharacterId}
@@ -1784,7 +1353,7 @@ function WorkspaceRoute() {
       />
 
       <WorkspaceScratchpadModal
-        isOpen={isScratchpadModalOpen} dialogRef={scratchpadDialogRef}
+        isOpen={isScratchpadModalOpen}
         content={scratchpadContent} statusLabel={scratchpadStatusLabel}
         isNarrowViewport={isNarrowViewport} setContent={setScratchpadContent}
         setActiveContextView={setActiveContextView}
@@ -1794,21 +1363,20 @@ function WorkspaceRoute() {
 
       <WorkspaceCorkboardModal
         isOpen={isCorkboardModalOpen}
-        dialogRef={corkboardDialogRef}
         corkboard={corkboard}
         documents={documents}
         currentDocumentId={selectedDocument?.id}
-        focusCardId={focusCorkboardCardId}
-        onFocusCardHandled={() => setFocusCorkboardCardId(null)}
+        focusCardId={chapterCardLinks.focusCorkboardCardId}
+        onFocusCardHandled={chapterCardLinks.clearFocusCorkboardCard}
         onClose={closeCorkboardModal}
         onOpenScratchpad={openScratchpadModal}
         onCurrentSceneAction={(message) => pushToast({tone: 'success', message})}
-        onCreateLinkedScene={(card) => void handleCreateLinkedScene(card)}
-        creatingLinkedSceneCardId={creatingLinkedSceneCardId}
+        onCreateLinkedScene={(card) => void chapterCardLinks.handleCreateLinkedScene(card)}
+        creatingLinkedSceneCardId={chapterCardLinks.creatingLinkedSceneCardId}
       />
 
       <WorkspaceExportModal
-        isOpen={isExportModalOpen} dialogRef={exportDialogRef}
+        isOpen={isExportModalOpen}
         format={exportFormat} selection={exportSelection}
         onClose={closeExportModal} onMove={moveExportItem}
         onToggle={toggleExportItem} onToggleAll={toggleAllExportItems}
@@ -1821,7 +1389,7 @@ function WorkspaceRoute() {
 
 
       <WorkspaceMemoryModal
-        isOpen={isMemoryDialogOpen} dialogRef={memoryDialogRef}
+        isOpen={isMemoryDialogOpen}
         draft={memoryDraft} isSaving={isSavingMemory} setDraft={setMemoryDraft}
         onClose={closeMemoryDialog} onSave={handleMemorySave}
       />

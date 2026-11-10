@@ -1,4 +1,6 @@
-import type {RefObject} from 'react';
+import {useRef} from 'react';
+import {useEscapeToClose} from '../../hooks/useEscapeToClose';
+import {useFocusTrap} from '../../hooks/useFocusTrap';
 import TipTapEditor from '../TipTapEditor';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
 import styles from '../../styles/WorkspaceRoute.module.css';
@@ -6,7 +8,6 @@ import modalStyles from './WorkspaceScratchpadModal.module.css';
 
 interface WorkspaceScratchpadModalProps {
   isOpen: boolean;
-  dialogRef: RefObject<HTMLDivElement | null>;
   content: string;
   statusLabel: string;
   isNarrowViewport: boolean;
@@ -18,9 +19,12 @@ interface WorkspaceScratchpadModalProps {
 }
 
 export const WorkspaceScratchpadModal = ({
-  isOpen, dialogRef, content, statusLabel, isNarrowViewport, setContent,
+  isOpen, content, statusLabel, isNarrowViewport, setContent,
   setActiveContextView, setContextDrawerOpen, setSceneDrawerOpen, onClose
 }: WorkspaceScratchpadModalProps) => {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useEscapeToClose(onClose, isOpen);
+  useFocusTrap(dialogRef, isOpen);
   if (!isOpen) return null;
   return (
     <div ref={dialogRef} role='dialog' aria-modal='true' aria-label='Project scratchpad'
