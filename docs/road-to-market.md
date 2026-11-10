@@ -326,7 +326,7 @@ messages).
 | 4.73 | Alternative replies | 4 | M | Done `82dacc8` |
 | 4.74 | Rolling Character Lab summaries | 4 | M | Done `545a7d3` |
 | 4.75 | Local reply length from server context | 4 | S | Done `4bf1e2a` |
-| 4.76 | Places: containment and connections | 4 | M | — (before beta; brief 3.37) |
+| 4.76 | Places: containment and connections | 4 | M | WIP (2026-11-10) |
 | 4.77 | Places: positions refer to place records | 4 | M | — (after 4.76) |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | — (after 4.77) |
 | 4.79 | Maps and placements (data, distance) | 4 | L | — (after 4.76) |
