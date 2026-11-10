@@ -9,7 +9,8 @@ import modalStyles from './WorkspaceScratchpadModal.module.css';
 interface WorkspaceScratchpadModalProps {
   isOpen: boolean;
   content: string;
-  statusLabel: string;
+  status: 'idle' | 'loading' | 'saving' | 'saved' | 'error';
+  lastSavedAt: number | null;
   isNarrowViewport: boolean;
   setContent: (content: string) => void;
   setActiveContextView: (view: 'scratchpad') => void;
@@ -19,12 +20,22 @@ interface WorkspaceScratchpadModalProps {
 }
 
 export const WorkspaceScratchpadModal = ({
-  isOpen, content, statusLabel, isNarrowViewport, setContent,
+  isOpen, content, status, lastSavedAt, isNarrowViewport, setContent,
   setActiveContextView, setContextDrawerOpen, setSceneDrawerOpen, onClose
 }: WorkspaceScratchpadModalProps) => {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   useEscapeToClose(onClose, isOpen);
   useFocusTrap(dialogRef, isOpen);
+  const statusLabel =
+    status === 'loading'
+      ? 'Loading scratchpad...'
+      : status === 'saving'
+        ? 'Saving scratchpad...'
+        : status === 'error'
+          ? 'Scratchpad could not be saved.'
+          : lastSavedAt
+            ? `Scratchpad saved at ${new Date(lastSavedAt).toLocaleTimeString()}`
+            : 'Scratchpad ready.';
   if (!isOpen) return null;
   return (
     <div ref={dialogRef} role='dialog' aria-modal='true' aria-label='Project scratchpad'

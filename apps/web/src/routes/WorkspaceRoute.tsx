@@ -18,19 +18,15 @@ import {
 import {useWorkspaceDocuments} from '../hooks/useWorkspaceDocuments';
 import {useWorkspaceStatBlocks} from '../hooks/useWorkspaceStatBlocks';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
-import {
-  DEFAULT_PARTY_SYNERGY_RULES,
-  deriveCharacterRuntimeModifiers,
-  getEffectiveResourceValues,
-  getEffectiveStatValue,
-  getPartySynergySuggestions
-} from '../services/compendium';
+import {getEffectiveResourceValues, getEffectiveStatValue} from '../services/compendium';
+import {useWorkspaceRuntimeModifiers} from '../hooks/useWorkspaceRuntimeModifiers';
 import {getSeriesBibleConfig} from '../services/seriesBible/SeriesBibleService';
 import {useWorkspaceResolverNotice} from '../hooks/useWorkspaceResolverNotice';
 import {useWorkspaceChapterCardLinks} from '../hooks/useWorkspaceChapterCardLinks';
 import {useWorkspaceCharacterStatPeek} from '../hooks/useWorkspaceCharacterStatPeek';
 import {useWorkspaceSeriesCanon} from '../hooks/useWorkspaceSeriesCanon';
 import {getWorldEngine} from '../services/worldEngine';
+import {getWorkspaceReviewCopy} from '../services/workspace/workspaceReviewCopy';
 import {useWorkspaceDrawers} from '../hooks/useWorkspaceDrawers';
 import {useWorkspaceCommands} from '../hooks/useWorkspaceCommands';
 import {useWorkspaceDrawerFocus} from '../hooks/useWorkspaceDrawerFocus';
@@ -550,23 +546,14 @@ function WorkspaceRoute() {
     navigate('/world-bible', {state: {focusCategorySlug: 'characters'}});
   };
 
-  const activePartySynergies = useMemo(
-    () =>
-      getPartySynergySuggestions({
-        characters,
-        rules: DEFAULT_PARTY_SYNERGY_RULES
-      }),
-    [characters]
-  );
-  const runtimeModifiers = useMemo(
-    () =>
-      deriveCharacterRuntimeModifiers({
-        settlementState,
-        settlementModules,
-        activePartySynergies
-      }),
-    [settlementState, settlementModules, activePartySynergies]
-  );
+  const {activePartySynergies, runtimeModifiers} = useWorkspaceRuntimeModifiers({
+    activeProject,
+    characters,
+    settlementState,
+    settlementModules,
+    addSystemHistory,
+    refreshSystemHistory
+  });
   const selectedSceneOrder = selectedDocument
     ? getSceneOrder(documents, selectedDocument.id)
     : 0;
@@ -663,28 +650,6 @@ function WorkspaceRoute() {
     },
     [documents, handleSelectDocument, openDetectedItemStateProposal]
   );
-  useEffect(() => {
-    if (!activeProject) return;
-    const activeRules = activePartySynergies
-      .filter((item) => item.missingRoles.length === 0)
-      .map((item) => item.ruleId)
-      .sort();
-    if (activeRules.length === 0) return;
-
-    const message =
-      activeRules.length === 1
-        ? 'Quest hook available from an active party synergy combo.'
-        : `Quest hooks available from ${activeRules.length} active party synergy combos.`;
-
-    addSystemHistory({
-      category: 'quest',
-      message,
-      insertText: `Quest Update: ${message}`,
-      sourceKey: `party-synergy:${activeRules.join('|')}`,
-      createdAt: Date.now()
-    });
-    refreshSystemHistory();
-  }, [activeProject, activePartySynergies, addSystemHistory, refreshSystemHistory]);
   const capabilities = getProjectCapabilities(projectSettings);
   const showGameSystems = capabilities.canUseGameSystems;
   const showRuleAuthoring = capabilities.canUseRuleAuthoring;
@@ -702,29 +667,10 @@ function WorkspaceRoute() {
     getCharacterStatSnapshot,
     getCharacterStatSnapshotAt
   });
-  const reviewBannerTitle = hasBlockingUnknownGuardrailIssues
-    ? isGeneralFictionProject
-      ? 'This scene has names or places to review before strict save.'
-      : 'This scene has detected references to review before strict save.'
-    : isGeneralFictionProject
-      ? 'Project review found names or places in this scene.'
-      : 'Project review found detected references in this scene.';
-  const reviewBannerBody = isGeneralFictionProject
-    ? 'Click an underline in the editor to add it to your world, connect it to something existing, or ignore it for now.'
-    : 'Click an underline in the editor to add it to the world, connect it to an existing record, or ignore it for now.';
-  const reviewCreateLabel = isGeneralFictionProject ? 'Add to World' : 'Create record';
-  const reviewCreateAllLabel = isGeneralFictionProject
-    ? 'Add all to World'
-    : 'Create all as new records';
-  const reviewDismissAllLabel = isGeneralFictionProject
-    ? 'Ignore all for now'
-    : hasBlockingUnknownGuardrailIssues
-      ? 'Dismiss all for now'
-      : 'Hide all warnings for now';
-  const reviewLinkLabel = isGeneralFictionProject ? 'Connect to existing' : 'Link alias';
-  const reviewPopoverMessage = isGeneralFictionProject
-    ? 'Add this to your world, connect it to something you already track, or ignore it for now.'
-    : 'Choose how to handle this detected reference.';
+  const reviewCopy = getWorkspaceReviewCopy({
+    isGeneralFiction: isGeneralFictionProject,
+    hasBlockingIssues: hasBlockingUnknownGuardrailIssues
+  });
   const visibleReviewSurfaces = unknownGuardrailIssues
     .map((issue) => issue.surface?.trim())
     .filter((surface): surface is string => Boolean(surface))
@@ -735,16 +681,6 @@ function WorkspaceRoute() {
   );
   const showReviewBanner =
     hasBlockingUnknownGuardrailIssues && !isReviewBannerDismissed;
-  const scratchpadStatusLabel =
-    scratchpadStatus === 'loading'
-      ? 'Loading scratchpad...'
-      : scratchpadStatus === 'saving'
-        ? 'Saving scratchpad...'
-        : scratchpadStatus === 'error'
-          ? 'Scratchpad could not be saved.'
-          : scratchpadLastSavedAt
-            ? `Scratchpad saved at ${new Date(scratchpadLastSavedAt).toLocaleTimeString()}`
-            : 'Scratchpad ready.';
   const selectionQuickSnippets = useWorkspaceLoreSnippets({
     activeProject,
     categories,
@@ -907,8 +843,8 @@ function WorkspaceRoute() {
       editStateMutationReviewItem,
       onFocusReviewItem: focusReviewItemInScene,
       activeReviewItemId,
-      createLabel: reviewCreateLabel,
-      linkLabel: reviewLinkLabel,
+      createLabel: reviewCopy.createLabel,
+      linkLabel: reviewCopy.linkLabel,
       worldCaptureDrafts,
       setWorldCaptureDrafts
     },
@@ -986,10 +922,10 @@ function WorkspaceRoute() {
           onDismissAll={() => dismissAllUnknownEntities(selectedId ?? undefined)}
           onDismissNotice={() => setReviewBannerDismissed(true)}
           onResolveAll={resolveAllUnknownEntities}
-          reviewBannerBody={reviewBannerBody}
-          reviewBannerTitle={reviewBannerTitle}
-          reviewCreateAllLabel={reviewCreateAllLabel}
-          reviewDismissAllLabel={reviewDismissAllLabel}
+          reviewBannerBody={reviewCopy.bannerBody}
+          reviewBannerTitle={reviewCopy.bannerTitle}
+          reviewCreateAllLabel={reviewCopy.createAllLabel}
+          reviewDismissAllLabel={reviewCopy.dismissAllLabel}
           visibleReviewSurfaces={visibleReviewSurfaces}
         />
       )}
@@ -1104,7 +1040,7 @@ function WorkspaceRoute() {
                   <WorkspaceReviewSurfacePopover
                     surface={activeConsistencyPopoverIssue.surface}
                     left={consistencyPopover.left} top={consistencyPopover.top}
-                    message={reviewPopoverMessage} createLabel={reviewCreateLabel} linkLabel={reviewLinkLabel}
+                    message={reviewCopy.popoverMessage} createLabel={reviewCopy.createLabel} linkLabel={reviewCopy.linkLabel}
                     categories={categories} selectedSceneId={selectedId}
                     worldCaptureDrafts={worldCaptureDrafts} setWorldCaptureDrafts={setWorldCaptureDrafts}
                     rejectedAliasSuggestions={rejectedAliasSuggestions}
@@ -1115,7 +1051,7 @@ function WorkspaceRoute() {
                 {manualWorldCapture && (
                   <WorkspaceManualWorldCapturePopover
                     capture={manualWorldCapture} setCapture={setManualWorldCapture}
-                    createLabel={reviewCreateLabel} categories={categories} characters={characters}
+                    createLabel={reviewCopy.createLabel} categories={categories} characters={characters}
                     entities={entities} entitySnippets={selectionQuickSnippets.entities}
                     existingTargetId={manualExistingTargetId} setExistingTargetId={setManualExistingTargetId}
                     rejectedAliasSuggestions={rejectedAliasSuggestions}
@@ -1263,7 +1199,7 @@ function WorkspaceRoute() {
 
       <WorkspaceScratchpadModal
         isOpen={isScratchpadModalOpen}
-        content={scratchpadContent} statusLabel={scratchpadStatusLabel}
+        content={scratchpadContent} status={scratchpadStatus} lastSavedAt={scratchpadLastSavedAt}
         isNarrowViewport={isNarrowViewport} setContent={setScratchpadContent}
         setActiveContextView={setActiveContextView}
         setContextDrawerOpen={setContextDrawerOpen}
