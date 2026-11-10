@@ -47,7 +47,7 @@ async function seedLinkedProject(name: string) {
     [SETTINGS_STORE_NAME, {id: ids.settings, projectId, characterStyles: [], activeSkills: [], featureToggles: {}, createdAt: 1, updatedAt: 1}],
     [CATEGORY_STORE_NAME, {id: ids.category, projectId, kind: 'character', name: 'Characters', slug: 'characters', fieldSchema: [], createdAt: 1}],
     [ENTITY_STORE_NAME, {id: ids.mira, projectId, categoryId: ids.category, name: 'Mira', fields: {rival: ids.sera}, links: [ids.sera], createdAt: 1, updatedAt: 1}],
-    [ENTITY_STORE_NAME, {id: ids.sera, projectId, categoryId: ids.category, name: 'Sera', fields: {}, links: [], systemNegativeSpace: {status: 'open', sceneIds: [ids.scene2]}, createdAt: 1, updatedAt: 1}],
+    [ENTITY_STORE_NAME, {id: ids.sera, projectId, categoryId: ids.category, name: 'Sera', fields: {}, links: [], systemNegativeSpace: {status: 'open', sceneIds: [ids.scene2]}, place: {parentId: ids.mira, connections: [{id: uuid(), toId: ids.mira, kind: 'road', distance: {words: 'two days'}}]}, createdAt: 1, updatedAt: 1}],
     [WRITING_STORE_NAME, {id: ids.scene1, projectId, title: 'One', content: `<p>Mira (${ids.mira}) waits.</p>`, order: 1, createdAt: 1, updatedAt: 1}],
     [WRITING_STORE_NAME, {id: ids.scene2, projectId, title: 'Two', content: '<p>Rain.</p>', order: 2, createdAt: 1, updatedAt: 1}],
     [CORKBOARD_CHAPTER_CARD_STORE_NAME, {id: ids.card, projectId, title: 'Act I', summary: '', status: 'planned', order: 1, sceneIds: [ids.scene1, ids.scene2], plotPoints: [], createdAt: 1, updatedAt: 1}],
@@ -96,6 +96,8 @@ function expectIndependentCopy(copy: ProjectSnapshot, source: ProjectSnapshot) {
   expect(mira.links).toEqual([sera.id]);
   expect(mira.fields).toEqual({rival: sera.id});
   expect(sera.systemNegativeSpace?.sceneIds.every((id) => scenes.has(id))).toBe(true);
+  expect(sera.place?.parentId).toBe(mira.id);
+  expect(sera.place?.connections?.[0]).toMatchObject({toId: mira.id, kind: 'road', distance: {words: 'two days'}});
   expect(data.corkboardChapterCards[0].sceneIds?.every((id) => scenes.has(id))).toBe(true);
   expect(data.characters[0].entityId).toBe(mira.id);
   expect(data.characterSheets[0]).toMatchObject({characterEntityId: mira.id, characterId: data.characters[0].id});

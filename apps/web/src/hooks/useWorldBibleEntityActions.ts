@@ -10,16 +10,19 @@ import {
 import type {
   Character,
   EntityCategory,
+  PlaceData,
   WorldEntity,
   Project
 } from '../entityTypes';
 import type {ReviewQueueItem} from '../services/consistency';
 import {
   isCharacterLikeEntity as isCharacterLikeRecord,
+  isLocationCategory,
   isLocationLikeEntity as isLocationLikeRecord,
   pickNextReviewItem,
   planEntityDraft
 } from '../services/worldBible/worldBibleEntityPlans';
+import {normalizePlaceData, placesById} from '../services/worldBible/places';
 import {useWorldBibleMergeActions} from './useWorldBibleMergeActions';
 import {useWorldBibleLinkActions} from './useWorldBibleLinkActions';
 import type {RAGProvider} from '../services/rag/RAGService';
@@ -61,6 +64,8 @@ interface UseWorldBibleEntityActionsParams {
   name: string;
   fieldValues: Record<string, string>;
   systemNegativeSpace?: WorldEntity['systemNegativeSpace'];
+  /** The location draft's parent and connections; undefined for other categories. */
+  place?: PlaceData;
   viewMode: 'category' | 'review';
   selectedEntityQueueItem: ReviewQueueItem | null;
   filteredReviewQueue: ReviewQueueItem[];
@@ -100,6 +105,7 @@ export const useWorldBibleEntityActions = ({
   name,
   fieldValues,
   systemNegativeSpace,
+  place,
   viewMode,
   selectedEntityQueueItem,
   filteredReviewQueue,
@@ -151,15 +157,20 @@ export const useWorldBibleEntityActions = ({
       try {
         const now = Date.now();
         const id = editingId ?? crypto.randomUUID();
+        const existing = entities.find((record) => record.id === id);
+        const savedPlace = isLocationCategory(activeCategory)
+          ? normalizePlaceData(id, place, placesById(categories, entities))
+          : existing?.place;
         const {entity, aliases: aliasesToSave} = planEntityDraft({
           id,
           now,
           projectId: activeProject.id,
           category: activeCategory,
-          existing: entities.find((record) => record.id === id),
+          existing,
           name,
           fieldValues,
           systemNegativeSpace,
+          place: savedPlace,
           indexedAliases: aliasMapByEntityId.get(id) ?? [],
           reviewingFromQueue: Boolean(viewMode === 'review' && selectedEntityQueueItem),
           alternativeNamesKey,
@@ -215,8 +226,10 @@ export const useWorldBibleEntityActions = ({
       activeProject,
       aliasMapByEntityId,
       alternativeNamesKey,
+      categories,
       editingId,
       entities,
+      place,
       fieldValues,
       systemNegativeSpace,
       formatAlternativeNames,

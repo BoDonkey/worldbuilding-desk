@@ -1,12 +1,23 @@
 import type {
+  AuthoredMeasure,
   CanonicalFact,
   EntityCategory,
   LoreDocument,
   LoreDocumentLink,
+  PlaceTravelTime,
   WorldEntity
 } from '../../entityTypes';
 import type {ConsistencyAlias} from '../storage';
 import {buildZip, type ZipEntryInput} from '../../utils/zip';
+import {
+  connectionsForPlace,
+  describeConnectionMeasures,
+  placeAncestors,
+  placesById,
+  type PlaceConnectionView,
+  type PlacesById
+} from '../worldBible/places';
+import {isLocationCategory} from '../worldBible/worldBibleEntityPlans';
 
 export const PORTABLE_DATA_SCHEMA_VERSION = 1;
 
@@ -20,6 +31,19 @@ export interface PortableMarkdownFrontmatter {
   links?: string[];
   fields?: Record<string, unknown>;
   kind?: string;
+  /** Location records: the parent place's name and the connections this record stores. */
+  place?: PortablePlace;
+}
+
+export interface PortablePlace {
+  inside?: string;
+  connections?: Array<{
+    to: string;
+    kind: string;
+    oneWay?: boolean;
+    distance?: AuthoredMeasure;
+    travelTimes?: PlaceTravelTime[];
+  }>;
 }
 
 export interface PortableMarkdownDraft {
@@ -113,14 +137,56 @@ const linkedEntityNames = (
     .map((id) => entitiesById.get(id)?.name)
     .filter((name): name is string => Boolean(name));
 
+/** The record's own place data, by name, for frontmatter; undefined when it has none. */
+const portablePlace = (entity: WorldEntity, places: PlacesById): PortablePlace | undefined => {
+  const parent = entity.place?.parentId ? places.get(entity.place.parentId) : undefined;
+  const connections = (entity.place?.connections ?? []).flatMap((connection) => {
+    const to = places.get(connection.toId);
+    if (!to || to.id === entity.id) return [];
+    return [{
+      to: to.name,
+      kind: connection.kind,
+      ...(connection.oneWay ? {oneWay: true} : {}),
+      ...(connection.distance ? {distance: connection.distance} : {}),
+      ...(connection.travelTimes?.length ? {travelTimes: connection.travelTimes} : {})
+    }];
+  });
+  if (!parent && connections.length === 0) return undefined;
+  return {
+    ...(parent ? {inside: parent.name} : {}),
+    ...(connections.length > 0 ? {connections} : {})
+  };
+};
+
+/** "road to Ford (one-way) — 40 miles; on foot: 3 days", seen from the place being exported. */
+const describeConnectionView = (
+  view: PlaceConnectionView,
+  places: PlacesById,
+  wikilink: boolean
+): string => {
+  const otherName = places.get(view.otherId)?.name ?? '';
+  const other = wikilink ? `[[${otherName}]]` : otherName;
+  const direction =
+    view.direction === 'from' ? `from ${other} (one-way, arriving here)`
+    : view.direction === 'to' ? `to ${other} (one-way)`
+    : `to ${other}`;
+  const measures = describeConnectionMeasures(view.connection);
+  return `${view.connection.kind} ${direction}${measures ? ` — ${measures}` : ''}`;
+};
+
 const buildEntityMarkdown = (params: {
   entity: WorldEntity;
   category: EntityCategory;
   entitiesById: Map<string, WorldEntity>;
+  places: PlacesById;
   aliases: ConsistencyAlias[];
   facts: CanonicalFact[];
 }): string => {
-  const {entity, category, entitiesById, aliases, facts} = params;
+  const {entity, category, entitiesById, places, aliases, facts} = params;
+  const isPlace = places.has(entity.id);
+  const placeData = isPlace ? portablePlace(entity, places) : undefined;
+  const ancestors = isPlace ? placeAncestors(entity.id, places) : [];
+  const connectionViews = isPlace ? connectionsForPlace(entity.id, places) : [];
   const entityAliases = aliasValuesForEntity(entity, aliases);
   const linkNames = linkedEntityNames(entity, entitiesById);
   const exportFields = Object.fromEntries(
@@ -137,7 +203,8 @@ const buildEntityMarkdown = (params: {
       ['categorySlug', category.slug],
       ['aliases', entityAliases],
       ['links', linkNames],
-      ['fields', exportFields]
+      ['fields', exportFields],
+      ['place', placeData]
     ]),
     '',
     `# ${entity.name}`,
@@ -151,6 +218,17 @@ const buildEntityMarkdown = (params: {
   });
   if (entityAliases.length > 0) {
     lines.push('## Aliases', '', entityAliases.map((value) => `- ${value}`).join('\n'), '');
+  }
+  if (ancestors.length > 0) {
+    lines.push('## Inside', '', ancestors.map((place) => `[[${place.name}]]`).join(' › '), '');
+  }
+  if (connectionViews.length > 0) {
+    lines.push(
+      '## Connections',
+      '',
+      connectionViews.map((view) => `- ${describeConnectionView(view, places, true)}`).join('\n'),
+      ''
+    );
   }
   if (linkNames.length > 0) {
     lines.push('## Links', '', linkNames.map((value) => `- [[${value}]]`).join('\n'), '');
@@ -200,15 +278,18 @@ const buildCategoryCsv = (params: {
   category: EntityCategory;
   entities: WorldEntity[];
   allEntities: Map<string, WorldEntity>;
+  places: PlacesById;
   aliases: ConsistencyAlias[];
   facts: CanonicalFact[];
 }): string => {
-  const {category, entities, allEntities, aliases, facts} = params;
+  const {category, entities, allEntities, places, aliases, facts} = params;
+  const isPlaceCategory = isLocationCategory(category);
   const headings = [
     'name',
     'aliases',
     'links',
     ...category.fieldSchema.map((field) => field.key),
+    ...(isPlaceCategory ? ['inside', 'connections'] : []),
     'accepted_facts'
   ];
   const rows = entities.map((entity) => {
@@ -220,13 +301,21 @@ const buildCategoryCsv = (params: {
       aliasValuesForEntity(entity, aliases).join(' | '),
       linkedEntityNames(entity, allEntities).join(' | '),
       ...category.fieldSchema.map((field) => entity.fields[field.key]),
+      ...(isPlaceCategory
+        ? [
+            placeAncestors(entity.id, places).map((place) => place.name).join(' › '),
+            connectionsForPlace(entity.id, places)
+              .map((view) => describeConnectionView(view, places, false))
+              .join(' | ')
+          ]
+        : []),
       entityFacts.map((fact) => `${fact.factType}: ${factValueToText(fact)}`).join(' | ')
     ].map(csvCell).join(',');
   });
   return [headings.map(csvCell).join(','), ...rows].join('\r\n') + '\r\n';
 };
 
-export const PORTABLE_SCHEMA_README = `# SagaSpine portable data\n\nSchema: worldbuilding-desk/portable/${PORTABLE_DATA_SCHEMA_VERSION}\n\nThis ZIP is the human-readable interchange format. The project backup ZIP remains the full-fidelity restore format.\n\n- \`world-bible/<category>/*.md\`: one record per Markdown file. YAML frontmatter contains category, aliases, links, and a JSON-compatible \`fields\` map. Accepted facts are repeated in the Markdown body so another tool can read them without parsing application data.\n- \`world-bible/*.csv\`: one UTF-8 CSV per category. Multi-value cells use \` | \` inside a correctly quoted CSV cell.\n- \`source-notes/*.md\`: one source note per Markdown file. Source Notes are evidence, not accepted canon.\n\nOn import, files are staged for review. World Bible files become incomplete drafts; Source Notes remain non-canon and use the normal extraction/review flow. Wikilinks are suggestions only and are ignored unless the author explicitly maps them.\n`;
+export const PORTABLE_SCHEMA_README = `# SagaSpine portable data\n\nSchema: worldbuilding-desk/portable/${PORTABLE_DATA_SCHEMA_VERSION}\n\nThis ZIP is the human-readable interchange format. The project backup ZIP remains the full-fidelity restore format.\n\n- \`world-bible/<category>/*.md\`: one record per Markdown file. YAML frontmatter contains category, aliases, links, a JSON-compatible \`fields\` map, and for places a \`place\` map (\`inside\`: the parent place's name; \`connections\`: the connections stored on that record, each with \`to\`, \`kind\`, optional \`oneWay\`, \`distance\`, and \`travelTimes\`). Accepted facts are repeated in the Markdown body so another tool can read them without parsing application data.\n- \`world-bible/*.csv\`: one UTF-8 CSV per category. Multi-value cells use \` | \` inside a correctly quoted CSV cell.\n- \`source-notes/*.md\`: one source note per Markdown file. Source Notes are evidence, not accepted canon.\n\nOn import, files are staged for review. World Bible files become incomplete drafts; Source Notes remain non-canon and use the normal extraction/review flow. Wikilinks are suggestions only and are ignored unless the author explicitly maps them.\n`;
 
 export function buildPortableDataZip(params: {
   categories: EntityCategory[];
@@ -238,6 +327,7 @@ export function buildPortableDataZip(params: {
 }): Uint8Array {
   const entitiesById = new Map(params.entities.map((entity) => [entity.id, entity]));
   const categoriesById = new Map(params.categories.map((category) => [category.id, category]));
+  const places = placesById(params.categories, params.entities);
   const entries: ZipEntryInput[] = [
     {fileName: 'README.md', fileData: textEncoder.encode(PORTABLE_SCHEMA_README)}
   ];
@@ -270,6 +360,7 @@ export function buildPortableDataZip(params: {
           entity,
           category,
           entitiesById,
+          places,
           aliases: params.aliases,
           facts
         })
@@ -285,6 +376,7 @@ export function buildPortableDataZip(params: {
           category,
           entities: params.entities.filter((entity) => entity.categoryId === category.id),
           allEntities: entitiesById,
+          places,
           aliases: params.aliases,
           facts: params.canonicalFacts
         })

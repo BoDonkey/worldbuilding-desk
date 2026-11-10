@@ -1,6 +1,8 @@
 import {useCallback, useMemo, useState} from 'react';
 import type {
   EntityCategory,
+  PlaceConnection,
+  PlaceData,
   WorldCanvasLensKind,
   WorldEntity,
   WritingDocument
@@ -18,6 +20,7 @@ import {
   parseAlternativeNames
 } from '../../../services/worldBible/worldBibleEntityHelpers';
 import {isCharacterCategory} from '../../../services/worldBible/worldBibleSummary';
+import {isLocationCategory} from '../../../services/worldBible/worldBibleEntityPlans';
 
 export type RecordAuthoringMode = 'idle' | 'manual';
 export type RecordReviewFocus = 'general' | 'aliases';
@@ -58,6 +61,8 @@ export function useWorldBibleRecordDraft({
   const [negativeSpaceStatus, setNegativeSpaceStatus] =
     useState<SystemNegativeSpaceStatus>('open');
   const [negativeSpaceSceneIds, setNegativeSpaceSceneIds] = useState<string[]>([]);
+  const [placeParentId, setPlaceParentId] = useState('');
+  const [placeConnections, setPlaceConnections] = useState<PlaceConnection[]>([]);
   const [characterDetailSection, setCharacterDetailSection] =
     useState<CharacterDetailSection>('canon');
   const [areItemDetailsExpanded, setAreItemDetailsExpanded] = useState(false);
@@ -89,6 +94,13 @@ export function useWorldBibleRecordDraft({
     ]
   );
 
+  const isLocation = isLocationCategory(activeCategory);
+  /** The parent and connections as edited; saving normalizes them. Undefined for other categories. */
+  const place = useMemo<PlaceData | undefined>(
+    () => isLocation ? {parentId: placeParentId || undefined, connections: placeConnections} : undefined,
+    [isLocation, placeConnections, placeParentId]
+  );
+
   const reset = useCallback(() => {
     setEditingId(null);
     setName('');
@@ -102,6 +114,8 @@ export function useWorldBibleRecordDraft({
     setRecordAuthoringMode('idle');
     setNegativeSpaceStatus('open');
     setNegativeSpaceSceneIds([]);
+    setPlaceParentId('');
+    setPlaceConnections([]);
     setAreItemDetailsExpanded(false);
     setIsPasteImportOpen(false);
     setPastedImportText('');
@@ -112,6 +126,8 @@ export function useWorldBibleRecordDraft({
     setEditingId(null);
     setName('');
     setFieldValues({});
+    setPlaceParentId('');
+    setPlaceConnections([]);
     setCharacterAuthoringMode('manual');
     setCharacterDetailSection('canon');
     setRecordAuthoringMode('idle');
@@ -131,6 +147,8 @@ export function useWorldBibleRecordDraft({
     setRecordAuthoringMode('manual');
     setNegativeSpaceStatus('open');
     setNegativeSpaceSceneIds([]);
+    setPlaceParentId('');
+    setPlaceConnections([]);
     setAreItemDetailsExpanded(false);
     setIsPasteImportOpen(false);
     setPastedImportText('');
@@ -143,6 +161,8 @@ export function useWorldBibleRecordDraft({
       setEditingId(null);
       setName(recordName);
       setFieldValues({});
+      setPlaceParentId('');
+      setPlaceConnections([]);
       setCharacterAuthoringMode(isCharacter ? 'manual' : 'idle');
       setRecordAuthoringMode(isCharacter ? 'idle' : 'manual');
       setCharacterDetailSection('canon');
@@ -168,6 +188,8 @@ export function useWorldBibleRecordDraft({
     setName(entity.name);
     setNegativeSpaceStatus(entity.systemNegativeSpace?.status ?? 'open');
     setNegativeSpaceSceneIds(entity.systemNegativeSpace?.sceneIds ?? []);
+    setPlaceParentId(entity.place?.parentId ?? '');
+    setPlaceConnections(entity.place?.connections ?? []);
     setMoveCategoryTargetId(entity.categoryId);
     const persistedAlternativeNames =
       typeof entity.fields[ALTERNATIVE_NAMES_KEY] === 'string'
@@ -213,6 +235,11 @@ export function useWorldBibleRecordDraft({
     negativeSpaceSceneIds,
     setNegativeSpaceSceneIds,
     systemNegativeSpace,
+    placeParentId,
+    setPlaceParentId,
+    placeConnections,
+    setPlaceConnections,
+    place,
     characterDetailSection,
     setCharacterDetailSection,
     areItemDetailsExpanded,

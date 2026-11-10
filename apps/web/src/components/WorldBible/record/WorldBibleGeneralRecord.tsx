@@ -13,6 +13,8 @@ import type {
 } from './recordTypes';
 import {RecordNamesSection} from './RecordNamesSection';
 import {RecordSectionBuilder} from './RecordSectionBuilder';
+import {RecordPlaceSection} from './RecordPlaceSection';
+import {isLocationCategory} from '../../../services/worldBible/worldBibleEntityPlans';
 
 type CategoryField = EntityCategory['fieldSchema'][number];
 
@@ -115,6 +117,15 @@ export function WorldBibleGeneralRecord({
                 !isDescriptionFirstItemDraft || field.key !== itemDescriptionField?.key
             )
             .map(renderEntityField)}
+
+          {isLocationCategory(category) && (
+            <RecordPlaceSection
+              categories={categories}
+              entities={entities}
+              draft={draft}
+              onEdit={onEdit}
+            />
+          )}
 
           <RecordSectionBuilder variant='record' authoring={authoring} />
         </div>

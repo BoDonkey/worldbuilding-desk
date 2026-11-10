@@ -1,0 +1,127 @@
+.placePanel {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--color-bg-secondary);
+}
+
+.placeHeading p,
+.placeHint {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-secondary);
+}
+
+.placeGroup {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.placeChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.connections {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+}
+
+.connectionCard {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--color-bg-primary);
+}
+
+.connectionRow {
+  display: grid;
+  grid-template-columns: minmax(10rem, 2fr) minmax(8rem, 1fr) auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+
+.connectionRow label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.connectionCard input,
+.connectionCard select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem;
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+}
+
+.connectionCard input[type='checkbox'] {
+  width: auto;
+}
+
+.connectionRow .inlineCheck {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
+.measureCaption {
+  margin-bottom: -0.3rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.measureRow {
+  display: grid;
+  grid-template-columns: minmax(10rem, 2fr) minmax(5rem, 1fr) minmax(6rem, 1fr);
+  gap: 0.5rem;
+}
+
+.travelRow {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(16rem, 3fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.connectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.incomingList {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.incomingList li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .connectionRow,
+  .measureRow,
+  .travelRow {
+    grid-template-columns: 1fr;
+  }
+}
