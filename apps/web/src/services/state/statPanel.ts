@@ -59,6 +59,8 @@ export function describeCharacterSnapshotChange(change: CharacterSnapshotChange)
   switch (change.kind) {
     case 'level':
       return `Level ${change.from} → ${change.to}`;
+    case 'experience':
+      return `XP ${change.from} → ${change.to}`;
     case 'resource':
       return `${change.label} ${formatResource(change.from)} → ${formatResource(change.to)}`;
     case 'stat':

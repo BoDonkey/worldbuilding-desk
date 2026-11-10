@@ -9,9 +9,12 @@ import type {
   StatBlockScopePreset,
   StatBlockSourceType,
   StatBlockStyle,
+  StateMutationEvent,
   StoredRuleset,
   WorldEntity
 } from '../entityTypes';
+import type {ActorResolution} from '../services/characters/characterIdentity';
+import {replayCharacterState} from '../services/state/stateReplay';
 import type {CharacterRuntimeModifiers} from '../services/compendium';
 import {
   extractStatBlockTokensFromHtml,
@@ -77,6 +80,10 @@ interface UseWorkspaceStatBlocksParams {
   pendingStatBlockRebindToken: string | null;
   setPendingStatBlockRebindToken: Dispatch<SetStateAction<string | null>>;
   characterSheets: CharacterSheet[];
+  stateMutationEvents: StateMutationEvent[];
+  actorResolutions: ActorResolution[];
+  /** Manuscript order of the scene being edited; 0 when none. */
+  sceneOrder: number;
   entities: WorldEntity[];
   ruleset: StoredRuleset | null;
   runtimeModifiers: CharacterRuntimeModifiers;
@@ -140,7 +147,9 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
     setStatBlockModalOpen,
     pendingStatBlockRebindToken,
     setPendingStatBlockRebindToken,
-    characterSheets,
+    stateMutationEvents,
+    actorResolutions,
+    sceneOrder,
     entities,
     ruleset,
     runtimeModifiers,
@@ -153,6 +162,32 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
     getEffectiveStatValue,
     getEffectiveResourceValues
   } = params;
+
+  // A sheet's level and XP are starting values; blocks show them as of the
+  // end of the scene being edited, after its accepted XP gains.
+  const characterSheets = useMemo(
+    () =>
+      params.characterSheets.map((sheet) => {
+        if (sceneOrder <= 0) return sheet;
+        const {level, experience} = replayCharacterState({
+          sheet,
+          ruleset,
+          events: stateMutationEvents,
+          target: {
+            actorId: sheet.characterEntityId,
+            characterId: sheet.characterId,
+            sheetId: sheet.id,
+            actorName: sheet.name
+          },
+          actorResolutions,
+          upToSceneOrder: sceneOrder
+        }).progression;
+        return level === sheet.level && experience === sheet.experience
+          ? sheet
+          : {...sheet, level, experience};
+      }),
+    [actorResolutions, params.characterSheets, ruleset, sceneOrder, stateMutationEvents]
+  );
 
   useStatBlockPreferencePersistence({
     activeProject,

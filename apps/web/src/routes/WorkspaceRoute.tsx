@@ -822,6 +822,9 @@ function WorkspaceRoute() {
       }),
     [settlementState, settlementModules, activePartySynergies]
   );
+  const selectedSceneOrder = selectedDocument
+    ? getSceneOrder(documents, selectedDocument.id)
+    : 0;
   const statBlocks = useWorkspaceStatBlocks({
     activeProject,
     projectSettings,
@@ -856,6 +859,9 @@ function WorkspaceRoute() {
     pendingStatBlockRebindToken,
     setPendingStatBlockRebindToken,
     characterSheets,
+    stateMutationEvents,
+    actorResolutions,
+    sceneOrder: selectedSceneOrder,
     entities,
     ruleset,
     runtimeModifiers,
@@ -995,9 +1001,6 @@ function WorkspaceRoute() {
     ]
   );
   const setWorkspaceStatContext = useWorkspaceUiStore((s) => s.setWorkspaceStatContext);
-  const selectedSceneOrder = selectedDocument
-    ? getSceneOrder(documents, selectedDocument.id)
-    : 0;
   useEffect(() => {
     if (!activeProject || !showGameSystems || !selectedDocument || selectedSceneOrder <= 0) {
       setWorkspaceStatContext(null);

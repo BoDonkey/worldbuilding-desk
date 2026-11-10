@@ -40,7 +40,7 @@ describe('BasicCharacterStatePanel', () => {
     />);
 
     fireEvent.click(screen.getByRole('button', {
-      name: 'Inventory, equipment, status, or location'
+      name: 'XP, inventory, equipment, status, or location'
     }));
     expect(onOpenDetailedChanges).toHaveBeenCalledOnce();
   });

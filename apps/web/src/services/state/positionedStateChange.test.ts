@@ -17,7 +17,8 @@ const before: CharacterReplayState = {
   stats: {STR: 10},
   resources: {current: {HP: 8}, max: {HP: 10}},
   inventory: {items: [{name: 'Potion', quantity: 1}], equipped: []},
-  statuses: []
+  statuses: [],
+  progression: {experience: 0, level: 1, startingLevel: 1, levelTable: []}
 };
 
 describe('positioned state changes', () => {

@@ -480,7 +480,7 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('button', 'Record a scene change').should('be.visible');
     cy.contains('button', 'Record a scene change').click();
     cy.location('pathname').should('eq', '/sheets');
-    cy.contains('button', 'Inventory, equipment, status, or location').click();
+    cy.contains('button', 'XP, inventory, equipment, status, or location').click();
     cy.contains('h2', 'Record a detailed scene change').parents('section').first().within(() => {
       cy.contains('label', 'Character').find('select').find('option:selected')
         .should('have.text', 'Tamsin Vale');

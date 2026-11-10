@@ -4,6 +4,7 @@ import type {
 } from '../../../entityTypes';
 import {inventoryAppKinds} from './inventory';
 import {locationAppKinds} from './location';
+import {progressionAppKinds} from './progression';
 import {resourceAppKinds, resourceChangeFromConsumableEffect} from './resource';
 import {statAppKinds, statChangeFromConsumableEffect} from './stat';
 import {statusAppKinds} from './status';
@@ -25,7 +26,8 @@ export const appStateKinds: AppStateKindRegistry = {
   ...statAppKinds,
   ...statusAppKinds,
   ...inventoryAppKinds,
-  ...locationAppKinds
+  ...locationAppKinds,
+  ...progressionAppKinds
 };
 
 /** The app entry for a command type, for code that handles any command. */

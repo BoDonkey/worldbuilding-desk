@@ -1,6 +1,6 @@
 # SagaSpine Project Status
 
-**Last Updated:** October 31, 2026
+**Last Updated:** November 8, 2026
 
 ## Project Overview
 
@@ -413,13 +413,27 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ### Optional Game/System Layers
 - Standalone `rules-engine` package with stats, resources, formulas, effects, and dice.
 - Each kind of scene state change (resource, stat, status, inventory,
-  location) lives in one engine module and one app module, with typed
+  location, XP) lives in one engine module and one app module, with typed
   registries driving replay, validation, labels, the Character Sheets form, the
   Workspace composer, the AI observation enum, and the story dashboard.
   Consumable effects become commands only through these modules, and
   rules-engine `Effect`s on stats or resource values can be translated to
   commands (not yet used by any rule path). Checklist for adding a kind:
   `docs/domain-model.md` §3.
+- XP and levels through the scene ledger (slice 3.34a). A scene can record
+  **Gain XP** (amount and optional reason) from the Character Sheets form or
+  the Workspace composer, and the scene scanner proposes one for prose like
+  "Kael gained 250 XP" (it no longer reads that as picking up an item called
+  XP). The sheet's level and XP are starting values. An optional **Levels**
+  table in the ruleset editor (for example level 2 at 100 XP) raises the level
+  as XP grows, never below the starting level; without one the level stays as
+  set. Stat cards, peeks, pinned stats, the scene roster, and inserted stat
+  blocks show the replayed level and XP for their point in the manuscript;
+  Character Sheets history shows the level and XP after each XP change; the
+  story dashboard counts XP under **Progression** and as an advancement axis.
+  Project storage schema 9 and backup snapshot schema 11 (both additive).
+  Inserted stat blocks still show the sheet's stats and resources, not
+  replayed ones.
 - Ruleset builder and runtime stat/resource evaluation.
 - Settlement progression, synergy logic, and compendium systems.
 - The Mechanics/Compendium route and its four extracted tab components now use

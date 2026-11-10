@@ -1,4 +1,4 @@
-import {getStateMutationKind} from './kinds';
+import {deriveLevel, getStateMutationKind, normalizeLevelTable} from './kinds';
 import type {
   ActorResolutionReference,
   CharacterReplayState,
@@ -91,6 +91,12 @@ export function buildCharacterReplayBaseline(params: {
     sheet.statuses?.filter(Boolean) ??
     [];
 
+  const startingProgression = {
+    experience: sheet.experience ?? 0,
+    startingLevel: sheet.level ?? 1,
+    levelTable: normalizeLevelTable(ruleset?.levelTable)
+  };
+
   return {
     actorId: sheet.characterEntityId ?? sheet.characterId ?? sheet.id,
     actorName: sheet.name,
@@ -104,7 +110,8 @@ export function buildCharacterReplayBaseline(params: {
       equipped
     },
     statuses,
-    locationName: undefined
+    locationName: undefined,
+    progression: {...startingProgression, level: deriveLevel(startingProgression)}
   };
 }
 
@@ -141,7 +148,9 @@ export function applyStateMutationCommand(
       equipped: [...state.inventory.equipped]
     },
     statuses: [...state.statuses],
-    locationName: state.locationName
+    locationName: state.locationName,
+    // The level table is never changed by replay, so it is shared.
+    progression: {...state.progression}
   };
 
   getStateMutationKind(command.type).apply(next, command);
@@ -187,7 +196,8 @@ export function replayCharacterState(params: {
       equipped: [...baseline.inventory.equipped]
     },
     statuses: [...baseline.statuses],
-    locationName: baseline.locationName
+    locationName: baseline.locationName,
+    progression: {...baseline.progression}
   };
 
   const acceptedEvents = getAcceptedStateMutationEvents(params.events);

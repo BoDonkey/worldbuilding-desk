@@ -57,4 +57,24 @@ describe('stateDeltaObservations', () => {
       }
     ]);
   });
+
+  it('reads XP gains as xp_gain, not as picking up an item called XP', () => {
+    const observations = extractStateDeltaObservations({
+      projectId: 'project-1',
+      text: 'Kael gained 250 XP. Later Kael earned 1,200 experience points for the kill. Kael gained 3 arrows.',
+      source: 'workspace-save',
+      knownEntities: [{id: 'character-1', name: 'Kael', type: 'character'}]
+    });
+    expect(
+      observations.map((observation) =>
+        observation.type === 'state_delta_candidate'
+          ? {operation: observation.operation, target: observation.target, amount: observation.amount}
+          : null
+      )
+    ).toEqual([
+      {operation: 'xp_gain', target: undefined, amount: 250},
+      {operation: 'xp_gain', target: undefined, amount: 1200},
+      {operation: 'inventory_add', target: 'arrows', amount: 3}
+    ]);
+  });
 });
