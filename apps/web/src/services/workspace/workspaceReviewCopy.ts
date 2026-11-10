@@ -46,3 +46,18 @@ export function getWorkspaceReviewCopy({
       : 'Choose how to handle this detected reference.'
   };
 }
+
+/**
+ * The unknown names the review banner lists by name (the first `limit`), and
+ * how many more it only counts.
+ */
+export function summarizeReviewSurfaces(
+  issues: ReadonlyArray<{surface?: string}>,
+  limit = 6
+): {visible: string[]; hiddenCount: number} {
+  const visible = issues
+    .map((issue) => issue.surface?.trim())
+    .filter((surface): surface is string => Boolean(surface))
+    .slice(0, limit);
+  return {visible, hiddenCount: Math.max(0, issues.length - visible.length)};
+}

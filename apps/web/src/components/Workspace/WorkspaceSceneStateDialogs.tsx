@@ -1,13 +1,9 @@
 import {useCallback, useMemo, useRef} from 'react';
-import type {Dispatch, SetStateAction} from 'react';
 import type {CompendiumEntry, EntityCategory, StoredRuleset, WorldEntity} from '../../entityTypes';
 import {useEscapeToClose} from '../../hooks/useEscapeToClose';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
-import type {
-  PendingInventoryCapture,
-  PendingPositionedChange,
-  useWorkspaceSceneRoster
-} from '../../hooks/useWorkspaceSceneRoster';
+import type {useWorkspaceSceneCursor} from '../../hooks/useWorkspaceSceneCursor';
+import type {useWorkspaceSceneRoster} from '../../hooks/useWorkspaceSceneRoster';
 import {resolveReusableItem} from '../../services/state/itemStateAuthoringService';
 import {isItemCategory} from '../../services/worldBible/worldBibleSummary';
 import styles from '../../styles/WorkspaceRoute.module.css';
@@ -19,18 +15,13 @@ type SceneRoster = ReturnType<typeof useWorkspaceSceneRoster>;
 
 interface WorkspaceSceneStateDialogsProps {
   sceneRoster: SceneRoster;
+  /** The cursor position and the pending dialogs. */
+  sceneCursor: ReturnType<typeof useWorkspaceSceneCursor>;
   sceneTitle: string;
-  sceneCursorPosition: number;
   ruleset: StoredRuleset | null;
   categories: EntityCategory[];
   entities: WorldEntity[];
   compendiumEntries: CompendiumEntry[];
-  pendingPositionedChange: PendingPositionedChange | null;
-  setPendingPositionedChange: Dispatch<SetStateAction<PendingPositionedChange | null>>;
-  isSavingPositionedChange: boolean;
-  pendingInventoryCapture: PendingInventoryCapture | null;
-  setPendingInventoryCapture: Dispatch<SetStateAction<PendingInventoryCapture | null>>;
-  isSavingInventoryCapture: boolean;
 }
 
 /**
@@ -41,19 +32,22 @@ interface WorkspaceSceneStateDialogsProps {
  */
 export function WorkspaceSceneStateDialogs({
   sceneRoster,
+  sceneCursor,
   sceneTitle,
-  sceneCursorPosition,
   ruleset,
   categories,
   entities,
-  compendiumEntries,
-  pendingPositionedChange,
-  setPendingPositionedChange,
-  isSavingPositionedChange,
-  pendingInventoryCapture,
-  setPendingInventoryCapture,
-  isSavingInventoryCapture
+  compendiumEntries
 }: WorkspaceSceneStateDialogsProps) {
+  const {
+    sceneCursorPosition,
+    pendingPositionedChange,
+    setPendingPositionedChange,
+    isSavingPositionedChange,
+    pendingInventoryCapture,
+    setPendingInventoryCapture,
+    isSavingInventoryCapture
+  } = sceneCursor;
   const {
     pendingPositionedSheet,
     positionedChangeBefore,

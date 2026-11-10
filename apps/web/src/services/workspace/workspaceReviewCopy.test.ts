@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {getWorkspaceReviewCopy} from './workspaceReviewCopy';
+import {getWorkspaceReviewCopy, summarizeReviewSurfaces} from './workspaceReviewCopy';
 
 describe('getWorkspaceReviewCopy', () => {
   it('uses world wording for general fiction', () => {
@@ -19,5 +19,17 @@ describe('getWorkspaceReviewCopy', () => {
     expect(warnings.bannerTitle).toBe('Project review found detected references in this scene.');
     expect(warnings.dismissAllLabel).toBe('Hide all warnings for now');
     expect(warnings.popoverMessage).toBe('Choose how to handle this detected reference.');
+  });
+});
+
+describe('summarizeReviewSurfaces', () => {
+  it('lists the first names and counts the rest, including ones without a name', () => {
+    const issues = [
+      {surface: ' Vel '}, {surface: ''}, {surface: 'Orrin'}, {}, {surface: 'Kest'}
+    ];
+    expect(summarizeReviewSurfaces(issues, 2)).toEqual({
+      visible: ['Vel', 'Orrin'],
+      hiddenCount: 3
+    });
   });
 });

@@ -26,7 +26,7 @@ import {useWorkspaceChapterCardLinks} from '../hooks/useWorkspaceChapterCardLink
 import {useWorkspaceCharacterStatPeek} from '../hooks/useWorkspaceCharacterStatPeek';
 import {useWorkspaceSeriesCanon} from '../hooks/useWorkspaceSeriesCanon';
 import {getWorldEngine} from '../services/worldEngine';
-import {getWorkspaceReviewCopy} from '../services/workspace/workspaceReviewCopy';
+import {getWorkspaceReviewCopy, summarizeReviewSurfaces} from '../services/workspace/workspaceReviewCopy';
 import {useWorkspaceDrawers} from '../hooks/useWorkspaceDrawers';
 import {useWorkspaceCommands} from '../hooks/useWorkspaceCommands';
 import {useWorkspaceDrawerFocus} from '../hooks/useWorkspaceDrawerFocus';
@@ -50,7 +50,7 @@ import {useAppStore} from '../store/appStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
 import {WorkspaceDrawerLayout} from '../components/Workspace/WorkspaceDrawerLayout';
 import {WorkspaceCorkboardModal} from '../components/Workspace/WorkspaceCorkboardModal';
-import {WorkspaceChapterCardContext} from '../components/Workspace/WorkspaceChapterCardContext';
+import {WorkspaceHeader} from '../components/Workspace/WorkspaceHeader';
 import {WorkspaceScratchpadModal} from '../components/Workspace/WorkspaceScratchpadModal';
 import {WorkspaceExportModal} from '../components/Workspace/WorkspaceExportModal';
 import {WorkspaceAITextReportModal} from '../components/Workspace/WorkspaceAITextReportModal';
@@ -62,28 +62,28 @@ import {UnknownEntityPanel} from '../components/Workspace/UnknownEntityPanel';
 import {WorkspaceReviewSurfacePopover} from '../components/Workspace/WorkspaceReviewSurfacePopover';
 import {WorkspaceManualWorldCapturePopover} from '../components/Workspace/WorkspaceManualWorldCapturePopover';
 import {WorkspaceSceneStateDialogs} from '../components/Workspace/WorkspaceSceneStateDialogs';
+import {WorkspaceEditorFooter} from '../components/Workspace/WorkspaceEditorFooter';
+import {WorkspaceEmptyState} from '../components/Workspace/WorkspaceEmptyState';
 import {
-  getStateMutationEventStaleness
-} from '../services/state/stateMutationStaleness';
+  countReviewItemsByScene,
+  countStaleStateEventsByScene
+} from '../services/workspace/sceneDrawerBadges';
+import {useWorkspaceSceneCursor} from '../hooks/useWorkspaceSceneCursor';
 import {
-  type EditorTextSnapshot,
-  type StateMutationTextAnchor
-} from '../services/state/stateMutationAnchor';
+  useConnectDocumentReviewBridge,
+  useDocumentReviewBridge
+} from '../hooks/useWorkspaceDocumentReviewBridge';
+import {useWorkspaceManualWorldCapture} from '../hooks/useWorkspaceManualWorldCapture';
 import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {useSceneRosterPreferences} from '../hooks/useSceneRosterPreferences';
 import {buildKnownLoreHighlights} from '../services/consistency/knownLoreHighlights';
-import {PageHeader} from '../components/PageHeader';
 import {RouteFeedback} from '../components/common';
 import {useNotificationStore} from '../store/notificationStore';
 import {GettingStartedGuide} from '../components/Onboarding/GettingStartedGuide';
-import {
-  useWorkspaceSceneRoster,
-  type PendingInventoryCapture,
-  type PendingPositionedChange
-} from '../hooks/useWorkspaceSceneRoster';
+import {useWorkspaceSceneRoster} from '../hooks/useWorkspaceSceneRoster';
 import {getSceneOrder} from '../services/state/characterSnapshot';
 import {WorkspaceCharacterLabDialogs} from '../components/Workspace/WorkspaceCharacterLabDialogs';
 import {WorkspaceSceneDraftEntry} from '../components/Workspace/WorkspaceSceneDraftEntry';
@@ -128,37 +128,14 @@ function WorkspaceRoute() {
   const {systemHistoryEntries, refreshSystemHistory, addSystemHistory} =
     useWorkspaceSystemHistory(activeProject?.id ?? null);
   const [worldCaptureDrafts, setWorldCaptureDrafts] = useState<Record<string, string>>({});
-  const [manualWorldCapture, setManualWorldCapture] = useState<{
-    sourceText: string;
-    draftText: string;
-    left: number;
-    top: number;
-  } | null>(null);
-  const [manualExistingTargetId, setManualExistingTargetId] = useState('');
+  const manualWorldCapture = useWorkspaceManualWorldCapture();
+  const resetManualWorldCapture = manualWorldCapture.reset;
   const [rejectedAliasSuggestions, setRejectedAliasSuggestions] = useState<
     Record<string, string[]>
   >({});
   const [isReviewBannerDismissed, setReviewBannerDismissed] = useState(false);
-  const [sceneRosterStateMoment, setSceneRosterStateMoment] = useState<
-    'opening' | 'cursor' | 'ending'
-  >('opening');
-  const [sceneCursorPosition, setSceneCursorPosition] = useState(1);
   const [labEntityId, setLabEntityId] = useState<string | null>(null);
   const [sceneLabEntityId, setSceneLabEntityId] = useState<string | null>(null);
-  const [sceneCursorSnapshot, setSceneCursorSnapshot] = useState<EditorTextSnapshot>({
-    text: '',
-    spans: []
-  });
-  const [sceneCursorAnchor, setSceneCursorAnchor] = useState<StateMutationTextAnchor>({
-    before: '',
-    after: ''
-  });
-  const [pendingPositionedChange, setPendingPositionedChange] =
-    useState<PendingPositionedChange | null>(null);
-  const [isSavingPositionedChange, setSavingPositionedChange] = useState(false);
-  const [pendingInventoryCapture, setPendingInventoryCapture] =
-    useState<PendingInventoryCapture | null>(null);
-  const [isSavingInventoryCapture, setSavingInventoryCapture] = useState(false);
   const {
     scratchpadContent,
     setScratchpadContent,
@@ -203,23 +180,7 @@ function WorkspaceRoute() {
     setScratchpadModalOpen(false);
   }, [setScratchpadModalOpen]);
   const lastAutosaveErrorRef = useRef<string | null>(null);
-  const persistDocRef = useRef<Parameters<typeof useWorkspaceDocuments>[0]['persistDocRef']['current']>(null);
-  const refreshDeferredReviewRef =
-    useRef<Parameters<typeof useWorkspaceDocuments>[0]['refreshDeferredReviewRef']['current']>(
-      null
-    );
-  const setGuardrailIssuesRef =
-    useRef<Parameters<typeof useWorkspaceDocuments>[0]['setGuardrailIssuesRef']['current']>(
-      null
-    );
-  const setConsistencyPopoverRef =
-    useRef<Parameters<typeof useWorkspaceDocuments>[0]['setConsistencyPopoverRef']['current']>(
-      null
-    );
-  const deleteDocumentSideEffectsRef =
-    useRef<
-      Parameters<typeof useWorkspaceDocuments>[0]['deleteDocumentSideEffectsRef']['current']
-    >(null);
+  const documentReviewBridge = useDocumentReviewBridge();
   const {requestConfirm, confirmDialog} = useConfirmDialog();
   const {
     selectedId,
@@ -254,20 +215,18 @@ function WorkspaceRoute() {
     documentsLoaded,
     documents,
     setDocuments,
-    persistDocRef,
-    refreshDeferredReviewRef,
-    setGuardrailIssuesRef,
-    setConsistencyPopoverRef,
-    deleteDocumentSideEffectsRef,
+    ...documentReviewBridge,
     setFeedback,
     requestConfirm,
     addSystemHistory
   });
-  useEffect(() => {
-    setSceneCursorPosition(1);
-    setSceneRosterStateMoment('opening');
-    setPendingPositionedChange(null);
-  }, [selectedId]);
+  const sceneCursor = useWorkspaceSceneCursor(selectedId);
+  const {
+    sceneCursorPosition,
+    sceneRosterStateMoment,
+    setSceneRosterStateMoment,
+    setPendingInventoryCapture
+  } = sceneCursor;
   const {
     isExportModalOpen,
     exportFormat,
@@ -335,11 +294,10 @@ function WorkspaceRoute() {
   const handleProjectReset = useCallback(() => {
     resetContextActionsRef.current();
     setWorldCaptureDrafts({});
-    setManualWorldCapture(null);
+    resetManualWorldCapture();
     setPendingInventoryCapture(null);
-    setManualExistingTargetId('');
     setReviewBannerDismissed(false);
-  }, []);
+  }, [resetManualWorldCapture, setPendingInventoryCapture]);
 
   const projectData = useWorkspaceProjectData({
     activeProject,
@@ -421,23 +379,10 @@ function WorkspaceRoute() {
     [projectSettings?.aiSettings]
   );
 
-  const staleStateEventCountBySceneId = useMemo(() => {
-    const counts: Record<string, number> = {};
-    stateMutationEvents.forEach((event) => {
-      if (event.status !== 'accepted') {
-        return;
-      }
-      const staleness = getStateMutationEventStaleness({
-        event,
-        documents
-      });
-      if (!staleness.isStale) {
-        return;
-      }
-      counts[event.sceneId] = (counts[event.sceneId] ?? 0) + 1;
-    });
-    return counts;
-  }, [documents, stateMutationEvents]);
+  const staleStateEventCountBySceneId = useMemo(
+    () => countStaleStateEventsByScene(stateMutationEvents, documents),
+    [documents, stateMutationEvents]
+  );
   const consistency = useWorkspaceConsistency({
     activeProject,
     documents,
@@ -490,13 +435,10 @@ function WorkspaceRoute() {
     reviewReadiness,
     openConsistencyPopover
   } = consistency;
-  const reviewItemCountBySceneId = useMemo(() => {
-    const counts: Record<string, number> = {};
-    consistencyReviewItems.forEach((item) => {
-      counts[item.sceneId] = (counts[item.sceneId] ?? 0) + 1;
-    });
-    return counts;
-  }, [consistencyReviewItems]);
+  const reviewItemCountBySceneId = useMemo(
+    () => countReviewItemsByScene(consistencyReviewItems),
+    [consistencyReviewItems]
+  );
   const runConsistencyReviewFromUi = useCallback(async () => {
     setReviewBannerDismissed(false);
     await handleRunConsistencyReview();
@@ -514,29 +456,15 @@ function WorkspaceRoute() {
     location
   });
   const {openCorkboardModal, closeCorkboardModal} = chapterCardLinks;
-  useLayoutEffect(() => {
-    persistDocRef.current = persistDoc;
-    refreshDeferredReviewRef.current = refreshDeferredReview;
-    setGuardrailIssuesRef.current =
-      setGuardrailIssues as typeof setGuardrailIssuesRef.current;
-    setConsistencyPopoverRef.current =
-      setConsistencyPopover as typeof setConsistencyPopoverRef.current;
-    deleteDocumentSideEffectsRef.current = async (docId: string) => {
-      await Promise.all([
-        ragService?.deleteDocument(docId) ?? Promise.resolve(),
-        shodhService?.deleteMemoriesForDocument(docId) ?? Promise.resolve()
-      ]);
-      await refreshMemories();
-    };
-  }, [
+  useConnectDocumentReviewBridge(documentReviewBridge, {
     persistDoc,
-    ragService,
     refreshDeferredReview,
-    refreshMemories,
-    setConsistencyPopover,
     setGuardrailIssues,
-    shodhService
-  ]);
+    setConsistencyPopover,
+    ragService,
+    shodhService,
+    refreshMemories
+  });
 
   const openWorldRecord = (target: {id: string; type: 'character' | 'entity'}) => {
     if (target.type === 'entity') {
@@ -609,19 +537,8 @@ function WorkspaceRoute() {
     compendiumEntries,
     getSceneRosterOverrides,
     updateSceneRosterOverride,
-    sceneRosterStateMoment,
-    setSceneRosterStateMoment,
-    sceneCursorPosition,
-    setSceneCursorPosition,
-    sceneCursorSnapshot,
-    setSceneCursorAnchor,
-    sceneCursorAnchor,
-    pendingPositionedChange,
-    setPendingPositionedChange,
-    setSavingPositionedChange,
-    pendingInventoryCapture,
-    setPendingInventoryCapture,
-    setSavingInventoryCapture,
+    // Cursor position, roster moment, and the pending state-change dialogs.
+    ...sceneCursor,
     setFeedback,
     requestConfirm
   });
@@ -671,14 +588,8 @@ function WorkspaceRoute() {
     isGeneralFiction: isGeneralFictionProject,
     hasBlockingIssues: hasBlockingUnknownGuardrailIssues
   });
-  const visibleReviewSurfaces = unknownGuardrailIssues
-    .map((issue) => issue.surface?.trim())
-    .filter((surface): surface is string => Boolean(surface))
-    .slice(0, 6);
-  const hiddenReviewSurfaceCount = Math.max(
-    0,
-    unknownGuardrailIssues.length - visibleReviewSurfaces.length
-  );
+  const {visible: visibleReviewSurfaces, hiddenCount: hiddenReviewSurfaceCount} =
+    summarizeReviewSurfaces(unknownGuardrailIssues);
   const showReviewBanner =
     hasBlockingUnknownGuardrailIssues && !isReviewBannerDismissed;
   const selectionQuickSnippets = useWorkspaceLoreSnippets({
@@ -776,20 +687,6 @@ function WorkspaceRoute() {
     openMemoryModal
   });
 
-  const handleOpenManualWorldCapture = useCallback(
-    (draftText: string, anchorRect: {left: number; top: number; bottom: number}) => {
-      setManualExistingTargetId('');
-      setManualWorldCapture({
-        sourceText: draftText,
-        draftText,
-        left: anchorRect.left,
-        top: anchorRect.bottom + 8
-      });
-    },
-    []
-  );
-
-
   if (!activeProject) {
     return (
       <section>
@@ -877,41 +774,13 @@ function WorkspaceRoute() {
         onChange={(e) => void handleImportDocuments(e)}
         style={{display: 'none'}}
       />
-      <PageHeader
-        eyebrow='Current manuscript'
-        title='Writing Workspace'
-        meta={
-          <span className={styles.workspaceHeaderMeta}>
-            {activeProject.name}
-            {selectedDocument ? ` · ${selectedDocument.title || 'Untitled scene'}` : ''}
-            <WorkspaceChapterCardContext
-              cards={chapterCardLinks.linkedChapterCards}
-              onOpenCard={chapterCardLinks.handleOpenChapterCard}
-              onOpenCorkboard={chapterCardLinks.handleOpenChapterCardRoute}
-            />
-          </span>
-        }
-        actions={
-          <>
-            <button
-              type='button'
-              className={`${styles.reviewIndicator} ${styles[`reviewIndicator_${reviewReadiness.state}`]}`}
-              onClick={() => openContextDrawer('review')}
-              title={reviewReadiness.detail}
-              aria-label={`Open review drawer, ${reviewReadiness.label}: ${reviewReadiness.detail}`}
-            >
-              <span className={styles.reviewIndicatorDot} />
-              <span>{reviewReadiness.label}</span>
-            </button>
-            <button
-              type='button'
-              className={styles.scratchpadHeaderButton}
-              onClick={openScratchpadModal}
-            >
-              Scratchpad
-            </button>
-          </>
-        }
+      <WorkspaceHeader
+        projectName={activeProject.name}
+        selectedDocument={selectedDocument}
+        chapterCardLinks={chapterCardLinks}
+        reviewReadiness={reviewReadiness}
+        onOpenReview={() => openContextDrawer('review')}
+        onOpenScratchpad={openScratchpadModal}
       />
       <GettingStartedGuide projectId={activeProject.id} />
       <RouteFeedback feedback={feedback} onClear={clearFeedback} errorsAsToast />
@@ -986,11 +855,7 @@ function WorkspaceRoute() {
                   resetScrollToken={editorScrollResetToken}
                   onChange={handleContentChange}
                   onWordCountChange={setWordCount}
-                  onCursorContextChange={({position, snapshot, anchor}) => {
-                    setSceneCursorPosition(position);
-                    setSceneCursorSnapshot(snapshot);
-                    setSceneCursorAnchor(anchor);
-                  }}
+                  onCursorContextChange={sceneCursor.handleCursorContextChange}
                   inlineHighlightsMode={
                     projectSettings?.editorFeedback?.inlineHighlightsMode ?? 'visible'
                   }
@@ -1029,11 +894,11 @@ function WorkspaceRoute() {
                   onOpenAIContext={handleOpenAIContext}
                   selectionActions={selectionActionRun.menu}
                   onOpenLoreInspector={handleOpenLoreInspector}
-                  onOpenWorldCapture={handleOpenManualWorldCapture}
+                  onOpenWorldCapture={manualWorldCapture.open}
                   onAddSelectionToInventory={isGeneralFictionProject
                     ? undefined
                     : openSelectionInventoryCapture}
-                  suppressSelectionBubble={Boolean(manualWorldCapture)}
+                  suppressSelectionBubble={Boolean(manualWorldCapture.capture)}
                   aiContextPassage={activeAIContext?.id === selectedId ? activeAIContext : null}
                 />
                 {consistencyPopover && activeConsistencyPopoverIssue && (
@@ -1048,12 +913,13 @@ function WorkspaceRoute() {
                     consistency={consistency} onClose={() => setConsistencyPopover(null)}
                   />
                 )}
-                {manualWorldCapture && (
+                {manualWorldCapture.capture && (
                   <WorkspaceManualWorldCapturePopover
-                    capture={manualWorldCapture} setCapture={setManualWorldCapture}
+                    capture={manualWorldCapture.capture} setCapture={manualWorldCapture.setCapture}
                     createLabel={reviewCopy.createLabel} categories={categories} characters={characters}
                     entities={entities} entitySnippets={selectionQuickSnippets.entities}
-                    existingTargetId={manualExistingTargetId} setExistingTargetId={setManualExistingTargetId}
+                    existingTargetId={manualWorldCapture.existingTargetId}
+                    setExistingTargetId={manualWorldCapture.setExistingTargetId}
                     rejectedAliasSuggestions={rejectedAliasSuggestions}
                     setRejectedAliasSuggestions={setRejectedAliasSuggestions}
                     consistency={consistency}
@@ -1062,115 +928,31 @@ function WorkspaceRoute() {
                 )}
               </div>
 
-              <div className={styles.editorFooterBar} data-stat-panel-avoid=''>
-                <button
-                  type='button'
-                  onClick={handleSave}
-                  disabled={saveStatus === 'saving'}
-                >
-                  Save now
-                </button>
-                {seriesBibleConfig?.parentProjectId && (
-                  <button
-                    type='button'
-                    onClick={() => void handlePromoteDocument()}
-                    disabled={isPromotingDocument}
-                  >
-                    {isPromotingDocument
-                      ? 'Promoting...'
-                      : 'Promote scene to parent'}
-                  </button>
-                )}
-                <button type='button' onClick={openMemoryModal}>
-                  Extract memory
-                </button>
-                <span className={styles.editorFooterStatus}>
-                  {saveStatus === 'saving' && 'Saving…'}
-                  {saveStatus === 'saved' && lastSavedAt && (
-                    <>Saved at {new Date(lastSavedAt).toLocaleTimeString()}</>
-                  )}
-                  {saveStatus === 'idle' && 'No recent changes'}
-                  {' · '}
-                  {wordCount} words
-                </span>
-                <div className={styles.editorFooterUtilities}>
-                  <button
-                    type='button'
-                    className={styles.drawerTopButton}
-                    onClick={openScratchpadModal}
-                  >
-                    Scratchpad
-                  </button>
-                  <button
-                    type='button'
-                    className={styles.drawerTopButton}
-                    aria-label='Open quick Corkboard'
-                    onClick={openCorkboardModal}
-                  >
-                    Corkboard
-                  </button>
-                  <button
-                    type='button'
-                    className={styles.drawerTopButton}
-                    onClick={toggleSceneDrawer}
-                  >
-                    Scenes
-                  </button>
-                  <button
-                    type='button'
-                    className={styles.drawerTopButton}
-                    onClick={toggleContextDrawer}
-                  >
-                    Context
-                  </button>
-                </div>
-              </div>
+              <WorkspaceEditorFooter
+                saveStatus={saveStatus}
+                lastSavedAt={lastSavedAt}
+                wordCount={wordCount}
+                onSave={handleSave}
+                canPromoteToParent={Boolean(seriesBibleConfig?.parentProjectId)}
+                isPromotingDocument={isPromotingDocument}
+                onPromoteDocument={handlePromoteDocument}
+                onExtractMemory={openMemoryModal}
+                onOpenScratchpad={openScratchpadModal}
+                onOpenCorkboard={openCorkboardModal}
+                onToggleSceneDrawer={toggleSceneDrawer}
+                onToggleContextDrawer={toggleContextDrawer}
+              />
             </>
           ) : (
-            <div className={styles.emptyWorkspaceState}>
-              <h2 className={styles.emptyWorkspaceTitle}>Start writing immediately</h2>
-              <p className={styles.emptyWorkspaceCopy}>
-                Create a blank scene or import existing pages. World context and review
-                tools can stay in the background until you need them.
-              </p>
-              <div className={styles.emptyWorkspaceActions}>
-                <button
-                  type='button'
-                  onClick={() => void handleNewDocument()}
-                  disabled={isCreatingScene}
-                >
-                  {isCreatingScene ? 'Creating...' : 'New Scene'}
-                </button>
-                <button
-                  type='button'
-                  onClick={openImportPicker}
-                  disabled={isImportingDocuments}
-                >
-                  {isImportingDocuments ? 'Importing...' : 'Import Draft'}
-                </button>
-                <button
-                  type='button'
-                  className={styles.drawerTopButton}
-                  onClick={openScratchpadModal}
-                >
-                  Open Scratchpad
-                </button>
-                <button
-                  type='button'
-                  className={styles.drawerTopButton}
-                  onClick={openCorkboardModal}
-                >
-                  Open Corkboard
-                </button>
-                <button
-                  type='button'
-                  className={styles.drawerTopButton}
-                  onClick={toggleSceneDrawer}
-                >
-                  Browse Scenes
-                </button>
-              </div>
-            </div>
+            <WorkspaceEmptyState
+              onNewScene={handleNewDocument}
+              isCreatingScene={isCreatingScene}
+              onImportDraft={openImportPicker}
+              isImportingDocuments={isImportingDocuments}
+              onOpenScratchpad={openScratchpadModal}
+              onOpenCorkboard={openCorkboardModal}
+              onToggleSceneDrawer={toggleSceneDrawer}
+            />
           )}
         </div>
 
@@ -1178,18 +960,12 @@ function WorkspaceRoute() {
 
       <WorkspaceSceneStateDialogs
         sceneRoster={sceneRoster}
+        sceneCursor={sceneCursor}
         sceneTitle={selectedDocument?.title || 'Current scene'}
-        sceneCursorPosition={sceneCursorPosition}
         ruleset={ruleset}
         categories={categories}
         entities={entities}
         compendiumEntries={compendiumEntries}
-        pendingPositionedChange={pendingPositionedChange}
-        setPendingPositionedChange={setPendingPositionedChange}
-        isSavingPositionedChange={isSavingPositionedChange}
-        pendingInventoryCapture={pendingInventoryCapture}
-        setPendingInventoryCapture={setPendingInventoryCapture}
-        isSavingInventoryCapture={isSavingInventoryCapture}
       />
 
       <WorkspaceStatBlockModal
