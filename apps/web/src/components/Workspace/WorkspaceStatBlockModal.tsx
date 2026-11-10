@@ -1,9 +1,8 @@
 import {useRef} from 'react';
-import type {Dispatch, SetStateAction} from 'react';
 import {useEscapeToClose} from '../../hooks/useEscapeToClose';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
 import type {
-  CharacterSheet, StatBlockGroup, StatBlockInsertMode, StatBlockScopePreset,
+  CharacterSheet, StatBlockInsertMode, StatBlockScopePreset,
   StatBlockSourceType, StatBlockStyle, WorldEntity
 } from '../../entityTypes';
 import type {useWorkspaceStatBlocks} from '../../hooks/useWorkspaceStatBlocks';
@@ -12,43 +11,24 @@ import styles from '../../styles/WorkspaceRoute.module.css';
 interface WorkspaceStatBlockModalProps {
   isOpen: boolean;
   statBlocks: ReturnType<typeof useWorkspaceStatBlocks>;
-  pendingRebindToken: string | null;
-  sourceType: StatBlockSourceType;
-  setSourceType: Dispatch<SetStateAction<StatBlockSourceType>>;
   characterSheets: CharacterSheet[];
-  selectedCharacterId: string;
-  setSelectedCharacterId: Dispatch<SetStateAction<string>>;
-  scopePreset: StatBlockScopePreset;
-  setScopePreset: Dispatch<SetStateAction<StatBlockScopePreset>>;
-  setSelectedGroupId: Dispatch<SetStateAction<string>>;
-  groups: StatBlockGroup[];
-  newGroupName: string;
-  setNewGroupName: Dispatch<SetStateAction<string>>;
   entities: WorldEntity[];
-  selectedEntityId: string;
-  setSelectedEntityId: Dispatch<SetStateAction<string>>;
-  style: StatBlockStyle;
-  setStyle: Dispatch<SetStateAction<StatBlockStyle>>;
-  insertMode: StatBlockInsertMode;
-  setInsertMode: Dispatch<SetStateAction<StatBlockInsertMode>>;
   navigate: (path: string) => void;
 }
 
 export const WorkspaceStatBlockModal = (props: WorkspaceStatBlockModalProps) => {
+  const {isOpen: isStatBlockModalOpen, statBlocks, characterSheets, entities, navigate} = props;
   const {
-    isOpen: isStatBlockModalOpen, statBlocks,
-    pendingRebindToken: pendingStatBlockRebindToken,
-    sourceType: statBlockSourceType, setSourceType: setStatBlockSourceType,
-    characterSheets, selectedCharacterId: selectedStatCharacterId,
-    setSelectedCharacterId: setSelectedStatCharacterId,
-    scopePreset: statBlockScopePreset, setScopePreset: setStatBlockScopePreset,
-    setSelectedGroupId: setSelectedStatGroupId, groups: statBlockGroups,
-    newGroupName: newStatGroupName, setNewGroupName: setNewStatGroupName,
-    entities, selectedEntityId: selectedStatEntityId,
-    setSelectedEntityId: setSelectedStatEntityId,
-    style: statBlockStyle, setStyle: setStatBlockStyle,
-    insertMode: statBlockInsertMode, setInsertMode: setStatBlockInsertMode, navigate
-  } = props;
+    pendingStatBlockRebindToken,
+    statBlockSourceType, setStatBlockSourceType,
+    selectedStatCharacterId, setSelectedStatCharacterId,
+    statBlockScopePreset, setStatBlockScopePreset,
+    setSelectedStatGroupId, statBlockGroups,
+    newStatGroupName, setNewStatGroupName,
+    selectedStatEntityId, setSelectedStatEntityId,
+    statBlockStyle, setStatBlockStyle,
+    statBlockInsertMode, setStatBlockInsertMode
+  } = statBlocks.choices;
   const {
     statDefinitionNameById, resourceDefinitionNameById, selectedSheet,
     activeProjectMode, canInsertStatBlock, selectedStatGroup,

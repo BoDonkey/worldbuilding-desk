@@ -11,7 +11,10 @@ import {useLocation, useNavigate} from 'react-router';
 import type {WritingDocument} from '../entityTypes';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
-import {useWorkspaceConsistency} from '../hooks/useWorkspaceConsistency';
+import {
+  useWorkspaceConsistency,
+  type StateMutationReviewItem
+} from '../hooks/useWorkspaceConsistency';
 import {useWorkspaceDocuments} from '../hooks/useWorkspaceDocuments';
 import {useWorkspaceStatBlocks} from '../hooks/useWorkspaceStatBlocks';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
@@ -342,6 +345,15 @@ function WorkspaceRoute() {
     setReviewBannerDismissed(false);
   }, []);
 
+  const projectData = useWorkspaceProjectData({
+    activeProject,
+    setDocuments,
+    onDocumentsLoaded: setLoadedDocumentsProjectId,
+    setImportMode,
+    setSkipImportSuggestions,
+    refreshSystemHistory,
+    onProjectReset: handleProjectReset
+  });
   const {
     editorConfig,
     toolbarButtons,
@@ -366,42 +378,9 @@ function WorkspaceRoute() {
     setCanonState,
     stateMutationEvents,
     canonicalFacts,
-    statBlockSourceType,
-    setStatBlockSourceType,
-    statBlockStyle,
-    setStatBlockStyle,
-    statBlockInsertMode,
-    setStatBlockInsertMode,
-    statBlockScopePreset,
-    setStatBlockScopePreset,
-    selectedStatGroupId,
-    setSelectedStatGroupId,
-    selectedStatIds,
-    setSelectedStatIds,
-    selectedResourceIds,
-    setSelectedResourceIds,
-    statBlockGroups,
-    setStatBlockGroups,
-    newStatGroupName,
-    setNewStatGroupName,
-    selectedStatCharacterId,
-    setSelectedStatCharacterId,
-    selectedStatEntityId,
-    setSelectedStatEntityId,
     statBlockInsertContent,
     setStatBlockInsertContent,
-    pendingStatBlockRebindToken,
-    setPendingStatBlockRebindToken,
-    isStatPreferencesHydrated
-  } = useWorkspaceProjectData({
-    activeProject,
-    setDocuments,
-    onDocumentsLoaded: setLoadedDocumentsProjectId,
-    setImportMode,
-    setSkipImportSuggestions,
-    refreshSystemHistory,
-    onProjectReset: handleProjectReset
-  });
+  } = projectData;
   const {
     activeAIContext,
     clearAIContext,
@@ -496,21 +475,9 @@ function WorkspaceRoute() {
   });
   const {
     setGuardrailIssues,
-    resolvingUnknown,
-    linkingUnknown,
     resolverNotice,
     setResolverNotice,
-    unknownLinkSelection,
-    setUnknownLinkSelection,
-    unknownCategorySelection,
-    setUnknownCategorySelection,
-    isRunningConsistencyReview,
     consistencyReviewItems,
-    stateMutationReviewItems,
-    hiddenStateMutationReviewCountBySceneId,
-    hiddenStateMutationReviewCount,
-    applyingStateMutationReviewId,
-    lastConsistencyReviewAt,
     consistencyPopover,
     setConsistencyPopover,
     persistDoc,
@@ -521,26 +488,11 @@ function WorkspaceRoute() {
     hasBlockingUnknownGuardrailIssues,
     highlightableReviewIssues,
     isReviewPrefsHydrated,
-    unknownLinkOptions,
-    getSuggestedUnknownCategoryId,
-    createWorldCategory,
-    resolveUnknownEntity,
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,
-    dismissUnknownEntity,
-    dismissConsistencyReviewItem, addModelCheckItems,
-    ignoreUnknownSurfaceProjectWide,
-    linkUnknownEntity,
     activeConsistencyPopoverIssue,
     reviewReadiness,
-    openConsistencyPopover,
-    acceptStateMutationReviewItem,
-    rejectStateMutationReviewItem,
-    acceptSceneStateMutationReviewItems,
-    rejectSceneStateMutationReviewItems,
-    hideStateMutationReviewItem,
-    restoreHiddenStateMutationReviewItems,
-    restoreAllHiddenStateMutationReviewItems
+    openConsistencyPopover
   } = consistency;
   const reviewItemCountBySceneId = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -622,35 +574,9 @@ function WorkspaceRoute() {
     activeProject,
     projectSettings,
     saveProjectSettings,
-    isStatPreferencesHydrated,
-    statBlockSourceType,
-    setStatBlockSourceType,
-    statBlockStyle,
-    setStatBlockStyle,
-    statBlockInsertMode,
-    setStatBlockInsertMode,
-    statBlockScopePreset,
-    setStatBlockScopePreset,
-    selectedStatGroupId,
-    setSelectedStatGroupId,
-    selectedStatIds,
-    setSelectedStatIds,
-    selectedResourceIds,
-    setSelectedResourceIds,
-    statBlockGroups,
-    setStatBlockGroups,
-    newStatGroupName,
-    setNewStatGroupName,
-    selectedStatCharacterId,
-    setSelectedStatCharacterId,
-    selectedStatEntityId,
-    setSelectedStatEntityId,
-    statBlockInsertContent,
-    setStatBlockInsertContent,
+    choices: projectData,
     isStatBlockModalOpen,
     setStatBlockModalOpen,
-    pendingStatBlockRebindToken,
-    setPendingStatBlockRebindToken,
     characterSheets,
     stateMutationEvents,
     actorResolutions,
@@ -730,7 +656,7 @@ function WorkspaceRoute() {
     getCharacterStatSnapshotAt
   } = sceneRoster;
   const editStateMutationReviewItem = useCallback(
-    (item: (typeof stateMutationReviewItems)[number]) => {
+    (item: StateMutationReviewItem) => {
       const document = documents.find((entry) => entry.id === item.sceneId);
       if (document) handleSelectDocument(document);
       openDetectedItemStateProposal(item.id);
@@ -975,24 +901,18 @@ function WorkspaceRoute() {
     sceneRosterTimeline, editSceneRosterTimelineEvent,
     invalidateSceneRosterTimelineEvent, reanchorSceneRosterTimelineEvent,
     expireSceneRosterTimelineEvent,
-    handleRunConsistencyReview: runConsistencyReviewFromUi,
-    isRunningConsistencyReview, lastConsistencyReviewAt, consistencyReviewItems,
-    stateMutationReviewItems, hiddenStateMutationReviewCountBySceneId,
-    hiddenStateMutationReviewCount, applyingStateMutationReviewId, reviewReadiness,
-    acceptStateMutationReviewItem, rejectStateMutationReviewItem,
-    acceptSceneStateMutationReviewItems, rejectSceneStateMutationReviewItems,
-    editStateMutationReviewItem,
-    hideStateMutationReviewItem, restoreHiddenStateMutationReviewItems,
-    restoreAllHiddenStateMutationReviewItems,
-    documents, handleSelectDocument,
-    onFocusReviewItem: focusReviewItemInScene,
-    activeReviewItemId, reviewCreateLabel, reviewLinkLabel, resolvingUnknown,
-    linkingUnknown, unknownCategorySelection, setUnknownCategorySelection,
-    worldCaptureDrafts, setWorldCaptureDrafts,
-    unknownLinkSelection, setUnknownLinkSelection, unknownLinkOptions,
-    getSuggestedUnknownCategoryId, createWorldCategory, resolveUnknownEntity, dismissUnknownEntity,
-    dismissConsistencyReviewItem, addModelCheckItems,
-    ignoreUnknownSurfaceProjectWide, linkUnknownEntity, openWorldRecord,
+    review: {
+      consistency,
+      onRunReview: runConsistencyReviewFromUi,
+      editStateMutationReviewItem,
+      onFocusReviewItem: focusReviewItemInScene,
+      activeReviewItemId,
+      createLabel: reviewCreateLabel,
+      linkLabel: reviewLinkLabel,
+      worldCaptureDrafts,
+      setWorldCaptureDrafts
+    },
+    documents, handleSelectDocument, openWorldRecord,
     scratchpadContent, setScratchpadContent, scratchpadStatus, scratchpadLastSavedAt,
     activeProject, projectSettings, activeAIContext, clearAIContext, setPendingAIInsert, previewSceneRevision,
     queuedAssistantPrompt, setQueuedAssistantPrompt, ragService, systemHistoryEntries,
@@ -1337,19 +1257,8 @@ function WorkspaceRoute() {
       />
 
       <WorkspaceStatBlockModal
-        isOpen={isStatBlockModalOpen}
-        statBlocks={statBlocks} pendingRebindToken={pendingStatBlockRebindToken}
-        sourceType={statBlockSourceType} setSourceType={setStatBlockSourceType}
-        characterSheets={characterSheets} selectedCharacterId={selectedStatCharacterId}
-        setSelectedCharacterId={setSelectedStatCharacterId}
-        scopePreset={statBlockScopePreset} setScopePreset={setStatBlockScopePreset}
-        setSelectedGroupId={setSelectedStatGroupId} groups={statBlockGroups}
-        newGroupName={newStatGroupName} setNewGroupName={setNewStatGroupName}
-        entities={entities} selectedEntityId={selectedStatEntityId}
-        setSelectedEntityId={setSelectedStatEntityId}
-        style={statBlockStyle} setStyle={setStatBlockStyle}
-        insertMode={statBlockInsertMode} setInsertMode={setStatBlockInsertMode}
-        navigate={navigate}
+        isOpen={isStatBlockModalOpen} statBlocks={statBlocks}
+        characterSheets={characterSheets} entities={entities} navigate={navigate}
       />
 
       <WorkspaceScratchpadModal

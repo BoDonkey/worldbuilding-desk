@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {useNavigate} from 'react-router';
 import {clearSystemHistoryEntries} from '../../services/system';
 import type {
@@ -23,17 +23,7 @@ import {ShodhMemoryPanel} from '../ShodhMemoryPanel';
 import TipTapEditor from '../TipTapEditor';
 import type {MemoryEntry} from '../../services/shodh/ShodhMemoryService';
 import type {WorkspaceContextDrawerView} from '../../hooks/useWorkspaceDrawers';
-import type {
-  ReviewReadiness,
-  StateMutationReviewGroupHiddenCounts,
-  StateMutationReviewItem
-} from '../../hooks/useWorkspaceConsistency';
-import type {GuardrailIssue} from '../../services/consistency/types';
-import {supportsWorldCaptureActions} from '../../services/consistency/reviewReadiness';
-import type {ReviewIssueAnnotation} from '../../services/worldEngine';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
-import {WorldCategorySelect} from './WorldCategorySelect';
-import {buildCharacterCaptureAliasList} from '../../services/worldBible/worldBibleCanonicalization';
 import styles from '../../styles/WorkspaceRoute.module.css';
 import {SceneRosterPanel} from './SceneRosterPanel';
 import type {
@@ -45,71 +35,9 @@ import type {
 import type {AITextProvenance} from '../../services/editor/aiTextProvenance';
 import {useModelCanonCheck} from '../../hooks/useModelCanonCheck';
 import {sceneCheckText} from '../../services/consistency/modelCanonCheck';
-import {CanonCheckPanel} from './CanonCheckPanel';
+import {WorkspaceReviewTab, type WorkspaceReviewInputs} from './WorkspaceReviewTab';
 import {anyAISwitchOn, readAISwitches} from '../../services/llm/aiSwitches';
 import {WorkspaceCharacterLabSection} from './WorkspaceCharacterLabSection';
-
-interface ConsistencyReviewItem {
-  id: string;
-  sceneId: string;
-  sceneTitle: string;
-  issue: GuardrailIssue;
-  reviewAnnotation?: ReviewIssueAnnotation;
-  staleSinceReview?: boolean;
-}
-
-const ISSUE_LABELS: Record<string, string> = {
-  UNKNOWN_ENTITY: 'Unknown name',
-  AMBIGUOUS_REFERENCE: 'Ambiguous reference',
-  UNEXPECTED_SCENE_PRESENCE: 'Unexpected scene presence',
-  STATE_CONFLICT: 'Continuity conflict',
-  INVALID_MUTATION: 'Invalid story state change'
-};
-
-const DETECTION_REASON_LABELS: Record<string, {label: string; title: string}> = {
-  known_entity: {
-    label: 'Known canon',
-    title: 'This text already appears to match an existing world or character record.'
-  },
-  titled_name: {
-    label: 'Titled name',
-    title: 'This looks like a named person because it includes a title such as Dr., Captain, or Professor.'
-  },
-  repeated_unknown: {
-    label: 'Repeated name',
-    title: 'This unknown name appears more than once, so review treats it as likely story context.'
-  },
-  leading_entity_cue: {
-    label: 'Context clue',
-    title: 'Nearby wording suggests this may be a place, object, person, or other story-world term.'
-  },
-  direct_address_candidate: {
-    label: 'Direct address',
-    title: 'Dialogue addresses this capitalized term as a name.'
-  },
-  character_context_candidate: {
-    label: 'Character-like name',
-    title: 'Sentence context suggests this unknown term may be a character name.'
-  },
-  multiword_proper_candidate: {
-    label: 'Proper name',
-    title: 'Capitalization and word shape suggest this may be a named story-world term.'
-  },
-  action_object_candidate: {
-    label: 'Action object',
-    title: 'The text uses this term like an object involved in an action.'
-  }
-};
-
-const getIssueLabel = (code: string): string => ISSUE_LABELS[code] ?? 'Review item';
-
-const getDetectionReason = (
-  reason: string
-): {label: string; title: string} =>
-  DETECTION_REASON_LABELS[reason] ?? {
-    label: 'Review clue',
-    title: 'Review found a pattern that may need canon cleanup.'
-  };
 
 interface AIContext {
   type: 'document';
@@ -123,13 +51,6 @@ interface PendingAIInsert {
   text: string;
   context: {from: number; to: number} | null;
   provenance?: AITextProvenance;
-}
-
-interface LinkTargetOption {
-  id: string;
-  name: string;
-  type: 'character' | 'entity';
-  label: string;
 }
 
 interface WorkspaceContextDrawerProps {
@@ -171,62 +92,9 @@ interface WorkspaceContextDrawerProps {
   expireSceneRosterTimelineEvent: (eventId: string) => void;
 
   // Review view
-  handleRunConsistencyReview: () => Promise<void>;
-  isRunningConsistencyReview: boolean;
-  lastConsistencyReviewAt: number | null;
-  consistencyReviewItems: ConsistencyReviewItem[];
-  stateMutationReviewItems: StateMutationReviewItem[];
-  hiddenStateMutationReviewCountBySceneId: StateMutationReviewGroupHiddenCounts;
-  hiddenStateMutationReviewCount: number;
-  applyingStateMutationReviewId: string | null;
-  reviewReadiness: ReviewReadiness;
-  acceptStateMutationReviewItem: (eventId: string) => Promise<void>;
-  editStateMutationReviewItem: (item: StateMutationReviewItem) => void;
-  rejectStateMutationReviewItem: (eventId: string) => Promise<void>;
-  acceptSceneStateMutationReviewItems: (sceneId: string) => Promise<void>;
-  rejectSceneStateMutationReviewItems: (sceneId: string) => Promise<void>;
-  hideStateMutationReviewItem: (eventId: string) => void;
-  restoreHiddenStateMutationReviewItems: (sceneId: string) => void;
-  restoreAllHiddenStateMutationReviewItems: () => void;
+  review: WorkspaceReviewInputs;
   documents: WritingDocument[];
   handleSelectDocument: (doc: WritingDocument) => void;
-  onFocusReviewItem: (item: ConsistencyReviewItem) => void;
-  activeReviewItemId: string | null;
-  reviewCreateLabel: string;
-  reviewLinkLabel: string;
-  resolvingUnknown: string | null;
-  linkingUnknown: string | null;
-  unknownCategorySelection: Record<string, string>;
-  setUnknownCategorySelection: (
-    updater: (prev: Record<string, string>) => Record<string, string>
-  ) => void;
-  worldCaptureDrafts: Record<string, string>;
-  setWorldCaptureDrafts: (
-    updater: (prev: Record<string, string>) => Record<string, string>
-  ) => void;
-  unknownLinkSelection: Record<string, string>;
-  setUnknownLinkSelection: (
-    updater: (prev: Record<string, string>) => Record<string, string>
-  ) => void;
-  unknownLinkOptions: Record<string, LinkTargetOption[]>;
-  getSuggestedUnknownCategoryId: (surface: string) => string | undefined;
-  createWorldCategory: (name: string) => Promise<EntityCategory>;
-  resolveUnknownEntity: (
-    surface: string,
-    categoryId?: string,
-    displayName?: string,
-    acceptedAliases?: string[]
-  ) => Promise<void>;
-  dismissUnknownEntity: (surface: string, documentId?: string) => void;
-  dismissConsistencyReviewItem: (itemId: string) => void;
-  /** Adds a confirmed canon check's items to the review queue (4.53). */
-  addModelCheckItems: (sceneId: string, items: ConsistencyReviewItem[]) => void;
-  ignoreUnknownSurfaceProjectWide: (surface: string, documentId?: string) => void;
-  linkUnknownEntity: (
-    surface: string,
-    targetValue?: string,
-    displayName?: string
-  ) => Promise<unknown>;
   openWorldRecord: (target: {id: string; type: 'character' | 'entity'}) => void;
 
   // Scratchpad view
@@ -295,15 +163,6 @@ const CONTEXT_DRAWER_TABS: Array<{id: WorkspaceContextDrawerView; label: string}
   {id: 'lore', label: 'Source Notes'}
 ];
 
-const isCharacterLikeCategory = (category: {slug: string; name: string} | null) => {
-  if (!category) return false;
-  const slug = category.slug.toLowerCase();
-  const name = category.name.toLowerCase();
-  return ['character', 'characters', 'npc', 'person', 'people'].some(
-    (hint) => slug.includes(hint) || name.includes(hint)
-  );
-};
-
 export function WorkspaceContextDrawer({
   activeContextView,
   setActiveContextView,
@@ -333,46 +192,9 @@ export function WorkspaceContextDrawer({
   invalidateSceneRosterTimelineEvent,
   reanchorSceneRosterTimelineEvent,
   expireSceneRosterTimelineEvent,
-  handleRunConsistencyReview,
-  isRunningConsistencyReview,
-  lastConsistencyReviewAt,
-  consistencyReviewItems,
-  stateMutationReviewItems,
-  hiddenStateMutationReviewCountBySceneId,
-  hiddenStateMutationReviewCount,
-  applyingStateMutationReviewId,
-  reviewReadiness,
-  acceptStateMutationReviewItem,
-  editStateMutationReviewItem,
-  rejectStateMutationReviewItem,
-  acceptSceneStateMutationReviewItems,
-  rejectSceneStateMutationReviewItems,
-  hideStateMutationReviewItem,
-  restoreHiddenStateMutationReviewItems,
-  restoreAllHiddenStateMutationReviewItems,
+  review,
   documents,
   handleSelectDocument,
-  onFocusReviewItem,
-  activeReviewItemId,
-  reviewCreateLabel,
-  reviewLinkLabel,
-  resolvingUnknown,
-  linkingUnknown,
-  unknownCategorySelection,
-  setUnknownCategorySelection,
-  worldCaptureDrafts,
-  setWorldCaptureDrafts,
-  unknownLinkSelection,
-  setUnknownLinkSelection,
-  unknownLinkOptions,
-  getSuggestedUnknownCategoryId,
-  createWorldCategory,
-  resolveUnknownEntity,
-  dismissUnknownEntity,
-  dismissConsistencyReviewItem,
-  addModelCheckItems,
-  ignoreUnknownSurfaceProjectWide,
-  linkUnknownEntity,
   openWorldRecord,
   scratchpadContent,
   setScratchpadContent,
@@ -419,7 +241,6 @@ export function WorkspaceContextDrawer({
   const [assistantSessionId] = useState(() => crypto.randomUUID());
   const aiSwitches = readAISwitches(projectSettings?.aiSettings);
   const anyAIOn = anyAISwitchOn(aiSwitches);
-  const activeReviewItemRef = useRef<HTMLLIElement | null>(null);
 
   const visibleTabs = useMemo(
     () =>
@@ -443,352 +264,13 @@ export function WorkspaceContextDrawer({
       ? {id: currentDocument.id, title: currentDocument.title, text: currentSceneCheckText}
       : null,
     documents,
-    onAddItems: addModelCheckItems
+    onAddItems: review.consistency.addModelCheckItems
   });
-  const orderedConsistencyReviewItems = useMemo(() => {
-    const activeItem = activeReviewItemId
-      ? consistencyReviewItems.find((item) => item.id === activeReviewItemId) ?? null
-      : null;
-    return activeItem
-      ? [
-          activeItem,
-          ...consistencyReviewItems.filter((item) => item.id !== activeItem.id)
-        ]
-      : consistencyReviewItems;
-  }, [activeReviewItemId, consistencyReviewItems]);
-  const staleReviewItemCount = useMemo(
-    () => consistencyReviewItems.filter((item) => item.staleSinceReview).length,
-    [consistencyReviewItems]
-  );
-  const currentDocumentReviewItems = useMemo(
-    () =>
-      selectedId
-        ? orderedConsistencyReviewItems.filter((item) => item.sceneId === selectedId)
-        : orderedConsistencyReviewItems,
-    [orderedConsistencyReviewItems, selectedId]
-  );
-  const otherDocumentReviewItems = useMemo(
-    () =>
-      selectedId
-        ? orderedConsistencyReviewItems.filter((item) => item.sceneId !== selectedId)
-        : [],
-    [orderedConsistencyReviewItems, selectedId]
-  );
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.id === activeContextView)) {
       setActiveContextView('world-bible');
     }
   }, [activeContextView, setActiveContextView, visibleTabs]);
-  useEffect(() => {
-    if (activeContextView !== 'review' || !activeReviewItemId) {
-      return;
-    }
-    const frameId = window.requestAnimationFrame(() => {
-      activeReviewItemRef.current?.scrollIntoView({
-        block: 'start',
-        behavior: 'auto'
-      });
-    });
-    return () => window.cancelAnimationFrame(frameId);
-  }, [activeContextView, activeReviewItemId, currentDocumentReviewItems, otherDocumentReviewItems]);
-  const stateMutationReviewGroups = stateMutationReviewItems.reduce<
-    Array<{sceneId: string; sceneTitle: string; items: StateMutationReviewItem[]}>
-  >((groups, item) => {
-    const existing = groups.find((group) => group.sceneId === item.sceneId);
-    if (existing) {
-      existing.items.push(item);
-      return groups;
-    }
-    groups.push({
-      sceneId: item.sceneId,
-      sceneTitle: item.sceneTitle,
-      items: [item]
-    });
-    return groups;
-  }, []);
-
-  const renderConsistencyReviewItem = (item: ConsistencyReviewItem) => {
-    const surface = item.issue.surface?.trim() ?? '';
-    const actionSurface = surface || item.issue.message;
-    const isActive = activeReviewItemId === item.id;
-    const isContinuityIssue =
-      item.issue.code === 'STATE_CONFLICT' || item.issue.code === 'INVALID_MUTATION';
-    const isExpanded = expandedReviewActionId === item.id || isActive;
-    const selectedCategoryId =
-      unknownCategorySelection[actionSurface] ||
-      (surface ? getSuggestedUnknownCategoryId(surface) : '') ||
-      '';
-    const draftName = worldCaptureDrafts[actionSurface] || actionSurface;
-    const selectedCategory = selectedCategoryId
-      ? categories.find((category) => category.id === selectedCategoryId) ?? null
-      : null;
-    const isCharacterCapture = isCharacterLikeCategory(selectedCategory);
-    const rejectedAliases = rejectedAliasSuggestions[actionSurface] ?? [];
-    const aliasPreview = isCharacterCapture
-      ? buildCharacterCaptureAliasList({
-          surface: actionSurface,
-          canonicalName: draftName,
-          rejectedAliases
-        })
-      : [];
-    const selectedLinkValue = unknownLinkSelection[actionSurface] ?? '';
-    const linkOptions = unknownLinkOptions[actionSurface] ?? [];
-    const issueTitle = surface || getIssueLabel(item.issue.code);
-    const reviewAnnotation = item.reviewAnnotation;
-    const reviewSummary = reviewAnnotation?.summary;
-    const shouldShowReviewSummary =
-      reviewSummary &&
-      !(
-        item.issue.code === 'UNKNOWN_ENTITY' &&
-        item.issue.severity === 'warning' &&
-        reviewAnnotation?.source === 'deterministic'
-      );
-
-    return (
-      <li
-        key={item.id}
-        ref={isActive ? activeReviewItemRef : undefined}
-        className={`${styles.consistencyListItem} ${
-          isContinuityIssue ? styles.consistencyListItemConflict : ''
-        } ${
-          isActive ? styles.consistencyListItemActive : ''
-        }`}
-      >
-        <div className={styles.consistencyItemHeader}>
-          <div>
-            <strong className={styles.consistencyItemTitle}>{issueTitle}</strong>
-            {isContinuityIssue && (
-              <span className={styles.consistencyConflictBadge}>Needs attention</span>
-            )}
-            {item.issue.code === 'UNKNOWN_ENTITY' &&
-              item.issue.severity === 'warning' && (
-                <span className={styles.consistencyReason}>Review later</span>
-              )}
-            {item.staleSinceReview && (
-              <span className={styles.consistencyReason} title='This scene changed after the last project review. Run the review again to refresh it.'>
-                Scene changed since review
-              </span>
-            )}
-          </div>
-          <div className={styles.consistencyHeaderActions}>
-            <button
-              type='button'
-              onClick={() => {
-                onFocusReviewItem(item);
-                setExpandedReviewActionId(item.id);
-              }}
-              className={styles.consistencySceneButton}
-              title={surface ? `Show "${surface}" in ${item.sceneTitle}` : `Open ${item.sceneTitle}`}
-            >
-              Show context
-            </button>
-            {isContinuityIssue && (
-              <button
-                type='button'
-                onClick={() => dismissConsistencyReviewItem(item.id)}
-                className={styles.consistencyDismissButton}
-                title='Dismiss until the next project review'
-              >
-                Dismiss
-              </button>
-            )}
-          </div>
-        </div>
-        <div className={styles.consistencyItemBody}>
-          <button
-            type='button'
-            onClick={() => {
-              onFocusReviewItem(item);
-              setExpandedReviewActionId(item.id);
-            }}
-            className={styles.consistencySceneButton}
-            title={surface ? `Show "${surface}" in ${item.sceneTitle}` : `Open ${item.sceneTitle}`}
-          >
-            {item.sceneTitle}
-          </button>
-          {surface ? (
-            <span className={styles.consistencyMessage}>{item.issue.message}</span>
-          ) : (
-            <>: {item.issue.message}</>
-          )}
-        </div>
-        {shouldShowReviewSummary && (
-          <div className={styles.consistencyDescription}>
-            {reviewSummary}
-          </div>
-        )}
-        {item.reviewAnnotation && (
-          <span className={styles.consistencyReason}>
-            {item.reviewAnnotation.engineLabel}
-          </span>
-        )}
-        {item.issue.detectionReason && (
-          <span
-            className={styles.consistencyReason}
-            title={getDetectionReason(item.issue.detectionReason).title}
-          >
-            {getDetectionReason(item.issue.detectionReason).label}
-          </span>
-        )}
-        {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
-          <span className={styles.consistencyRelated}>
-            {item.issue.relatedEntities.slice(0, 3).map((target) => (
-              <button
-                key={`${item.id}-${target.id}`}
-                type='button'
-                onClick={() => openWorldRecord(target)}
-                className={styles.consistencyRelatedButton}
-              >
-                Open {target.name}
-              </button>
-            ))}
-          </span>
-        )}
-        {isExpanded && supportsWorldCaptureActions(item.issue) && (
-          <div className={styles.reviewActionPanel}>
-            <label className={styles.reviewActionField}>
-              World Bible type
-              <WorldCategorySelect
-                categories={categories}
-                value={selectedCategoryId}
-                onChange={(categoryId) =>
-                  setUnknownCategorySelection((prev) => ({
-                    ...prev,
-                    [actionSurface]: categoryId
-                  }))
-                }
-                onCreate={createWorldCategory}
-              />
-            </label>
-            <label className={styles.reviewActionField}>
-              {isCharacterCapture ? 'Canonical name' : 'Name'}
-              <input
-                type='text'
-                value={draftName}
-                onChange={(event) =>
-                  setWorldCaptureDrafts((prev) => ({
-                    ...prev,
-                    [actionSurface]: event.target.value
-                  }))
-                }
-              />
-            </label>
-            {isCharacterCapture && (
-              <div className={styles.canonicalCaptureHint}>
-                <strong>World Bible is the canon home.</strong>
-                <span>
-                  Save the full name here, then keep or remove suggested aliases.
-                </span>
-                {aliasPreview.length > 0 && (
-                  <div className={styles.aliasPreviewList} aria-label='Suggested aliases'>
-                    {aliasPreview.map((alias) => (
-                      <span key={alias}>
-                        {alias}
-                        <button
-                          type='button'
-                          onClick={() =>
-                            setRejectedAliasSuggestions((prev) => ({
-                              ...prev,
-                              [actionSurface]: [
-                                ...(prev[actionSurface] ?? []),
-                                alias
-                              ]
-                            }))
-                          }
-                          aria-label={`Remove alias ${alias}`}
-                          title='Remove alias'
-                        >
-                          x
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            <div className={styles.reviewActionRow}>
-              <button
-                type='button'
-                onClick={() =>
-                  void resolveUnknownEntity(
-                    actionSurface,
-                    selectedCategoryId || undefined,
-                    draftName,
-                    aliasPreview
-                  ).then(() =>
-                    setRejectedAliasSuggestions((prev) => {
-                      const copy = {...prev};
-                      delete copy[actionSurface];
-                      return copy;
-                    })
-                  )
-                }
-                disabled={resolvingUnknown === actionSurface}
-              >
-                {resolvingUnknown === actionSurface
-                  ? 'Adding...'
-                  : isCharacterCapture
-                    ? 'Create character'
-                    : reviewCreateLabel}
-              </button>
-              <button
-                type='button'
-                onClick={() => dismissUnknownEntity(actionSurface, item.sceneId)}
-              >
-                Ignore
-              </button>
-              <button
-                type='button'
-                onClick={() =>
-                  ignoreUnknownSurfaceProjectWide(actionSurface, item.sceneId)
-                }
-              >
-                Always ignore
-              </button>
-            </div>
-            {linkOptions.length > 0 ? (
-              <div className={styles.reviewActionRow}>
-                <select
-                  value={selectedLinkValue}
-                  onChange={(event) =>
-                    setUnknownLinkSelection((prev) => ({
-                      ...prev,
-                      [actionSurface]: event.target.value
-                    }))
-                  }
-                  aria-label='Existing world record'
-                >
-                  <option value=''>Select existing record...</option>
-                  {linkOptions.map((option) => (
-                    <option
-                      key={`${option.type}-${option.id}`}
-                      value={`${option.type}:${option.id}`}
-                    >
-                      {option.name} · {option.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type='button'
-                  onClick={() =>
-                    void linkUnknownEntity(actionSurface, selectedLinkValue, draftName)
-                  }
-                  disabled={linkingUnknown === actionSurface || !selectedLinkValue}
-                >
-                  {linkingUnknown === actionSurface ? 'Connecting...' : reviewLinkLabel}
-                </button>
-              </div>
-            ) : (
-              <div className={styles.consistencyDescription}>
-                No existing records available yet.
-              </div>
-            )}
-          </div>
-        )}
-      </li>
-    );
-  };
-
   const content = (() => {
     if (activeContextView === 'scene-roster') {
       return (
@@ -868,221 +350,22 @@ export function WorkspaceContextDrawer({
     }
     if (activeContextView === 'review') {
       return (
-        <div className={styles.contextSummary}>
-          <div className={styles.contextSummaryText}>
-            <strong>Project Review</strong>
-            <div className={styles.consistencyDescription}>
-              Scans every scene for names and canon references that are not already
-              tracked. Known canon can underline while you type; new names appear here
-              after review runs.
-            </div>
-          </div>
-          <div className={styles.consistencyPanelHeader}>
-            <button
-              type='button'
-              onClick={() => void handleRunConsistencyReview()}
-              disabled={isRunningConsistencyReview}
-            >
-              {isRunningConsistencyReview ? 'Running project review...' : 'Run project review'}
-            </button>
-          </div>
-          <CanonCheckPanel check={canonCheck} sceneTitle={currentDocument ? currentDocument.title : null} />
-          {lastConsistencyReviewAt && (
-            <div className={styles.consistencyLastRun}>
-              Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
-              {staleReviewItemCount > 0
-                ? ` · ${staleReviewItemCount} item${staleReviewItemCount === 1 ? '' : 's'} from scenes changed since`
-                : ''}
-            </div>
-          )}
-          {hiddenStateMutationReviewCount > 0 && (
-            <div className={styles.consistencyDescription}>
-              {hiddenStateMutationReviewCount} hidden suggested state change
-              {hiddenStateMutationReviewCount === 1 ? '' : 's'} kept out of the active queue.
-              {' '}
-              <button
-                type='button'
-                onClick={restoreAllHiddenStateMutationReviewItems}
-                className={styles.consistencyRelatedButton}
-              >
-                Restore all
-              </button>
-            </div>
-          )}
-          {consistencyReviewItems.length > 0 && (
-            <>
-              <div className={styles.consistencyDescription}>
-                <strong>Review issues</strong>
-                {reviewReadiness.passiveCount > 0 && (
-                  <>
-                    {' '}
-                    {reviewReadiness.passiveCount} low-priority candidate
-                    {reviewReadiness.passiveCount === 1 ? '' : 's'} saved for later.
-                  </>
-                )}
-              </div>
-              {currentDocumentReviewItems.length > 0 && (
-                <section className={styles.reviewIssueSection}>
-                  <div className={styles.reviewIssueSectionHeader}>
-                    Current document
-                    {currentDocument ? ` · ${currentDocument.title || 'Untitled scene'}` : ''}
-                  </div>
-                  <ul className={styles.consistencyList}>
-                    {currentDocumentReviewItems.map(renderConsistencyReviewItem)}
-                  </ul>
-                </section>
-              )}
-              {otherDocumentReviewItems.length > 0 && (
-                <section className={styles.reviewIssueSection}>
-                  <div className={styles.reviewIssueSectionHeader}>
-                    Other documents
-                  </div>
-                  <ul className={styles.consistencyList}>
-                    {otherDocumentReviewItems.map(renderConsistencyReviewItem)}
-                  </ul>
-                </section>
-              )}
-            </>
-          )}
-          {stateMutationReviewItems.length > 0 && (
-            <>
-              <div className={styles.consistencyDescription}>
-                <strong>Suggested state changes</strong>
-              </div>
-              {stateMutationReviewGroups.slice(0, 24).map((group) => {
-                const batchAcceptId = `scene:${group.sceneId}:accept`;
-                const batchRejectId = `scene:${group.sceneId}:reject`;
-                const validCount = group.items.filter((item) => item.canAcceptInBatch).length;
-                const hiddenCount =
-                  hiddenStateMutationReviewCountBySceneId[group.sceneId] ?? 0;
-                return (
-                  <div key={group.sceneId}>
-                    <div className={styles.consistencyPanelHeader}>
-                      <button
-                        type='button'
-                        onClick={() => {
-                          const doc = documents.find((entry) => entry.id === group.sceneId);
-                          if (doc) handleSelectDocument(doc);
-                        }}
-                        className={styles.consistencySceneButton}
-                        title={`Open ${group.sceneTitle}`}
-                      >
-                        {group.sceneTitle}
-                      </button>
-                      <button
-                        type='button'
-                        onClick={() => void acceptSceneStateMutationReviewItems(group.sceneId)}
-                        disabled={validCount === 0 || applyingStateMutationReviewId === batchAcceptId}
-                        className={styles.consistencyRelatedButton}
-                      >
-                        {applyingStateMutationReviewId === batchAcceptId ? 'Applying...' : `Accept valid (${validCount})`}
-                      </button>
-                      <button
-                        type='button'
-                        onClick={() => void rejectSceneStateMutationReviewItems(group.sceneId)}
-                        disabled={applyingStateMutationReviewId === batchRejectId}
-                        className={styles.consistencyRelatedButton}
-                      >
-                        {applyingStateMutationReviewId === batchRejectId ? 'Rejecting...' : 'Reject all'}
-                      </button>
-                      {hiddenCount > 0 ? (
-                        <button
-                          type='button'
-                          onClick={() => restoreHiddenStateMutationReviewItems(group.sceneId)}
-                          className={styles.consistencyRelatedButton}
-                        >
-                          {`Restore hidden (${hiddenCount})`}
-                        </button>
-                      ) : null}
-                    </div>
-                    <ul className={styles.consistencyList}>
-                      {group.items.map((item) => (
-                        <li key={item.id} className={styles.consistencyListItem}>
-                          <strong>{item.actorLabel}</strong>
-                          {item.sceneSequence ? ` · Step ${item.sceneSequence}` : ''}
-                          <div className={styles.consistencyRelated}>
-                            {item.canAccept ? (
-                              <span className={styles.consistencyBadgeReady}>Ready</span>
-                            ) : item.canAcceptInBatch ? (
-                              <span className={styles.consistencyBadgeBatch}>After earlier steps</span>
-                            ) : (
-                              <span className={styles.consistencyBadgeBlocked}>Blocked</span>
-                            )}
-                          </div>
-                          {item.summaryLines.map((line) => (
-                            <div key={`${item.id}-${line}`} className={styles.consistencyDescription}>
-                              {line}
-                            </div>
-                          ))}
-                          {item.effectLines.map((line) => (
-                            <div key={`${item.id}:effect:${line}`} className={styles.consistencyDescription}>
-                              {line}
-                            </div>
-                          ))}
-                          {item.acceptanceHint && (
-                            <div className={styles.consistencyDescription}>
-                              {item.acceptanceHint}
-                            </div>
-                          )}
-                          {item.validationIssues.map((issue) => (
-                            <div key={`${item.id}:issue:${issue}`} className={styles.consistencyDescription}>
-                              {issue}
-                            </div>
-                          ))}
-                          <div className={styles.consistencyRelated}>
-                            {item.canEditInWorkspace && (
-                              <button
-                                type='button'
-                                onClick={() => editStateMutationReviewItem(item)}
-                                disabled={applyingStateMutationReviewId === item.id}
-                                className={styles.consistencyRelatedButton}
-                              >
-                                Review here
-                              </button>
-                            )}
-                            <button
-                              type='button'
-                              onClick={() => void acceptStateMutationReviewItem(item.id)}
-                              disabled={!item.canAccept || applyingStateMutationReviewId === item.id}
-                              className={styles.consistencyRelatedButton}
-                            >
-                              {applyingStateMutationReviewId === item.id ? 'Applying...' : 'Accept'}
-                            </button>
-                            <button
-                              type='button'
-                              onClick={() => void rejectStateMutationReviewItem(item.id)}
-                              disabled={applyingStateMutationReviewId === item.id}
-                              className={styles.consistencyRelatedButton}
-                            >
-                              Reject
-                            </button>
-                            <button
-                              type='button'
-                              onClick={() => hideStateMutationReviewItem(item.id)}
-                              disabled={applyingStateMutationReviewId === item.id}
-                              className={styles.consistencyRelatedButton}
-                            >
-                              Hide for now
-                            </button>
-                          </div>
-                          <span className={styles.consistencyReason}>Deterministic state review</span>
-                          {item.staleLabel && (
-                            <span className={styles.consistencyReason}>
-                              {item.isStale ? `Stale: ${item.staleLabel}` : item.staleLabel}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </>
-          )}
-          {consistencyReviewItems.length === 0 && stateMutationReviewItems.length === 0 ? (
-            <p className={styles.contextSummaryText}>No open review items.</p>
-          ) : null}
-        </div>
+        <WorkspaceReviewTab
+          review={review}
+          tabState={{
+            canonCheck,
+            expandedReviewActionId,
+            setExpandedReviewActionId,
+            rejectedAliasSuggestions,
+            setRejectedAliasSuggestions
+          }}
+          categories={categories}
+          documents={documents}
+          selectedId={selectedId}
+          currentDocument={currentDocument}
+          handleSelectDocument={handleSelectDocument}
+          openWorldRecord={openWorldRecord}
+        />
       );
     }
     if (activeContextView === 'ai') {
@@ -1181,7 +464,7 @@ export function WorkspaceContextDrawer({
             });
           }}
           onRunConsistencyReview={() => {
-            void handleRunConsistencyReview();
+            void review.onRunReview();
           }}
         />
       );
@@ -1224,9 +507,9 @@ export function WorkspaceContextDrawer({
               }`}
             >
               <span>{tab.label}</span>
-              {tab.id === 'review' && reviewReadiness.count > 0 && (
+              {tab.id === 'review' && review.consistency.reviewReadiness.count > 0 && (
                 <span className={styles.contextTabBadge}>
-                  {reviewReadiness.count}
+                  {review.consistency.reviewReadiness.count}
                 </span>
               )}
             </button>
