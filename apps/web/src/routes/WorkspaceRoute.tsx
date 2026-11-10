@@ -1,12 +1,4 @@
-import {
-  type ComponentProps,
-  useEffect,
-  useLayoutEffect,
-  useState,
-  useCallback,
-  useMemo,
-  useRef
-} from 'react';
+import {type ComponentProps, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useLocation, useNavigate} from 'react-router';
 import type {WritingDocument} from '../entityTypes';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
@@ -69,10 +61,8 @@ import {
   countStaleStateEventsByScene
 } from '../services/workspace/sceneDrawerBadges';
 import {useWorkspaceSceneCursor} from '../hooks/useWorkspaceSceneCursor';
-import {
-  useConnectDocumentReviewBridge,
-  useDocumentReviewBridge
-} from '../hooks/useWorkspaceDocumentReviewBridge';
+import {useWorkspaceRenderDiagnostics} from '../hooks/useWorkspaceRenderDiagnostics';
+import {useConnectDocumentReviewBridge, useDocumentReviewBridge} from '../hooks/useWorkspaceDocumentReviewBridge';
 import {useWorkspaceManualWorldCapture} from '../hooks/useWorkspaceManualWorldCapture';
 import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
@@ -87,14 +77,6 @@ import {useWorkspaceSceneRoster} from '../hooks/useWorkspaceSceneRoster';
 import {getSceneOrder} from '../services/state/characterSnapshot';
 import {WorkspaceCharacterLabDialogs} from '../components/Workspace/WorkspaceCharacterLabDialogs';
 import {WorkspaceSceneDraftEntry} from '../components/Workspace/WorkspaceSceneDraftEntry';
-
-declare global {
-  interface Window {
-    __wbdWorkspaceMountedAt?: number;
-    __wbdWorkspaceRenderCount?: number;
-    __wbdWorkspaceUnmountedAt?: number;
-  }
-}
 
 type FeedbackTone = 'success' | 'error';
 
@@ -161,18 +143,7 @@ function WorkspaceRoute() {
     activeProjectId: activeProject?.id ?? null
   });
 
-  useEffect(() => {
-    window.__wbdWorkspaceMountedAt = Date.now();
-    window.__wbdWorkspaceRenderCount = 0;
-    return () => {
-      window.__wbdWorkspaceUnmountedAt = Date.now();
-    };
-  }, []);
-
-  // Lightweight diagnostics only, no state updates.
-  useEffect(() => {
-    window.__wbdWorkspaceRenderCount = (window.__wbdWorkspaceRenderCount ?? 0) + 1;
-  });
+  useWorkspaceRenderDiagnostics();
   const openScratchpadModal = useCallback(() => {
     setScratchpadModalOpen(true);
   }, [setScratchpadModalOpen]);
@@ -262,8 +233,8 @@ function WorkspaceRoute() {
   const {
     shodhService,
     refreshMemories,
-    isMemoryModalOpen,
-    setMemoryModalOpen,
+    isMemoryDialogOpen,
+    closeMemoryModal,
     memoryDraft,
     setMemoryDraft,
     memoryScope,
@@ -653,15 +624,6 @@ function WorkspaceRoute() {
     }
   }, [showGameSystems, activeContextView, setActiveContextView]);
 
-
-  const isMemoryDialogOpen = Boolean(isMemoryModalOpen && selectedDocument);
-  const closeMemoryDialog = useCallback(() => {
-    setMemoryModalOpen(false);
-  }, [setMemoryModalOpen]);
-
-
-
-
   const {isPromotingDocument, handlePromoteDocument, isSyncingCanon, handleCanonSync} =
     useWorkspaceSeriesCanon({
       activeProject,
@@ -1008,11 +970,10 @@ function WorkspaceRoute() {
         selectedTitle={title} selectedContent={content} onOpenScene={handleSelectDocument}
       />
 
-
       <WorkspaceMemoryModal
         isOpen={isMemoryDialogOpen}
         draft={memoryDraft} isSaving={isSavingMemory} setDraft={setMemoryDraft}
-        onClose={closeMemoryDialog} onSave={handleMemorySave}
+        onClose={closeMemoryModal} onSave={handleMemorySave}
       />
 
       <WorkspaceCharacterLabDialogs
