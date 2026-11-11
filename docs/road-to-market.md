@@ -203,7 +203,7 @@ messages).
 | 1.4a | Ask pending-proposal readiness | 1 | S | Done `a46e67a` |
 | 1.4b | Assistant follow-up subjects + evidence-gate coverage | 1 | M | Done `cff28f4` |
 | 1.5 | Shared AI proposal surface | 1 | M | Done `b1d0a2a` |
-| 1.6 | Context and memory baseline + benchmark | 1 | M | WIP |
+| 1.6 | Context and memory baseline + benchmark | 1 | M | Done `44a1dcc` |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |
 | 2.2 | Migrate confirm/alert call sites | 2 | M | Done `9c278a3` + `ab14f63` |
 | 2.3 | Inline field-level validation | 2 | S | Done `45a163f` |
