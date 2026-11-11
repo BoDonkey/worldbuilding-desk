@@ -23,7 +23,7 @@ export const resourceAppKinds = {
       label: 'Change resource by',
       fields: [
         {type: 'definition', source: 'resource'},
-        {type: 'resourceValue', label: 'Delta'}
+        {type: 'number', label: 'Delta'}
       ],
       build: ({actorId, resourceDefinition, numericValue}) =>
         resourceDefinition && Number.isFinite(numericValue)
@@ -74,7 +74,7 @@ export const resourceAppKinds = {
       label: 'Set resource to',
       fields: [
         {type: 'definition', source: 'resource'},
-        {type: 'resourceValue', label: 'Value'}
+        {type: 'number', label: 'Value'}
       ],
       build: ({actorId, resourceDefinition, numericValue}) =>
         resourceDefinition && Number.isFinite(numericValue)

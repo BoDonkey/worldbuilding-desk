@@ -1,5 +1,6 @@
 import type {EntityCategory} from '../../entityTypes';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './ItemDescriptionFirstFields.module.css';
 import {EntityFieldEditor} from './EntityFieldEditor';
 
 interface ItemDescriptionFirstFieldsProps {
@@ -22,7 +23,7 @@ export function ItemDescriptionFirstFields({
   onToggleDetails
 }: ItemDescriptionFirstFieldsProps) {
   return (
-    <section className={styles.itemDraftPanel} aria-labelledby='item-draft-heading'>
+    <section className={shared.itemDraftPanel} aria-labelledby='item-draft-heading'>
       <div className={styles.itemDraftHeader}>
         <div>
           <div className={styles.itemDraftEyebrow}>Start with the story</div>
@@ -34,7 +35,7 @@ export function ItemDescriptionFirstFields({
         </div>
       </div>
 
-      <div className={styles.formGroup}>
+      <div className={shared.formGroup}>
         <label>
           Name
           <input
@@ -48,7 +49,7 @@ export function ItemDescriptionFirstFields({
       </div>
 
       {descriptionField ? (
-        <div className={styles.itemDescriptionField}>
+        <div className={shared.itemDescriptionField}>
           <EntityFieldEditor
             field={descriptionField}
             fieldValues={fieldValues}

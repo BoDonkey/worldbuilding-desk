@@ -275,7 +275,7 @@ messages).
 | 4.24 | Fact-anchored canon contradiction detection | 4 | M | Done `ffcd1bd` |
 | 4.25 | Persisted, incremental project review | 4 | M | Done `d6e5ddd` |
 | 4.26 | State-backed continuity checks | 4 | M | Done `bd255cd` |
-| 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — post-beta candidate because it expands state ownership and persistence beyond sheets/rulesets; descriptive location/custody for canonical characters, not required by mechanics-only 4.26 |
+| 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — (before beta, author decision 2026-11-08; after 4.76, before 4.77, so place positions reach general fiction) |
 | 4.28 | Manuscript-order validity for canon facts | 4 | M | Done `42c86de` |
 | 4.29 | Portable Markdown/CSV export + Markdown-folder import | 4 | M | Done `7cd6895` |
 | 4.30 | World Canvas — record, view mode, premise, lenses, questions (WC-1) | 4 | M | Done `f9f3e54` |
@@ -329,6 +329,12 @@ messages).
 | 4.75 | Local reply length from server context | 4 | S | Done `4bf1e2a` |
 | 4.82 | Ordinary assistant rolling summaries | 4 | M | — post-beta candidate; after the relevant 3.32 assistant/context seam |
 | 4.83 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
+| 4.76 | Places: containment and connections | 4 | M | — (before beta; brief 3.37) |
+| 4.77 | Places: positions refer to place records | 4 | M | — (after 4.76) |
+| 4.78 | Places: where-is-everyone view + movement checks | 4 | M | — (after 4.77) |
+| 4.79 | Maps and placements (data, distance) | 4 | L | — (after 4.76) |
+| 4.80 | Map surface: image import, pins, scene view, export | 4 | L | — (after 4.78, 4.79) |
+| 4.81 | Grid and hex maps | 4 | M | — (after 4.80) |
 | 5.1 | Auto-update decision + implementation | 5 | M | Done `c1c4f33` + `7357671` + `4efa1d1` + `a56e5dd` |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | In progress (author-approved exception to the Phase 5 gate, 2026-10-31) — data folder moved to `SagaSpine` with a one-time migration and packaged test; builds stay unsigned through the beta by author decision; signing (macOS first) before paid launch |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | Done `9d748f4` + `613a8e3` + `88eb908` + `5ad6a77` |
@@ -348,13 +354,14 @@ messages).
 | 5.17 | Writing-flow stability + assistant continuity | 5 | L | Done `dc0460c` |
 | 5.18 | Per-project AI switches (coaching, prose) | 5 | M | Done `bee5089` |
 | 5.19 | Custom AI actions in the selection menu | 5 | M | Done `da9ed97` |
-| 3.32 | Break up the oversized route files along feature seams | 3 | L | WIP — World Bible route split (2,145 → 596 lines); World Bible CSS split is 3.32a; next routes: Workspace (+ context drawer), Lore, then Character Sheets after 3.34 |
-| 3.32a | Split the World Bible CSS module along component seams | 3 | M | — (after the 3.32 World Bible route PR merges) |
+| 3.32 | Break up the oversized route files along feature seams | 3 | L | WIP — World Bible route split (2,145 → 596 lines); Lore route split (1,766 → 194 lines); World Bible CSS split done as 3.32a; next routes: Workspace (+ context drawer), then Character Sheets after 3.34 |
+| 3.32a | Split the World Bible CSS module along component seams | 3 | M | Done `25d0b92` — 19 modules, largest 466 lines; 52 before/after screenshots pixel-identical |
 | 3.33 | Code tour for maintainers | 3 | M | — (author request, 2026-11-07; stable half now, route sections after 3.32) |
 | 3.34 | One module per state-change kind, one change vocabulary (mechanics registry) | 3 | L | Done `fb53c2a` — CI flake to fix: Windows Desktop E2E `app-updates.e2e.ts` ("checks at startup once allowed…") timed out waiting for the update card once on PR #102, passed on rerun; unrelated to 3.34 |
-| 3.34a | XP and levels through the scene ledger (first new kind on 3.34) | 3 | M | — (after 3.34) |
+| 3.34a | XP and levels through the scene ledger (first new kind on 3.34) | 3 | M | Done `8b6af1e` — inserted stat blocks replay level and XP only; their stats and resources still come from the sheet |
 | 3.35 | Route every project-mode decision through project capabilities | 3 | S | — (author request, 2026-11-08; with or right after the 3.32 Workspace split) |
 | 3.36 | Game Simulation brief (design only) | 3 | S | Done `20cd067` |
+| 3.37 | Places and maps brief (design only) | 3 | S | Done `05f1ed6` |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -677,21 +684,107 @@ adding implementation scope.
   - **Rules.** No code. Not a commitment to build Game Simulation.
   - **Verify.** Documentation tier; the author signs off on the brief.
 
-### Phase 4 — Post-beta candidate
+- **3.37 Places and maps brief (design only).** Author request
+  (2026-11-08). LitRPG and Game Simulation need to know where places are
+  and where characters are, and a graphical map was raised as a later
+  extension. Today `location_set` stores places as free text and locations
+  have no hierarchy, connections, or coordinates. Write
+  `docs/places-and-maps-brief.md` with the author.
+  - **Questions.** How do positions refer to places? Containment and
+    connections? Where do coordinates live, and how is distance measured?
+    What story time do travel checks need? Which checks, and are they
+    warnings? What is the map surface's input and output? Where does AI stop?
+  - **Decided (2026-11-08).** Coordinates are needed; they are stored per
+    map (placements), not globally; the map is an extension built last, from
+    imported images with pins; all of it comes before the beta; no story
+    time between scenes for now; one parent per place, nested to any depth;
+    distance units per map.
+  - **Then.** Slices 4.76–4.81 on the board. Link the brief from
+    `docs/README.md`.
+  - **Rules.** No code. Not a commitment to build.
+  - **Verify.** Documentation tier; the author signs off on the brief.
 
-- **4.27 Sheet-free descriptive state for general fiction.** Post-beta
-  candidate. Let canonical characters carry descriptive state (location,
-  custody of named items, and later allegiance/disguise) without a ruleset or
+### Phase 4 — Places, positions, and maps (before beta)
+
+Design: `docs/places-and-maps-brief.md` (3.37). Each slice follows the
+State rules in `docs/architecture-review.md` and the trust boundary in the
+brief's § 9: AI only proposes positions, places, parents, and connections.
+Movement checks are review findings, never blocks.
+
+- **4.76 Places: containment and connections.** Brief § 3. A location record
+  may name one parent location (nested to any depth; cycles refused). Places
+  may be linked by connections (kind, optional authored distance in the
+  author's words plus a number and unit, optional travel times by mode,
+  two-way unless marked one-way). Edit both in the World Bible location
+  record. Project schema bump with migration and restorable backup per 4.2;
+  portable export (4.29) and backups carry the new data.
+  - **Verify.** Full-coverage tier; unit tests for cycle refusal and
+    containment lookups; e2e for editing a parent and a connection.
+
+- **4.27 Sheet-free descriptive state for general fiction.** Moved before
+  the beta (author decision, 2026-11-08) so place positions (4.77–4.80)
+  reach characters without a sheet. Build after 4.76 and before 4.77. Let
+  canonical characters carry descriptive state (location, custody of named
+  items, and later allegiance/disguise) without a ruleset or
   `CharacterSheet`: a minimal replay target keyed by World Bible entity id,
-  the existing `location_set` / `inventory_*` commands only, and the same
-  accepted-ledger, scene-ordered, invalidatable rules as mechanics state.
-  Derivation stops discarding sheet-less observations; the Workspace
-  acquisition proposal (4.16b) and Character continuity section gain the
-  state-only path for general fiction; 4.26's checks then apply to every
-  project mode. Project and snapshot schema bump with a migration and
-  restorable backup per 4.2. Update `docs/domain-model.md` §3 (subject scope)
-  and the smoke procedures. Do not add stats or resources to general
-  fiction; this is descriptive state only.
+  the existing `location_set` / `inventory_*` commands only (through the
+  3.34 kind modules), and the same accepted-ledger, scene-ordered,
+  invalidatable rules as mechanics state. Derivation stops discarding
+  sheet-less observations; the Workspace acquisition proposal (4.16b) and
+  Character continuity section gain the state-only path for general
+  fiction; 4.26's checks then apply to every project mode. Project and
+  snapshot schema bump with a migration and restorable backup per 4.2.
+  Update `docs/domain-model.md` §3 (subject scope) and the smoke procedures.
+  Do not add stats or resources to general fiction; this is descriptive
+  state only.
+  - **Verify.** Full-coverage tier; replay tests for a sheet-less character
+    beside a sheeted one; migration and backup-restore tests; e2e for the
+    general-fiction acquisition proposal and continuity section.
+
+- **4.77 Places: positions refer to place records.** Brief § 3. Add an
+  optional place record id to `location_set` (through the 3.34 kind modules;
+  the name stays as label and fallback). One-time matching of existing
+  free-text positions by name and alias where unambiguous; everything else
+  stays text and is offered for review. The "two places at once" check and
+  the existing location continuity check (1.2b, 4.26) become
+  containment-aware and compare ids when both sides have one.
+  - **Verify.** Full-coverage tier; replay tests for old free-text entries
+    and new id entries side by side; migration test for the matching.
+
+- **4.78 Places: where-is-everyone view + movement checks.** Brief § 7.
+  Show each character's position at a chosen scene and a character's path
+  over a range of scenes, derived from the ledger by replay. Add review
+  findings for a move with no connection or route and no travel cue
+  ("teleporting"), and for a position that matches no place record (offer to
+  create or link). No story time; the "too fast" check is not in scope.
+  - **Verify.** Full-coverage tier; e2e for the view and each new finding.
+
+- **4.79 Maps and placements (data, distance).** Brief §§ 4–5. Map records
+  (name, optional image reference, distance unit, scale, optional parent
+  placement) and placements (place, map, x, y). Author-set unit conversions.
+  Distance service: authored connection, then route, then straight line,
+  always returning its source; figures in different units without a
+  conversion are shown side by side, never compared. No map surface yet;
+  placements can be entered as numbers in the location record. Schema bump,
+  migration, backup, and portable export as in 4.76.
+  - **Verify.** Full-coverage tier; unit tests for each distance source,
+    cross-map distance through parent placements, and unit conversion.
+
+- **4.80 Map surface: image import, pins, scene view, export.** Brief § 8.
+  Import an image as a map background (size limit with a clear message;
+  backups, vaults, and export carry it). Pin place records onto it to create
+  placements, show who is where at a chosen scene, and export the pinned map
+  as an image. No drawing tools. Follows the Design System in
+  `docs/product-blueprint.md`; keyboard-usable pin placement.
+  - **Verify.** Full-coverage tier; e2e for import, pin, scene switch, and
+    export; screenshots at desktop and ≤620px, light and dark.
+
+- **4.81 Grid and hex maps.** Brief § 4. Optional per-map grid or hex
+  setting; distance on that map is counted in squares or hexes. For dungeon
+  and tactical maps in LitRPG and later Game Simulation.
+  - **Verify.** Full-coverage tier; unit tests for grid and hex distance.
+
+### Phase 4 — Post-beta context candidates
 
 - **4.82 Ordinary assistant rolling summaries.** Follow-up accepted from
   Slice 1.6's deterministic baseline: the ordinary assistant keeps only
@@ -754,6 +847,7 @@ adding implementation scope.
     persistence, provider, or prompt-assembly code changes. Record the exact
     fixture revision, model, quantization, context, hardware, settings, and
     measured outputs for reproducibility.
+
 ### Phase 5 — Release engineering
 
 - **5.2 Code signing + notarization.** Author decision (2026-10-31): builds

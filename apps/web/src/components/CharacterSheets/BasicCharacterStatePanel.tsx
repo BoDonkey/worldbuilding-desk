@@ -81,7 +81,7 @@ export function BasicCharacterStatePanel(props: BasicCharacterStatePanelProps) {
           </div>
           <div className={styles.basicStateActions}>
             <button type='button' onClick={props.onOpenDetailedChanges}>
-              Inventory, equipment, status, or location
+              XP, inventory, equipment, status, or location
             </button>
             <button type='button' onClick={props.onConfirm} disabled={props.isSaving || !props.sheetId || !props.sceneId || !selectedValue || props.previewIssues.length > 0}>
               {props.isSaving ? 'Recording…' : 'Confirm scene change'}

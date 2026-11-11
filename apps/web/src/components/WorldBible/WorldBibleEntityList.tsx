@@ -3,7 +3,8 @@ import type {useWorldBibleReview} from '../../hooks/useWorldBibleReview';
 import type {useWorldBibleEntityActions} from '../../hooks/useWorldBibleEntityActions';
 import type {useWorldBibleSelectedEntity} from '../../hooks/useWorldBibleSelectedEntity';
 import {buildEntityCardSummary} from '../../services/worldBible/worldBibleSummary';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './WorldBibleEntityCards.module.css';
 
 interface WorldBibleEntityListProps {
   viewMode: 'category' | 'review';
@@ -145,7 +146,7 @@ export const WorldBibleEntityList = (props: WorldBibleEntityListProps) => {
                       <strong>Source Note:</strong> {linkedLoreDocument.title}
                     </div>
                   )}
-                  <div className={styles.entityActions}>
+                  <div className={shared.entityActions}>
                     <button
                       onClick={() => handleEdit(entity)}
                     >
@@ -154,7 +155,7 @@ export const WorldBibleEntityList = (props: WorldBibleEntityListProps) => {
                     {hasNameResolutionMatch && (
                       <button
                         type='button'
-                        className={styles.primaryButton}
+                        className={shared.primaryButton}
                         onClick={() => handleEdit(entity, 'aliases')}
                       >
                         Resolve names
@@ -182,7 +183,7 @@ export const WorldBibleEntityList = (props: WorldBibleEntityListProps) => {
                     <button
                       onClick={() => handleDeleteEntity(entity.id)}
                       disabled={deletingEntityId === entity.id}
-                      className={styles.deleteButton}
+                      className={shared.deleteButton}
                     >
                       {deletingEntityId === entity.id ? 'Deleting...' : 'Delete'}
                     </button>

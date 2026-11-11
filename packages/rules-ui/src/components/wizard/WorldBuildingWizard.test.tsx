@@ -111,4 +111,49 @@ describe('WorldBuildingWizard', () => {
     fireEvent.click(screen.getByRole('button', {name: 'Cancel'}));
     expect(onCancel).toHaveBeenCalledOnce();
   });
+
+  it('saves an optional level table, sorted and without unusable rows', async () => {
+    const onComplete = vi.fn();
+    const initialRuleset: WorldRuleset = {
+      id: 'ruleset-1',
+      name: 'World',
+      version: '1.0.0',
+      statDefinitions: [],
+      resourceDefinitions: [],
+      levelTable: [{level: 3, experience: 300}],
+      rules: [],
+      itemTemplates: [],
+      statusTemplates: [],
+      createdAt: 1,
+      updatedAt: 1
+    };
+    render(<WorldBuildingWizard initialRuleset={initialRuleset} onComplete={onComplete} />);
+
+    fireEvent.click(screen.getByRole('button', {name: '+ Add Level'}));
+    expect(screen.getByLabelText('Level', {selector: '#level-table-level-1'})).toHaveValue(4);
+    fireEvent.change(screen.getByLabelText('Level', {selector: '#level-table-level-1'}), {
+      target: {value: '2'}
+    });
+    fireEvent.change(screen.getByLabelText('Total XP needed', {selector: '#level-table-xp-1'}), {
+      target: {value: '100'}
+    });
+    fireEvent.click(screen.getByRole('button', {name: '+ Add Level'}));
+    fireEvent.change(screen.getByLabelText('Level', {selector: '#level-table-level-2'}), {
+      target: {value: '1'}
+    });
+
+    fireEvent.click(screen.getByRole('button', {name: 'Save Changes'}));
+    await waitFor(() => expect(onComplete).toHaveBeenCalledOnce());
+    expect((onComplete.mock.calls[0][0] as WorldRuleset).levelTable).toEqual([
+      {level: 2, experience: 100},
+      {level: 3, experience: 300}
+    ]);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Remove level 3'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Remove level 2'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Remove level 1'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Save Changes'}));
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(2));
+    expect((onComplete.mock.calls[1][0] as WorldRuleset).levelTable).toBeUndefined();
+  });
 });

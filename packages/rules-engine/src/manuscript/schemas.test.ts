@@ -55,7 +55,8 @@ describe('manuscript state schemas', () => {
       resources: {current: {hp: 20}, max: {hp: 20}},
       inventory: {items: [], equipped: []},
       statuses: ['Tired'],
-      locationName: undefined
+      locationName: undefined,
+      progression: {experience: 0, level: 1, startingLevel: 1, levelTable: []}
     });
   });
 });

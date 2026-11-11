@@ -14,7 +14,8 @@ const before: CharacterReplayState = {
     ],
     equipped: ['Iron Sword']
   },
-  statuses: []
+  statuses: [],
+  progression: {experience: 0, level: 1, startingLevel: 1, levelTable: []}
 };
 
 describe('positioned state change inventory choices', () => {

@@ -11,7 +11,7 @@ import {
   resolveImportSectionField,
   suggestImportFieldLabel
 } from '../../services/worldBible/worldBibleImportParsing';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import styles from './WorldBibleImportDrafts.module.css';
 
 const KEEP_VALUE = 'keep';
 const SKIP_VALUE = 'skip';

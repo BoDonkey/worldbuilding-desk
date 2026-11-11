@@ -1,0 +1,22 @@
+.banner {
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+}
+
+.syncRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.outOfSync {
+  color: var(--color-error);
+  margin-left: 0.5rem;
+  font-weight: 600;
+}

@@ -28,6 +28,16 @@ export const ResourceDefinitionSchema = StatDefinitionSchema.extend({
 });
 export type ResourceDefinition = z.infer<typeof ResourceDefinitionSchema>;
 
+/**
+ * One row of an author's level table: reaching `experience` total XP makes a
+ * character at least `level`. Level 1 needs no row.
+ */
+export const LevelThresholdSchema = z.object({
+  level: z.number().int().min(2),
+  experience: z.number().min(0)
+});
+export type LevelThreshold = z.infer<typeof LevelThresholdSchema>;
+
 export const CompendiumDomainSchema = z.enum([
   'beast',
   'flora',
@@ -80,6 +90,8 @@ export const WorldRulesetSchema = z.object({
   // User-defined systems
   statDefinitions: z.array(StatDefinitionSchema).default([]),
   resourceDefinitions: z.array(ResourceDefinitionSchema).default([]),
+  // Optional. Without it, a character's level is whatever the author sets.
+  levelTable: z.array(LevelThresholdSchema).optional(),
 
   rules: z.array(GameRuleSchema).default([]),
   // Stored rules that failed GameRuleSchema. Kept verbatim so nothing an

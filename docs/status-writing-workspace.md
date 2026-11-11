@@ -69,6 +69,11 @@
   accepted event plus any author-requested item/effect records while
   superseding the reviewed proposal.
 - Hidden deterministic state suggestions now surface only as lightweight review summaries with per-scene and project-level restore actions.
+- XP (slice 3.34a): the change composer's advanced list has **Gain XP**
+  (amount and optional reason), and the scene scanner suggests one for prose
+  like "Kael gained 250 XP". Inserted character stat blocks show level and XP
+  as of the end of the scene being edited; their stats and resources still
+  come from the sheet.
 - Project scratchpad is available as an autosaved quick-access modal and remains available from the workspace context drawer.
 - Scratchpad quick access is now available from active-project chrome on World Bible, Lore, and Canon Decisions so loose ideas can move into structured canon, longform lore, or review decisions without navigating back to Workspace.
 - Planning now presents World Canvas beside Corkboard as a sibling brainstorming

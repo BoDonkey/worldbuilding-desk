@@ -3,6 +3,7 @@ import type {Effect} from '../../types/Effect';
 import type {CharacterReplayState, StateMutationCommand} from '../types';
 import {inventoryCommandSchemas, inventoryKinds} from './inventory';
 import {locationCommandSchemas, locationKinds} from './location';
+import {progressionCommandSchemas, progressionKinds} from './progression';
 import {resourceCommandFromEffect, resourceCommandSchemas, resourceKinds} from './resource';
 import {statCommandFromEffect, statCommandSchemas, statKinds} from './stat';
 import {statusCommandSchemas, statusKinds} from './status';
@@ -40,6 +41,12 @@ export type {
 } from './inventory';
 export {LocationSetStateMutationCommandSchema} from './location';
 export type {LocationSetStateMutationCommand} from './location';
+export {
+  XpGainStateMutationCommandSchema,
+  deriveLevel,
+  normalizeLevelTable
+} from './progression';
+export type {XpGainStateMutationCommand} from './progression';
 
 /**
  * The state-change kinds, one entry per command `type`. Typed over the whole
@@ -51,7 +58,8 @@ export const stateMutationKinds: EngineStateKindRegistry = {
   ...statKinds,
   ...statusKinds,
   ...inventoryKinds,
-  ...locationKinds
+  ...locationKinds,
+  ...progressionKinds
 };
 
 export const StateMutationCommandSchema = z.discriminatedUnion('type', [
@@ -59,7 +67,8 @@ export const StateMutationCommandSchema = z.discriminatedUnion('type', [
   ...statCommandSchemas,
   ...statusCommandSchemas,
   ...inventoryCommandSchemas,
-  ...locationCommandSchemas
+  ...locationCommandSchemas,
+  ...progressionCommandSchemas
 ]);
 
 type SameTypes<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;

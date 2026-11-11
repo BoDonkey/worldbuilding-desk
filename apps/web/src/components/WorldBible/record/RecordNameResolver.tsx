@@ -1,5 +1,6 @@
 import type {WorldEntity} from '../../../entityTypes';
-import styles from '../../../assets/components/WorldBibleRoute.module.css';
+import shared from '../worldBibleShared.module.css';
+import styles from './RecordNameResolver.module.css';
 import type {OpenRecord, RecordEntityActions, RecordResolution, RecordVariant} from './recordTypes';
 
 interface RecordNameResolverProps {
@@ -87,7 +88,7 @@ export function RecordNameResolver({
           )}
           <button
             type='button'
-            className={styles.primaryButton}
+            className={shared.primaryButton}
             onClick={() => void handleSaveCanonicalRename()}
             disabled={isSubmittingEntity}
           >
@@ -114,10 +115,10 @@ export function RecordNameResolver({
               </select>
             </label>
             {manualResolutionTarget && (
-              <div className={styles.reviewToolbarActions}>
+              <div className={shared.reviewToolbarActions}>
                 <button
                   type='button'
-                  className={styles.primaryButton}
+                  className={shared.primaryButton}
                   onClick={() =>
                     void handleConvertEntityToAlias(manualResolutionTarget)
                   }
@@ -155,14 +156,14 @@ export function RecordNameResolver({
             )}
           </>
         ) : (
-          <div className={styles.reviewHint}>
+          <div className={shared.reviewHint}>
             {isCharacter
               ? 'No other characters exist in this category yet.'
               : `No other ${categoryName.toLowerCase()} exist in this category yet.`}
           </div>
         )
       ) : (
-        <div className={styles.reviewHint}>
+        <div className={shared.reviewHint}>
           {isCharacter
             ? 'Save this character before resolving it against another record.'
             : `Save this ${recordLabel} before resolving it against another record.`}

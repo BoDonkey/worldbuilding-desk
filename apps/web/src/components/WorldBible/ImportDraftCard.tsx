@@ -7,7 +7,7 @@ import type {
 import {getPreferredImportField} from '../../services/worldBible/worldBibleEntityHelpers';
 import {getImportSourceKind} from '../../services/worldBible/worldBibleImportParsing';
 import {ImportSectionPanel} from './ImportSectionPanel';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import styles from './WorldBibleImportDrafts.module.css';
 
 interface ImportDraftCardProps {
   draft: WorldBibleImportDraft;

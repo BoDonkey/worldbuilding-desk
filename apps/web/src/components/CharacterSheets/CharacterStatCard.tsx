@@ -142,6 +142,7 @@ export function CharacterStatCard({
         <div className={styles.identity}>
           <strong>{snapshot.name}</strong>
           <span>Level {snapshot.level}</span>
+          {snapshot.experience > 0 && <span>{snapshot.experience} XP</span>}
         </div>
       </div>
       {template && <div className={styles.statusWindowCaption}>[{template.label}]</div>}

@@ -34,7 +34,7 @@ import {getAllByProject} from './projectIndex';
 import {requestToPromise, transactionToPromise} from './idbRequest';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SCHEMA_VERSION = 8;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 9;
 export const PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION = 1;
 
 export interface ProjectMigrationContext {
@@ -243,6 +243,14 @@ const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
     fromVersion: 7,
     toVersion: 8,
     migrate: migrateZoneRecordIds
+  },
+  {
+    fromVersion: 8,
+    toVersion: 9,
+    // Rulesets gain an optional level table and the ledger an `xp_gain`
+    // command (slice 3.34a). Both are additive; existing projects have neither,
+    // so the version checkpoint and automatic backup are the whole migration.
+    migrate: async () => undefined
   }
 ];
 

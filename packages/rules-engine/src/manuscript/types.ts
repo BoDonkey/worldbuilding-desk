@@ -1,4 +1,4 @@
-import type {WorldRuleset} from '../types/WorldRuleset';
+import type {LevelThreshold, WorldRuleset} from '../types/WorldRuleset';
 import type {
   InventoryEquipStateMutationCommand,
   InventoryQuantityStateMutationCommand,
@@ -7,7 +7,8 @@ import type {
   ResourceSetStateMutationCommand,
   StatChangeStateMutationCommand,
   StatSetStateMutationCommand,
-  StatusStateMutationCommand
+  StatusStateMutationCommand,
+  XpGainStateMutationCommand
 } from './kinds';
 
 /*
@@ -28,7 +29,8 @@ export type StateMutationCommand =
   | StatusStateMutationCommand
   | InventoryQuantityStateMutationCommand
   | InventoryEquipStateMutationCommand
-  | LocationSetStateMutationCommand;
+  | LocationSetStateMutationCommand
+  | XpGainStateMutationCommand;
 
 export interface StateMutationEvent {
   id: string;
@@ -61,7 +63,8 @@ export interface StateMutationEvent {
 }
 
 /** The ruleset fields replay and validation read. */
-export type ManuscriptRuleset = Pick<WorldRuleset, 'statDefinitions' | 'resourceDefinitions'>;
+export type ManuscriptRuleset = Pick<WorldRuleset, 'statDefinitions' | 'resourceDefinitions'> &
+  Partial<Pick<WorldRuleset, 'levelTable'>>;
 
 interface ReplaySheetEntry {
   name: string;
@@ -76,6 +79,9 @@ export interface ReplaySheet {
   characterEntityId?: string;
   characterId?: string;
   name: string;
+  /** Starting level and XP; replayed `xp_gain` commands build on them. */
+  level?: number;
+  experience?: number;
   stats: Array<{definitionId: string; value: number | boolean | string}>;
   resources: Array<{definitionId: string; current: number; max: number}>;
   statuses?: string[];
@@ -88,6 +94,16 @@ export interface ReplaySheet {
 export interface ActorResolutionReference {
   legacyActorId: string;
   entityId: string;
+}
+
+/** XP and level at a point in the manuscript. */
+export interface CharacterProgressionState {
+  experience: number;
+  level: number;
+  /** The sheet's level; a level table never takes a character below it. */
+  startingLevel: number;
+  /** The ruleset's level table, normalized; empty when there is none. */
+  levelTable: readonly LevelThreshold[];
 }
 
 export interface CharacterReplayState {
@@ -109,6 +125,7 @@ export interface CharacterReplayState {
   };
   statuses: string[];
   locationName?: string;
+  progression: CharacterProgressionState;
 }
 
 export type CharacterStateReplayBaseline = CharacterReplayState;

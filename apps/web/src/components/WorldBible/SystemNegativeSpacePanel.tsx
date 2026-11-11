@@ -5,7 +5,7 @@ import {
   summarizeSystemNegativeSpaceRecords,
   type SystemNegativeSpaceStatus
 } from '../../services/worldBible/systemNegativeSpace';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import styles from './SystemNegativeSpacePanel.module.css';
 
 interface SystemNegativeSpacePanelProps {
   categoryId: string;

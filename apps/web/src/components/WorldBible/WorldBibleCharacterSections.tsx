@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react';
 import type {Character, CharacterSheet} from '../../entityTypes';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './WorldBibleCharacterSections.module.css';
 
 export type CharacterDetailSection =
   | 'canon'
@@ -175,7 +176,7 @@ export const WorldBibleCharacterSections = (
               </div>
             </div>
             {props.dialogueStyleContent}
-            <div className={styles.reviewToolbarActions}>
+            <div className={shared.reviewToolbarActions}>
               <button type='button' onClick={props.onExport} disabled={props.isExporting}>
                 {props.isExporting ? 'Exporting...' : 'Export character'}
               </button>

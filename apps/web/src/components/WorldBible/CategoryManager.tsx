@@ -6,7 +6,8 @@ import CategoryEditor from '../CategoryEditor';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {useEscapeToClose} from '../../hooks/useEscapeToClose';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './CategoryManager.module.css';
 import dialogStyles from '../../assets/components/WorldBible/CategoryManagerDialog.module.css';
 import {
   SYSTEM_NEGATIVE_SPACE_CATEGORY_NAME,
@@ -133,7 +134,7 @@ export function CategoryManager({
             <strong>Optional: {SYSTEM_NEGATIVE_SPACE_CATEGORY_NAME}</strong>
             <span className={styles.categoryMeta}>{SYSTEM_NEGATIVE_SPACE_DESCRIPTION}</span>
           </div>
-          <div className={styles.categoryActions}>
+          <div className={shared.categoryActions}>
             <button onClick={() => void handleAddSystemNegativeSpace()}>
               Add {SYSTEM_NEGATIVE_SPACE_CATEGORY_NAME}
             </button>
@@ -151,7 +152,7 @@ export function CategoryManager({
                 {isSystemNegativeSpaceCategory(category) ? ' · built-in mechanics record' : ''})
               </span>
             </div>
-            <div className={styles.categoryActions}>
+            <div className={shared.categoryActions}>
               {!isSystemNegativeSpaceCategory(category) && (
                 <button onClick={() => setEditingCategory(category)}>
                   Edit Fields
@@ -159,7 +160,7 @@ export function CategoryManager({
               )}
               <button
                 onClick={() => handleDeleteCategory(category.id)}
-                className={styles.deleteButton}
+                className={shared.deleteButton}
                 aria-label={`Delete ${category.name}`}
               >
                 Delete

@@ -1,4 +1,4 @@
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
 import {CharacterFromDescriptionDialog} from '../CharacterLab/CharacterFromDescriptionDialog';
 import {CharacterCardImportDialog} from '../CharacterLab/CharacterCardImportDialog';
 
@@ -10,7 +10,7 @@ export function CharacterIntakeTasks({onStart, fromDescription}: {onStart: (kind
   return (
     <>
       {fromDescription && (
-      <div className={styles.castTask}>
+      <div className={shared.castTask}>
         <h3>From a description</h3>
         <p>
           Describe a character in a few sentences. The character lab splits it into
@@ -21,7 +21,7 @@ export function CharacterIntakeTasks({onStart, fromDescription}: {onStart: (kind
         </button>
       </div>
       )}
-      <div className={styles.castTask}>
+      <div className={shared.castTask}>
         <h3>From a character card</h3>
         <p>
           Bring in a character from SillyTavern or a card library (PNG or JSON). You see where each

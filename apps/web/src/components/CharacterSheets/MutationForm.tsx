@@ -82,7 +82,8 @@ export function MutationForm({
   > = {
     statusName: {value: mutationStatusName, onChange: setMutationStatusName},
     itemName: {value: mutationItemName, onChange: setMutationItemName},
-    locationName: {value: mutationLocationName, onChange: setMutationLocationName}
+    locationName: {value: mutationLocationName, onChange: setMutationLocationName},
+    textValue: {value: mutationTextValue, onChange: setMutationTextValue}
   };
 
   const renderField = (field: SheetFormField) => {
@@ -127,7 +128,7 @@ export function MutationForm({
             </label>
           </div>
         );
-      case 'resourceValue':
+      case 'number':
         return (
           <div className={styles.inlineMarginBottom075rem}>
             <label>

@@ -45,6 +45,7 @@ export interface CharacterSnapshot {
   sheetId: string;
   name: string;
   level: number;
+  experience: number;
   stats: CharacterSnapshotStatLine[];
   resources: CharacterSnapshotResourceLine[];
   inventory: CharacterSnapshotInventoryLine[];
@@ -116,7 +117,8 @@ export function buildCharacterSnapshot(params: {
   return {
     sheetId: sheet.id,
     name: sheet.name,
-    level: Math.max(1, sheet.level + runtimeModifiers.levelBonus),
+    level: Math.max(1, replayed.progression.level + runtimeModifiers.levelBonus),
+    experience: replayed.progression.experience,
     stats: Object.entries(replayed.stats).map(([id, value]) => ({
       id,
       label: params.statDefinitionNameById.get(id) ?? id,
@@ -179,6 +181,7 @@ export function buildCharacterSnapshot(params: {
 
 export type CharacterSnapshotChange =
   | {kind: 'level'; from: number; to: number}
+  | {kind: 'experience'; from: number; to: number}
   | {kind: 'stat'; id: string; label: string; from: string | null; to: string | null}
   | {
       kind: 'resource';
@@ -196,7 +199,7 @@ const itemKey = (name: string): string => name.trim().toLocaleLowerCase();
 
 /**
  * What differs between two snapshots of the same character, e.g. the previous
- * scene's ending and the current cursor. Ordered: level, resources, stats,
+ * scene's ending and the current cursor. Ordered: level, experience, resources, stats,
  * statuses, inventory, equipment, location.
  */
 export function describeCharacterSnapshotChanges(
@@ -207,6 +210,9 @@ export function describeCharacterSnapshotChanges(
 
   if (before.level !== after.level) {
     changes.push({kind: 'level', from: before.level, to: after.level});
+  }
+  if (before.experience !== after.experience) {
+    changes.push({kind: 'experience', from: before.experience, to: after.experience});
   }
 
   const beforeResources = new Map(before.resources.map((resource) => [resource.id, resource]));

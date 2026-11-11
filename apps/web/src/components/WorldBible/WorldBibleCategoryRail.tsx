@@ -1,6 +1,7 @@
 import type {RefObject} from 'react';
 import type {EntityCategory} from '../../entityTypes';
-import styles from '../../assets/components/WorldBibleRoute.module.css';
+import shared from './worldBibleShared.module.css';
+import styles from './WorldBibleCategoryRail.module.css';
 
 interface WorldBibleCategoryRailProps {
   isCollapsed: boolean;
@@ -38,7 +39,7 @@ export const WorldBibleCategoryRail = (props: WorldBibleCategoryRailProps) => {
           <aside className={styles.categoryRail} aria-label='World Bible categories'>
             <div className={styles.categoryRailHeader}>
               <h2>Categories</h2>
-              <span className={styles.categoryRailCount}>{categories.length}</span>
+              <span className={shared.categoryRailCount}>{categories.length}</span>
             </div>
             <div className={styles.tabNav}>
               <button
@@ -48,7 +49,7 @@ export const WorldBibleCategoryRail = (props: WorldBibleCategoryRailProps) => {
               >
                 Review
                 {reviewCount > 0 && (
-                  <span className={styles.categoryRailCount}>{reviewCount}</span>
+                  <span className={shared.categoryRailCount}>{reviewCount}</span>
                 )}
               </button>
               {categories.map((cat) => (

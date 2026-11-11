@@ -16,7 +16,8 @@ export type StateChangeCategory =
   | 'Inventory'
   | 'Equipment'
   | 'Statuses'
-  | 'Locations';
+  | 'Locations'
+  | 'Progression';
 
 type StatDefinition = StoredRuleset['statDefinitions'][number];
 type ResourceDefinition = StoredRuleset['resourceDefinitions'][number];
@@ -51,11 +52,11 @@ export interface SheetFormInput {
 /** One input on the Character Sheets form, in display order. */
 export type SheetFormField =
   | {type: 'definition'; source: 'resource' | 'stat'}
-  | {type: 'resourceValue'; label: string}
+  | {type: 'number'; label: string}
   | {type: 'statValue'; numberLabel: string; textLabel: string}
   | {
       type: 'text';
-      value: 'statusName' | 'itemName' | 'locationName';
+      value: 'statusName' | 'itemName' | 'locationName' | 'textValue';
       label: string;
       placeholder: string;
     }
@@ -94,7 +95,15 @@ export type ComposerInputSpec =
       valueLabel: string;
       valuePlaceholder: string;
     }
-  | {type: 'name'; label: string; inventoryChoice: boolean; quantity: boolean};
+  | {type: 'name'; label: string; inventoryChoice: boolean; quantity: boolean}
+  | {
+      /** A number in `value` plus an optional note in `name`. */
+      type: 'amount';
+      valueLabel: string;
+      valuePlaceholder: string;
+      noteLabel: string;
+      notePlaceholder: string;
+    };
 
 /**
  * The app's side of one kind of state change: how authors enter it and how

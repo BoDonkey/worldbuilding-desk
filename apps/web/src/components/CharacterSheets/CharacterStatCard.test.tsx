@@ -7,6 +7,7 @@ const snapshot: CharacterSnapshot = {
   sheetId: 'sheet-mira',
   name: 'Mira',
   level: 4,
+  experience: 0,
   stats: [
     {id: 'strength', label: 'Strength', value: '14'},
     {id: 'agility', label: 'Agility', value: '17'}

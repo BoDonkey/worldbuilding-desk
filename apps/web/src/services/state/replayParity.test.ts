@@ -32,6 +32,10 @@ import {buildCharacterReplayBaseline, validateStateMutationEvent} from './stateM
  * Slice 3.21a (zod 3 → 4) re-recorded the digest. A diff against the zod 3
  * output showed identical replay state, and every difference was in the
  * wording of the 65 schema-error messages, which kept the same issue codes and paths.
+ *
+ * Slice 3.34a added `progression` (XP and level) to replay state. It is left
+ * out of the digested output, so the digest still proves every older field
+ * is unchanged; XP replay has its own tests in the rules engine.
  */
 const GOLDEN_SHA256 = '4ed0ab4ccc8c4a955259fb6a5f4cab8a70f5570cabcf1ab846b82d00e6a83ef4';
 
@@ -260,7 +264,11 @@ function runCase(parityCase: ParityCase) {
 
 describe('manuscript-time replay parity', () => {
   it('reproduces the pre-move golden output for every case, scene, and position', () => {
-    const actual = JSON.stringify(CASES.map(runCase), null, 1);
+    const actual = JSON.stringify(
+      CASES.map(runCase),
+      (key, value: unknown) => (key === 'progression' ? undefined : value),
+      1
+    );
     const digest = createHash('sha256').update(actual).digest('hex');
     if (digest !== GOLDEN_SHA256) {
       const dumpPath = join(tmpdir(), `replay-parity-${digest.slice(0, 12)}.json`);

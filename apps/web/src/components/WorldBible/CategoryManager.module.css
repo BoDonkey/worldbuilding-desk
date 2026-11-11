@@ -1,0 +1,74 @@
+/* Category Manager Styles */
+
+.addCategoryForm {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.addCategoryForm input {
+  flex: 1;
+  padding: 0.5rem;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.addCategoryForm button {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.addCategoryForm button:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.categoryList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.categoryItem {
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--color-bg-primary);
+}
+
+.categoryInfo {
+  color: var(--color-text-primary);
+}
+
+.categoryInfo strong {
+  color: var(--color-text-primary);
+}
+
+.categoryMeta {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-left: 0.5rem;
+}
+
+.closeButton {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--color-text-secondary);
+  color: var(--color-on-accent);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background-color: var(--color-text-secondary);
+}

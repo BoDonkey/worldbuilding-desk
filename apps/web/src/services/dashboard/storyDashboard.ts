@@ -42,7 +42,7 @@ export interface StateDistributionMetric {
 export interface MechanicsAxisMetric {
   axisId: string;
   label: string;
-  kind: 'attribute' | 'resource';
+  kind: 'attribute' | 'resource' | 'progression';
   commandCount: number;
   sourceSceneIds: string[];
 }
@@ -87,7 +87,7 @@ export interface StoryDashboard {
 }
 
 const STATE_CATEGORIES: StateChangeCategory[] = [
-  'Attributes', 'Resources', 'Inventory', 'Equipment', 'Statuses', 'Locations'
+  'Attributes', 'Resources', 'Inventory', 'Equipment', 'Statuses', 'Locations', 'Progression'
 ];
 
 /** Also reused by progressionContinuityCandidates.ts to identify advancement-axis commands. */
@@ -185,7 +185,8 @@ function buildMechanicsMetrics(params: {
   ruleset: StoredRuleset;
   totalWords: number;
 }): NonNullable<StoryDashboard['mechanics']> {
-  const axisLabels = new Map<string, {label: string; kind: 'attribute' | 'resource'}>([
+  const axisLabels = new Map<string, {label: string; kind: 'attribute' | 'resource' | 'progression'}>([
+    ['progression:xp', {label: 'XP', kind: 'progression' as const}],
     ...params.ruleset.statDefinitions.filter((definition) => definition.type === 'number').map((definition) => [
       `stat:${definition.id}`,
       {label: definition.name, kind: 'attribute' as const}
@@ -302,10 +303,12 @@ function numericAxisId(command: StateMutationCommand): string | null {
   if (command.type === 'resource_change' || command.type === 'resource_set') {
     return `resource:${command.resourceDefinitionId}`;
   }
+  if (command.type === 'xp_gain') return 'progression:xp';
   return null;
 }
 
 function isPositiveChange(command: StateMutationCommand): boolean {
+  if (command.type === 'xp_gain') return command.amount > 0;
   return (command.type === 'stat_change' || command.type === 'resource_change') &&
     typeof command.delta === 'number' && command.delta > 0;
 }

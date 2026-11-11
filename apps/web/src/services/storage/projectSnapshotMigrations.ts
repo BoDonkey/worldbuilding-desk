@@ -10,7 +10,7 @@ import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
 import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
 
 export const MIN_SUPPORTED_PROJECT_SNAPSHOT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 10;
+export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 11;
 
 export interface ProjectSnapshotMigration {
   fromVersion: number;
@@ -203,6 +203,21 @@ export function migrateProjectSnapshotV9ToV10(
   };
 }
 
+/**
+ * 3.34a: backups may hold a ruleset level table and `xp_gain` ledger
+ * commands. Older backups have neither, so nothing converts; the new version
+ * makes older apps refuse backups they could not replay.
+ */
+export function migrateProjectSnapshotV10ToV11(
+  snapshot: Record<string, unknown>
+): Record<string, unknown> {
+  return {
+    ...snapshot,
+    schemaVersion: 11,
+    project: {...asRecord(snapshot.project), storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION}
+  };
+}
+
 const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
   {
     fromVersion: 1,
@@ -248,6 +263,11 @@ const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
     fromVersion: 9,
     toVersion: 10,
     migrate: migrateProjectSnapshotV9ToV10
+  },
+  {
+    fromVersion: 10,
+    toVersion: 11,
+    migrate: migrateProjectSnapshotV10ToV11
   }
 ];
 

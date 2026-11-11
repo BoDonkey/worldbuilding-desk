@@ -26,7 +26,8 @@ import {
   useWorldBibleRecordDraft,
   type RecordReviewFocus
 } from '../components/WorldBible/record/useWorldBibleRecordDraft';
-import styles from '../assets/components/WorldBibleRoute.module.css';
+import shared from '../components/WorldBible/worldBibleShared.module.css';
+import styles from '../styles/WorldBibleRoute.module.css';
 import {useWorldBibleReview} from '../hooks/useWorldBibleReview';
 import {
   useWorldBibleImports
@@ -493,7 +494,7 @@ function WorldBibleRoute() {
 
       {activeCategory && (
         <div
-          className={`${styles.content} ${styles.castContent}`}
+          className={`${shared.content} ${shared.castContent}`}
         >
           {isRecordEditorOpen && (
             <WorldBibleRecordEditor

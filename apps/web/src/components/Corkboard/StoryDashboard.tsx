@@ -1,4 +1,7 @@
-import type {StoryDashboard as StoryDashboardData} from '../../services/dashboard/storyDashboard';
+import type {
+  MechanicsAxisMetric,
+  StoryDashboard as StoryDashboardData
+} from '../../services/dashboard/storyDashboard';
 import type {ProjectAISettings, WritingDocument} from '../../entityTypes';
 import type {ProgressionContinuityCandidate} from '../../services/progressionContinuity/progressionContinuityCandidates';
 import {WritingCoachSection} from './WritingCoachSection';
@@ -18,6 +21,11 @@ interface StoryDashboardProps {
 
 const formatNumber = (value: number) => new Intl.NumberFormat().format(value);
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
+const AXIS_KIND_LABELS: Record<MechanicsAxisMetric['kind'], string> = {
+  attribute: 'Attribute',
+  resource: 'Resource',
+  progression: 'XP'
+};
 
 export function StoryDashboard({
   dashboard,
@@ -210,7 +218,7 @@ function MechanicsDashboard({dashboard, onOpenScene}: Pick<StoryDashboardProps, 
           {mechanics.axes.map((axis) => (
             <article key={axis.axisId} className={styles.observation}>
               <div className={styles.observationHeader}><h3>{axis.label}</h3><strong>{axis.commandCount}</strong></div>
-              <p>{axis.kind === 'attribute' ? 'Attribute' : 'Resource'} changes recorded in accepted events.</p>
+              <p>{AXIS_KIND_LABELS[axis.kind]} changes recorded in accepted events.</p>
               <SourceScenes sceneIds={axis.sourceSceneIds} scenes={dashboard.scenes} onOpenScene={onOpenScene} />
             </article>
           ))}

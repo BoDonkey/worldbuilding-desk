@@ -131,6 +131,7 @@ describe('stat card template', () => {
     sheetId: 'sheet-mira',
     name: 'Mira Vale',
     level: 3,
+    experience: 0,
     stats: [
       {id: 'str', label: 'Strength', value: '12'},
       {id: 'agi', label: 'Agility', value: '9'}
