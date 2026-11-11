@@ -38,6 +38,7 @@ import {
 import {countWords} from '../utils/textHelpers';
 import {useStatBlockPreferencePersistence} from './useStatBlockPreferencePersistence';
 import {useStatBlockRebind} from './useStatBlockRebind';
+import {getProjectCapabilities} from '../projectMode';
 
 type FeedbackState = {
   tone: 'success' | 'error';
@@ -238,7 +239,7 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
     characterSheets.find((sheet) => sheet.id === selectedStatCharacterId) ?? null;
   const selectedEntity =
     entities.find((entity) => entity.id === selectedStatEntityId) ?? null;
-  const activeProjectMode = projectSettings?.projectMode ?? 'litrpg';
+  const {insertsLiveStatBlocks} = getProjectCapabilities(projectSettings);
   const canInsertStatBlock =
     (statBlockSourceType === 'character' && characterSheets.length > 0) ||
     (statBlockSourceType === 'item' && entities.length > 0);
@@ -393,7 +394,7 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
       selectedEntity,
       style: statBlockStyle,
       insertMode: statBlockInsertMode,
-      projectMode: activeProjectMode,
+      insertsLiveStatBlocks,
       pendingRebindToken: pendingStatBlockRebindToken,
       content,
       renderCharacter: resolveCharacterBlock,
@@ -420,7 +421,7 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
       addSystemHistory(plan.history);
     }
   }, [
-    activeProjectMode,
+    insertsLiveStatBlocks,
     addSystemHistory,
     content,
     getStatBlockTokenPresentation,
@@ -562,7 +563,7 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
     resourceDefinitionNameById,
     selectedSheet,
     selectedEntity,
-    activeProjectMode,
+    insertsLiveStatBlocks,
     canInsertStatBlock,
     selectedStatGroup,
     activeSelectedStatSet,

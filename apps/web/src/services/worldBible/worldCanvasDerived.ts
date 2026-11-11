@@ -63,7 +63,7 @@ interface DerivedContext {
   categories: EntityCategory[];
   loreDocuments: LoreDocument[];
   links: LoreDocumentLink[];
-  isGeneralFiction?: boolean;
+  hidesSystemCategories?: boolean;
 }
 
 interface ReferenceAccumulator {
@@ -76,9 +76,9 @@ interface ReferenceAccumulator {
 
 const referenceKey = (sourceType: CanvasReferenceSourceType, id: string) => `${sourceType}:${id}`;
 
-const visibleCategories = (categories: EntityCategory[], isGeneralFiction = false) => new Map(
+const visibleCategories = (categories: EntityCategory[], hidesSystemCategories = false) => new Map(
   categories
-    .filter((category) => !isGeneralFiction || !isSystemNegativeSpaceCategory(category))
+    .filter((category) => !hidesSystemCategories || !isSystemNegativeSpaceCategory(category))
     .map((category) => [category.id, category])
 );
 
@@ -158,7 +158,7 @@ export function deriveWorldCanvasReferencePalette(
   canvas: WorldCanvasDocument,
   context: DerivedContext
 ): WorldCanvasReferencePalette {
-  const categoriesById = visibleCategories(context.categories, context.isGeneralFiction);
+  const categoriesById = visibleCategories(context.categories, context.hidesSystemCategories);
   const visibleEntities = context.entities.filter((entity) => categoriesById.has(entity.categoryId));
   const entitiesById = new Map(visibleEntities.map((entity) => [entity.id, entity]));
   const pinnedByKey = collectPinned(canvas);
@@ -262,9 +262,9 @@ export function summarizeLens(
 }
 
 export function summarizeOtherRecords(
-  context: Pick<DerivedContext, 'entities' | 'categories' | 'isGeneralFiction'>
+  context: Pick<DerivedContext, 'entities' | 'categories' | 'hidesSystemCategories'>
 ): string[] {
-  const categoriesById = visibleCategories(context.categories, context.isGeneralFiction);
+  const categoriesById = visibleCategories(context.categories, context.hidesSystemCategories);
   return context.entities
     .filter((entity) => {
       const category = categoriesById.get(entity.categoryId);

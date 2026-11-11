@@ -31,7 +31,7 @@ export const WorkspaceStatBlockModal = (props: WorkspaceStatBlockModalProps) => 
   } = statBlocks.choices;
   const {
     statDefinitionNameById, resourceDefinitionNameById, selectedSheet,
-    activeProjectMode, canInsertStatBlock, selectedStatGroup,
+    insertsLiveStatBlocks, canInsertStatBlock, selectedStatGroup,
     activeSelectedStatSet, activeSelectedResourceSet, statBlockScopeValue,
     handleInsertStatBlock, handleToggleStatSelection, handleToggleResourceSelection,
     handleSaveStatGroup, handleDeleteStatGroup, closeStatBlockModal
@@ -295,13 +295,13 @@ export const WorkspaceStatBlockModal = (props: WorkspaceStatBlockModalProps) => 
                   onChange={(event) =>
                     setStatBlockInsertMode(event.target.value as StatBlockInsertMode)
                   }
-                  disabled={activeProjectMode === 'litrpg'}
+                  disabled={insertsLiveStatBlocks}
                   className={styles.fullWidthField}
                 >
                   <option value='block'>Live block now</option>
                   <option value='template'>Reusable placeholder</option>
                 </select>
-                {activeProjectMode === 'litrpg' && (
+                {insertsLiveStatBlocks && (
                   <span className={styles.modeHint}>
                     LitRPG mode always inserts live text for readability.
                   </span>

@@ -14,6 +14,7 @@ import {StoryDashboard} from '../components/Corkboard/StoryDashboard';
 import {ChapterCardSceneLinks} from '../components/Corkboard/ChapterCardSceneLinks';
 import {removeSceneLink, toggleSceneLink} from '../services/workspace/chapterCardSceneLinks';
 import {canDraftScenes, isSceneDraftable} from '../services/sceneDraft/sceneDraft';
+import {getProjectCapabilities} from '../projectMode';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import styles from '../styles/CorkboardRoute.module.css';
 
@@ -67,7 +68,7 @@ function CorkboardRoute() {
   const {dashboard, documents, events, ruleset, status: dashboardStatus} = useStoryDashboardData({
     projectId: activeProject?.id ?? null,
     cards: corkboardCards,
-    mechanicsEnabled: Boolean(projectSettings && projectSettings.projectMode !== 'general')
+    mechanicsEnabled: getProjectCapabilities(projectSettings).tracksStoryMechanics
   });
   const {candidates: progressionContinuityCandidates} = useProgressionContinuityCandidates({
     projectId: activeProject?.id ?? null,

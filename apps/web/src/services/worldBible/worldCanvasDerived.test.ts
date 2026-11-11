@@ -123,7 +123,7 @@ describe('worldCanvasDerived', () => {
     expect(summarizeOtherRecords({
       categories,
       entities: [entity('problem', mechanics.id, 'Magic debt')],
-      isGeneralFiction: true
+      hidesSystemCategories: true
     })).toEqual([]);
   });
 
@@ -188,7 +188,7 @@ describe('worldCanvasDerived', () => {
       entities: [entity('problem', mechanics.id, 'Magic debt')],
       loreDocuments: [],
       links: [],
-      isGeneralFiction: true
+      hidesSystemCategories: true
     });
     expect(palette.suggested).toEqual([]);
     expect(palette.browse).toEqual([]);

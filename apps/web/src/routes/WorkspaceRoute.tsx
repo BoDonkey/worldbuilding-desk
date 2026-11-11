@@ -541,7 +541,6 @@ function WorkspaceRoute() {
   const capabilities = getProjectCapabilities(projectSettings);
   const showGameSystems = capabilities.canUseGameSystems;
   const showRuleAuthoring = capabilities.canUseRuleAuthoring;
-  const isGeneralFictionProject = capabilities.isGeneralFiction;
   const {characterStatPeek, statPeekRequest} = useWorkspaceCharacterStatPeek({
     activeProject,
     showGameSystems,
@@ -556,7 +555,7 @@ function WorkspaceRoute() {
     getCharacterStatSnapshotAt
   });
   const reviewCopy = getWorkspaceReviewCopy({
-    isGeneralFiction: isGeneralFictionProject,
+    usesPlainReviewLanguage: capabilities.usesPlainReviewLanguage,
     hasBlockingIssues: hasBlockingUnknownGuardrailIssues
   });
   const {visible: visibleReviewSurfaces, hiddenCount: hiddenReviewSurfaceCount} =
@@ -857,9 +856,9 @@ function WorkspaceRoute() {
                   selectionActions={selectionActionRun.menu}
                   onOpenLoreInspector={handleOpenLoreInspector}
                   onOpenWorldCapture={manualWorldCapture.open}
-                  onAddSelectionToInventory={isGeneralFictionProject
-                    ? undefined
-                    : openSelectionInventoryCapture}
+                  onAddSelectionToInventory={capabilities.canCaptureSelectionAsInventory
+                    ? openSelectionInventoryCapture
+                    : undefined}
                   suppressSelectionBubble={Boolean(manualWorldCapture.capture)}
                   aiContextPassage={activeAIContext?.id === selectedId ? activeAIContext : null}
                 />
