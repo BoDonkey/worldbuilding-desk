@@ -1,5 +1,6 @@
 import {useEffect, useRef} from 'react';
-import type {RefObject} from 'react';
+import {useEscapeToClose} from '../../hooks/useEscapeToClose';
+import {useFocusTrap} from '../../hooks/useFocusTrap';
 import type {ChapterCard, WritingDocument} from '../../entityTypes';
 import type {useWorkspaceCorkboard} from '../../hooks/useWorkspaceCorkboard';
 import {removeSceneLink, toggleSceneLink} from '../../services/workspace/chapterCardSceneLinks';
@@ -8,7 +9,6 @@ import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface WorkspaceCorkboardModalProps {
   isOpen: boolean;
-  dialogRef: RefObject<HTMLDivElement | null>;
   corkboard: ReturnType<typeof useWorkspaceCorkboard>;
   documents: WritingDocument[];
   currentDocumentId?: string;
@@ -22,11 +22,14 @@ interface WorkspaceCorkboardModalProps {
 }
 
 export const WorkspaceCorkboardModal = ({
-  isOpen, dialogRef, corkboard, documents, currentDocumentId,
+  isOpen, corkboard, documents, currentDocumentId,
   focusCardId, onFocusCardHandled,
   onClose, onOpenScratchpad, onCurrentSceneAction,
   onCreateLinkedScene, creatingLinkedSceneCardId
 }: WorkspaceCorkboardModalProps) => {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useEscapeToClose(onClose, isOpen);
+  useFocusTrap(dialogRef, isOpen);
   const cardElementsRef = useRef(new Map<string, HTMLElement>());
   const cardTitleInputsRef = useRef(new Map<string, HTMLInputElement>());
   const {

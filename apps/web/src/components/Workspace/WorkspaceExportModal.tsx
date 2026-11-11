@@ -1,10 +1,11 @@
-import type {RefObject} from 'react';
+import {useRef} from 'react';
+import {useEscapeToClose} from '../../hooks/useEscapeToClose';
+import {useFocusTrap} from '../../hooks/useFocusTrap';
 import type {WorkspaceExportFormat, WorkspaceExportItem} from '../../store/workspaceUiStore';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface WorkspaceExportModalProps {
   isOpen: boolean;
-  dialogRef: RefObject<HTMLDivElement | null>;
   format: WorkspaceExportFormat;
   selection: WorkspaceExportItem[];
   onClose: () => void;
@@ -15,9 +16,12 @@ interface WorkspaceExportModalProps {
 }
 
 export const WorkspaceExportModal = ({
-  isOpen, dialogRef, format, selection, onClose, onMove, onToggle,
+  isOpen, format, selection, onClose, onMove, onToggle,
   onToggleAll, onExport
 }: WorkspaceExportModalProps) => {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useEscapeToClose(onClose, isOpen);
+  useFocusTrap(dialogRef, isOpen);
   if (!isOpen) return null;
   return (
     <div ref={dialogRef} role='dialog' aria-modal='true' className={styles.modalOverlay}>

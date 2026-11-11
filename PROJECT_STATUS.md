@@ -593,6 +593,22 @@ Under the hood, the app still includes rich systems for world data, rules, chara
     components that preserve the route's existing workflows and styling
   - `WorkspaceDrawerPanel` for the shared mobile overlay, focus boundary,
     side-specific shell, header, and close behavior
+- Workspace route split along its seams (slice 3.32, behavior unchanged):
+  the route is 991 lines (was 1,841) and the context drawer 567 (was
+  1,284). The drawer's Review tab is `WorkspaceReviewTab`, with
+  `WorkspaceReviewIssueItem` and `WorkspaceStateChangeReview`; the drawer
+  keeps the canon check and expanded/rejected state so they survive a tab
+  switch. The editor column has `WorkspaceHeader`, `WorkspaceEditorFooter`,
+  `WorkspaceEmptyState`, and `WorkspaceSceneStateDialogs`; modals own their
+  own Escape and focus trap. New hooks: `useWorkspaceSceneCursor`,
+  `useWorkspaceManualWorldCapture`, `useWorkspaceChapterCardLinks`,
+  `useWorkspaceCharacterStatPeek`, `useWorkspaceSeriesCanon`,
+  `useWorkspaceRuntimeModifiers`, `useWorkspaceResolverNotice`,
+  `useWorkspaceRenderDiagnostics`, and `useWorkspaceDocumentReviewBridge`
+  (the refs that let the documents hook call review without a cycle).
+  Review wording and scene-drawer badge counts are pure, tested helpers in
+  `services/workspace/`. `WorkspaceRoute.module.css` (2,349 lines) is not
+  split yet.
 - Workspace review/canon status UI now includes focused `UnknownEntityPanel` and
   `CanonPanel` components while preserving the route-owned review and sync
   workflows.
@@ -619,7 +635,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - `useWorkspaceDocuments` now keeps persistence behavior local while using pure helpers for document selection initialization, editor-document assembly, change detection, and manual-save/autosave consistency mode selection.
 - `useCharacterSheetMutationPreview` now owns scene-mutation form state, deterministic preview/replay derivation, and mutation-history orchestration; pure mutation command construction lives in the tested character ruleset service.
 - Shared text matching contract added for smoke-critical lore/review matching paths.
-- Current targeted architecture sizes are `WorkspaceRoute.tsx` 2,075 lines,
+- Current targeted architecture sizes are `WorkspaceRoute.tsx` 991 lines (3.32),
   `WorldBibleRoute.tsx` 2,044, `CharacterSheetsRoute.tsx` 2,140,
   `CompendiumRoute.tsx` 1,551, and `useWorkspaceConsistency.ts` 2,072.
 - The desktop app keeps its route in the URL hash (`index.html#/workspace`)

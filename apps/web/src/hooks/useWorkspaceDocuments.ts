@@ -33,7 +33,7 @@ import {
 import type {ConfirmRequest} from './useConfirmDialog';
 import {describeError} from '../services/errors';
 import {useStatusAnnouncement} from './useStatusAnnouncement';
-type SaveStatus = 'idle' | 'saving' | 'saved';
+export type SaveStatus = 'idle' | 'saving' | 'saved';
 type ImportMode = WorkspaceImportMode;
 
 type FeedbackState = {

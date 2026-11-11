@@ -1,4 +1,6 @@
-import type {RefObject} from 'react';
+import {useRef} from 'react';
+import {useEscapeToClose} from '../../hooks/useEscapeToClose';
+import {useFocusTrap} from '../../hooks/useFocusTrap';
 import TipTapEditor from '../TipTapEditor';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
 import styles from '../../styles/WorkspaceRoute.module.css';
@@ -6,9 +8,9 @@ import modalStyles from './WorkspaceScratchpadModal.module.css';
 
 interface WorkspaceScratchpadModalProps {
   isOpen: boolean;
-  dialogRef: RefObject<HTMLDivElement | null>;
   content: string;
-  statusLabel: string;
+  status: 'idle' | 'loading' | 'saving' | 'saved' | 'error';
+  lastSavedAt: number | null;
   isNarrowViewport: boolean;
   setContent: (content: string) => void;
   setActiveContextView: (view: 'scratchpad') => void;
@@ -18,9 +20,22 @@ interface WorkspaceScratchpadModalProps {
 }
 
 export const WorkspaceScratchpadModal = ({
-  isOpen, dialogRef, content, statusLabel, isNarrowViewport, setContent,
+  isOpen, content, status, lastSavedAt, isNarrowViewport, setContent,
   setActiveContextView, setContextDrawerOpen, setSceneDrawerOpen, onClose
 }: WorkspaceScratchpadModalProps) => {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useEscapeToClose(onClose, isOpen);
+  useFocusTrap(dialogRef, isOpen);
+  const statusLabel =
+    status === 'loading'
+      ? 'Loading scratchpad...'
+      : status === 'saving'
+        ? 'Saving scratchpad...'
+        : status === 'error'
+          ? 'Scratchpad could not be saved.'
+          : lastSavedAt
+            ? `Scratchpad saved at ${new Date(lastSavedAt).toLocaleTimeString()}`
+            : 'Scratchpad ready.';
   if (!isOpen) return null;
   return (
     <div ref={dialogRef} role='dialog' aria-modal='true' aria-label='Project scratchpad'
