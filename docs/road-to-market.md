@@ -327,8 +327,8 @@ messages).
 | 4.73 | Alternative replies | 4 | M | Done `82dacc8` |
 | 4.74 | Rolling Character Lab summaries | 4 | M | Done `545a7d3` |
 | 4.75 | Local reply length from server context | 4 | S | Done `4bf1e2a` |
-| 4.76 | Ordinary assistant rolling summaries | 4 | M | — post-beta candidate; after the relevant 3.32 assistant/context seam |
-| 4.77 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
+| 4.82 | Ordinary assistant rolling summaries | 4 | M | — post-beta candidate; after the relevant 3.32 assistant/context seam |
+| 4.83 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
 | 5.1 | Auto-update decision + implementation | 5 | M | Done `c1c4f33` + `7357671` + `4efa1d1` + `a56e5dd` |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | In progress (author-approved exception to the Phase 5 gate, 2026-10-31) — data folder moved to `SagaSpine` with a one-time migration and packaged test; builds stay unsigned through the beta by author decision; signing (macOS first) before paid launch |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | Done `9d748f4` + `613a8e3` + `88eb908` + `5ad6a77` |
@@ -693,7 +693,7 @@ adding implementation scope.
   and the smoke procedures. Do not add stats or resources to general
   fiction; this is descriptive state only.
 
-- **4.76 Ordinary assistant rolling summaries.** Follow-up accepted from
+- **4.82 Ordinary assistant rolling summaries.** Follow-up accepted from
   Slice 1.6's deterministic baseline: the ordinary assistant keeps only
   recent complete turns within a 512–6,000-token budget and drops older
   turns, while Character Lab already has an author-visible compression
@@ -722,7 +722,7 @@ adding implementation scope.
     substitution; UI test that the author can inspect, edit, remove, and
     regenerate the summary while the visible transcript remains intact.
 
-- **4.77 Source-linked scene digest pilot.** Experimental follow-up from
+- **4.83 Source-linked scene digest pilot.** Experimental follow-up from
   Slice 1.6. Determine whether model-proposed scene digests improve evidence
   recall beyond indexed context before changing the production Project memory
   feature or bundling a generator.
