@@ -112,6 +112,12 @@ export const useWorkspaceMemories = ({
     setMemoryModalOpen(true);
   }, [selectedDocument, summarizeContent]);
 
+  const closeMemoryModal = useCallback(() => {
+    setMemoryModalOpen(false);
+  }, []);
+  /** The extract-memory dialog needs an open scene. */
+  const isMemoryDialogOpen = Boolean(isMemoryModalOpen && selectedDocument);
+
   const handleMemorySave = useCallback(async () => {
     if (!selectedDocument || !shodhService || !memoryDraft.trim()) {
       setMemoryModalOpen(false);
@@ -174,8 +180,8 @@ export const useWorkspaceMemories = ({
     shodhService,
     memories,
     refreshMemories,
-    isMemoryModalOpen,
-    setMemoryModalOpen,
+    isMemoryDialogOpen,
+    closeMemoryModal,
     memoryDraft,
     setMemoryDraft,
     memoryScope,

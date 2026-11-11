@@ -1,12 +1,10 @@
 import {useCallback, useEffect, useMemo} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
+import type {useWorkspaceProjectData} from './useWorkspaceProjectData';
 import type {
   CharacterSheet,
   Project,
   ProjectSettings,
-  StatBlockGroup,
-  StatBlockInsertMode,
-  StatBlockScopePreset,
   StatBlockSourceType,
   StatBlockStyle,
   StateMutationEvent,
@@ -46,39 +44,50 @@ type FeedbackState = {
   message: string;
 } | null;
 
+/**
+ * The stat block dialog's choices (source, style, scope, groups, selection,
+ * the block waiting to insert, the token being rebound). They live in the
+ * project data hook so they load with the project's settings.
+ */
+export type StatBlockChoices = Pick<
+  ReturnType<typeof useWorkspaceProjectData>,
+  | 'isStatPreferencesHydrated'
+  | 'statBlockSourceType'
+  | 'setStatBlockSourceType'
+  | 'statBlockStyle'
+  | 'setStatBlockStyle'
+  | 'statBlockInsertMode'
+  | 'setStatBlockInsertMode'
+  | 'statBlockScopePreset'
+  | 'setStatBlockScopePreset'
+  | 'selectedStatGroupId'
+  | 'setSelectedStatGroupId'
+  | 'selectedStatIds'
+  | 'setSelectedStatIds'
+  | 'selectedResourceIds'
+  | 'setSelectedResourceIds'
+  | 'statBlockGroups'
+  | 'setStatBlockGroups'
+  | 'newStatGroupName'
+  | 'setNewStatGroupName'
+  | 'selectedStatCharacterId'
+  | 'setSelectedStatCharacterId'
+  | 'selectedStatEntityId'
+  | 'setSelectedStatEntityId'
+  | 'statBlockInsertContent'
+  | 'setStatBlockInsertContent'
+  | 'pendingStatBlockRebindToken'
+  | 'setPendingStatBlockRebindToken'
+>;
+
 interface UseWorkspaceStatBlocksParams {
   activeProject: Project | null;
   projectSettings: ProjectSettings | null;
   saveProjectSettings: (settings: ProjectSettings) => Promise<ProjectSettings>;
-  isStatPreferencesHydrated: boolean;
-  statBlockSourceType: StatBlockSourceType;
-  setStatBlockSourceType: Dispatch<SetStateAction<StatBlockSourceType>>;
-  statBlockStyle: StatBlockStyle;
-  setStatBlockStyle: Dispatch<SetStateAction<StatBlockStyle>>;
-  statBlockInsertMode: StatBlockInsertMode;
-  setStatBlockInsertMode: Dispatch<SetStateAction<StatBlockInsertMode>>;
-  statBlockScopePreset: StatBlockScopePreset;
-  setStatBlockScopePreset: Dispatch<SetStateAction<StatBlockScopePreset>>;
-  selectedStatGroupId: string;
-  setSelectedStatGroupId: Dispatch<SetStateAction<string>>;
-  selectedStatIds: string[];
-  setSelectedStatIds: Dispatch<SetStateAction<string[]>>;
-  selectedResourceIds: string[];
-  setSelectedResourceIds: Dispatch<SetStateAction<string[]>>;
-  statBlockGroups: StatBlockGroup[];
-  setStatBlockGroups: Dispatch<SetStateAction<StatBlockGroup[]>>;
-  newStatGroupName: string;
-  setNewStatGroupName: Dispatch<SetStateAction<string>>;
-  selectedStatCharacterId: string;
-  setSelectedStatCharacterId: Dispatch<SetStateAction<string>>;
-  selectedStatEntityId: string;
-  setSelectedStatEntityId: Dispatch<SetStateAction<string>>;
-  statBlockInsertContent: string | null;
-  setStatBlockInsertContent: Dispatch<SetStateAction<string | null>>;
+  /** The dialog's choices, loaded and saved with the project's settings. */
+  choices: StatBlockChoices;
   isStatBlockModalOpen: boolean;
   setStatBlockModalOpen: Dispatch<SetStateAction<boolean>>;
-  pendingStatBlockRebindToken: string | null;
-  setPendingStatBlockRebindToken: Dispatch<SetStateAction<string | null>>;
   characterSheets: CharacterSheet[];
   stateMutationEvents: StateMutationEvent[];
   actorResolutions: ActorResolution[];
@@ -118,6 +127,25 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
     activeProject,
     projectSettings,
     saveProjectSettings,
+    choices,
+    isStatBlockModalOpen,
+    setStatBlockModalOpen,
+    stateMutationEvents,
+    actorResolutions,
+    sceneOrder,
+    entities,
+    ruleset,
+    runtimeModifiers,
+    content,
+    setContent,
+    setSaveStatus,
+    setWordCount,
+    setFeedback,
+    addSystemHistory,
+    getEffectiveStatValue,
+    getEffectiveResourceValues
+  } = params;
+  const {
     isStatPreferencesHydrated,
     statBlockSourceType,
     setStatBlockSourceType,
@@ -143,25 +171,9 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
     setSelectedStatEntityId,
     statBlockInsertContent,
     setStatBlockInsertContent,
-    isStatBlockModalOpen,
-    setStatBlockModalOpen,
     pendingStatBlockRebindToken,
-    setPendingStatBlockRebindToken,
-    stateMutationEvents,
-    actorResolutions,
-    sceneOrder,
-    entities,
-    ruleset,
-    runtimeModifiers,
-    content,
-    setContent,
-    setSaveStatus,
-    setWordCount,
-    setFeedback,
-    addSystemHistory,
-    getEffectiveStatValue,
-    getEffectiveResourceValues
-  } = params;
+    setPendingStatBlockRebindToken
+  } = choices;
 
   // A sheet's level and XP are starting values; blocks show them as of the
   // end of the scene being edited, after its accepted XP gains.
@@ -545,6 +557,7 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
   }, [closeStatBlockModal, isStatBlockModalOpen]);
 
   return {
+    choices,
     statDefinitionNameById,
     resourceDefinitionNameById,
     selectedSheet,
