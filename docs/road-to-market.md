@@ -203,6 +203,7 @@ messages).
 | 1.4a | Ask pending-proposal readiness | 1 | S | Done `a46e67a` |
 | 1.4b | Assistant follow-up subjects + evidence-gate coverage | 1 | M | Done `cff28f4` |
 | 1.5 | Shared AI proposal surface | 1 | M | Done `b1d0a2a` |
+| 1.6 | Context and memory baseline + benchmark | 1 | M | Done `44a1dcc` |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |
 | 2.2 | Migrate confirm/alert call sites | 2 | M | Done `9c278a3` + `ab14f63` |
 | 2.3 | Inline field-level validation | 2 | S | Done `45a163f` |
@@ -326,6 +327,8 @@ messages).
 | 4.73 | Alternative replies | 4 | M | Done `82dacc8` |
 | 4.74 | Rolling Character Lab summaries | 4 | M | Done `545a7d3` |
 | 4.75 | Local reply length from server context | 4 | S | Done `4bf1e2a` |
+| 4.82 | Ordinary assistant rolling summaries | 4 | M | — post-beta candidate; after the relevant 3.32 assistant/context seam |
+| 4.83 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
 | 4.76 | Places: containment and connections | 4 | M | — (before beta; brief 3.37) |
 | 4.77 | Places: positions refer to place records | 4 | M | — (after 4.76) |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | — (after 4.77) |
@@ -392,6 +395,54 @@ and results templates in the fixture runbook. Do not fix ordinary findings
 mid-run. Preserve evidence, finish A–H, then classify each finding as a
 release blocker, workflow blocker, UX friction, false positive, or fixture
 bug before changing the Phase 5 board.
+
+**1.6 Context and memory baseline + benchmark.** Author-requested
+investigation (2026-11-11), prompted by a broad external brief that did not
+have the current code. Establish whether SagaSpine needs generated scene
+digests, rolling assistant summaries, or a dedicated small local model before
+adding implementation scope.
+
+- **Current-state audit.** Trace the actual save-to-prompt paths for primary
+  manuscript and canon data, deterministic state, indexed context, project
+  memory, and conversation history. Name the owning files and distinguish
+  authoritative records from rebuildable derived data. Correct the source
+  brief's assumptions, including that the internal `ShodhMemoryService` is
+  not the Shodh associative-memory library and that a local embedding model
+  already ships with the app.
+- **Baseline benchmark.** Add a deterministic, repeatable harness over the
+  real retrieval and context-selection services for representative distant
+  recall, end-of-scene details, revised history, changing relationships,
+  project isolation, and conversation-history pressure. Compare at least
+  indexed context alone with indexed context plus today's 500-character
+  project-memory extracts. Do not use a model's self-reported confidence as
+  evidence. Record retrieval accuracy, selected sources, context size, and
+  latency separately from generation quality.
+- **Prototype boundary.** If useful to answer the decision, prototype
+  source-linked scene digests with an already installed local model outside
+  production behavior. A digest is derived, non-canon, tied to a source
+  revision/hash, and invalidated by an edit. Any proposed structured fields
+  and evidence spans are deterministically parsed and validated; no model
+  output writes to canon, mechanics, or state. Do not bundle or download a
+  generative model in this slice.
+- **Decision report.** Write a dated, non-authoritative report under `docs/`
+  covering observed architecture, benchmark results, performance, risks, and
+  a recommendation. Decide independently whether to schedule (a) ordinary
+  assistant rolling summaries based on the author-visible Character Lab
+  pattern, (b) source-linked scene digests, (c) a named local
+  memory-extraction model route, or (d) a bundled generative model. Do not add
+  those implementation slices without evidence from this work. Link the
+  report from `docs/README.md` while it remains active input; archive it after
+  accepted decisions are folded into the authority docs and roadmap.
+- **Order.** The audit and benchmark may run alongside 3.32 because they do
+  not change application behavior. Any follow-up that changes the Workspace
+  assistant waits for the relevant 3.32 route/context-drawer split. Complete
+  this investigation before resuming the fresh 1.1 trust run if its accepted
+  outcome will change retrieval or prompt assembly.
+- **Verify.** Documentation/tooling tier for the audit and report. If the
+  benchmark adds test or harness code, run the CI-policy tests, file-size
+  gate, fast battery, and the coverage tier selected by
+  `CI_BASE_SHA=origin/main node scripts/ci/detect.mjs`. Report measured
+  benchmark inputs and outputs so another run can reproduce the comparison.
 
 ### Phase 3 — Code fitness
 
@@ -732,6 +783,70 @@ Movement checks are review findings, never blocks.
   setting; distance on that map is counted in squares or hexes. For dungeon
   and tactical maps in LitRPG and later Game Simulation.
   - **Verify.** Full-coverage tier; unit tests for grid and hex distance.
+
+### Phase 4 — Post-beta context candidates
+
+- **4.82 Ordinary assistant rolling summaries.** Follow-up accepted from
+  Slice 1.6's deterministic baseline: the ordinary assistant keeps only
+  recent complete turns within a 512–6,000-token budget and drops older
+  turns, while Character Lab already has an author-visible compression
+  pattern. Generalize that pattern without changing the saved transcript.
+  - **Behavior.** When earlier completed turns no longer fit, offer an
+    author-invoked summary; keep at least the two newest complete turns
+    verbatim. Show the bounded summary, the turns it covers, and an editor.
+    It is working conversation context, never canon, never a Source Note,
+    and never a manuscript edit. Removing it restores the original turns to
+    prompt eligibility. Do not summarize discarded alternative replies.
+  - **Safety.** The request sends only the covered conversation. Validate
+    deterministic word/character limits, source turn ids, and a conversation
+    revision before using the result; if the transcript changes during the
+    run, keep the old state and ask the author to retry. A failed or stopped
+    summary leaves the full history unchanged. Follow the AI coaching switch,
+    route disclosure, Stop, and consultation accounting.
+  - **Persistence decision.** Start session-local, matching Character Lab.
+    Do not persist summaries across restart until beta evidence shows that
+    long-lived assistant conversations are an author workflow rather than
+    disposable help.
+  - **Order.** After the relevant 3.32 assistant/context-drawer seam is
+    stable. Promote before beta only if the resumed 1.1 run demonstrates
+    material loss of conversation continuity.
+  - **Verify.** Full-coverage tier. Unit tests for threshold, source coverage,
+    extension, edit bounds, transcript races, failure/Stop, and prompt
+    substitution; UI test that the author can inspect, edit, remove, and
+    regenerate the summary while the visible transcript remains intact.
+
+- **4.83 Source-linked scene digest pilot.** Experimental follow-up from
+  Slice 1.6. Determine whether model-proposed scene digests improve evidence
+  recall beyond indexed context before changing the production Project memory
+  feature or bundling a generator.
+  - **Corpus and comparison.** Extend the 1.6 harness with a representative,
+    rights-safe fixture covering end-of-scene facts, distant recall, evolving
+    relationships, character knowledge, revisions, and project isolation.
+    Compare indexed context alone, today's 500-character extracts, and
+    generated digests. Measure relevant-evidence recall, unsupported claims,
+    selected context tokens, source coverage, local latency, and invalidation;
+    keep generation quality separate from retrieval quality.
+  - **Prototype.** Use an explicitly selected model already installed in
+    verified private-local Ollama or a loopback OpenAI-compatible server. No
+    download, bundled generator, hosted fallback, or permanent background
+    model. Candidate fields are events/decisions, participants, state changes,
+    knowledge gained, promises/open threads, and exact evidence spans.
+  - **Trust boundary.** Digest records are derived, non-canon, and carry
+    project id, scene id, source revision/hash, route/model provenance, and
+    validation status. Deterministic code validates the response schema,
+    evidence spans against source text, referenced entity ids, bounds, and
+    source revision. An edit invalidates the digest. No output writes to
+    canon, mechanics, state, or production memory in this slice.
+  - **Decision gate.** Produce a go/no-go result for a production digest
+    feature and a named `memory-extraction` route. Consider a bundled
+    quantized generator only if the pilot shows material value and separately
+    installed local models prove an unacceptable dependency. Do not schedule
+    either merely because the prototype runs.
+  - **Verify.** Tooling or unit-only tier while the prototype remains outside
+    production behavior; use the full-coverage tier if shared runtime,
+    persistence, provider, or prompt-assembly code changes. Record the exact
+    fixture revision, model, quantization, context, hardware, settings, and
+    measured outputs for reproducibility.
 
 ### Phase 5 — Release engineering
 
