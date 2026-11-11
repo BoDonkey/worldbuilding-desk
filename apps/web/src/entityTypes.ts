@@ -454,12 +454,49 @@ export interface WorldEntity {
     status: 'open' | 'worsening' | 'changed' | 'resolved';
     sceneIds: string[];
   };
+  /** Containment and connections for a location record (slice 4.76). */
+  place?: PlaceData;
   isNew?: boolean;
   needsCompletion?: boolean;
   aliasesReviewedAt?: number;
   links: string[];
   createdAt: number;
   updatedAt: number;
+}
+
+/**
+ * An amount the author wrote down: their own words ("three days"), and
+ * optionally a number and unit the app can add up later (3, "days").
+ */
+export interface AuthoredMeasure {
+  words?: string;
+  amount?: number;
+  unit?: string;
+}
+
+export interface PlaceTravelTime extends AuthoredMeasure {
+  /** How the trip is made: "on foot", "by horse". */
+  mode: string;
+}
+
+/**
+ * A link between two places. Stored once, on the record where it was added,
+ * and shown on both ends. Two-way unless `oneWay` (then only from → to).
+ */
+export interface PlaceConnection {
+  id: string;
+  toId: string;
+  /** Road, river, portal, stairway: the author's word. */
+  kind: string;
+  oneWay?: boolean;
+  distance?: AuthoredMeasure;
+  travelTimes?: PlaceTravelTime[];
+}
+
+export interface PlaceData {
+  /** The one place this place is inside. Parents nest to any depth; cycles are refused. */
+  parentId?: string;
+  connections?: PlaceConnection[];
 }
 
 export type LoreDocumentKind =

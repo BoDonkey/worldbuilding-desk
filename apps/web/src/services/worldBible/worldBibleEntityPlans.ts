@@ -1,4 +1,4 @@
-import type {CompendiumDomain, EntityCategory, WorldEntity} from '../../entityTypes';
+import type {CompendiumDomain, EntityCategory, PlaceData, WorldEntity} from '../../entityTypes';
 import type {ReviewQueueItem} from '../consistency';
 import {buildCanonicalAliasList, deriveFirstNameAlias} from './worldBibleCanonicalization';
 import {normalizeRichTextValue} from './worldBibleEntityHelpers';
@@ -24,10 +24,13 @@ export const isCharacterLikeEntity = (categories: EntityCategory[], entity: Worl
 };
 
 /** Location-like by slug only. */
-export const isLocationLikeEntity = (categories: EntityCategory[], entity: WorldEntity): boolean => {
-  const slug = (findCategory(categories, entity)?.slug ?? '').toLowerCase();
+export const isLocationCategory = (category: EntityCategory | null | undefined): boolean => {
+  const slug = (category?.slug ?? '').toLowerCase();
   return LOCATION_CATEGORY_HINTS.some((hint) => slug.includes(hint));
 };
+
+export const isLocationLikeEntity = (categories: EntityCategory[], entity: WorldEntity): boolean =>
+  isLocationCategory(findCategory(categories, entity));
 
 export const inferCompendiumDomain = (categories: EntityCategory[], entity: WorldEntity): CompendiumDomain => {
   const slug = (findCategory(categories, entity)?.slug ?? '').toLowerCase();
@@ -64,6 +67,8 @@ export interface EntityDraftInput {
   name: string;
   fieldValues: Record<string, string>;
   systemNegativeSpace?: WorldEntity['systemNegativeSpace'];
+  /** Normalized place data for a location record; other records keep what they had. */
+  place?: PlaceData;
   /** Aliases currently indexed for this record. */
   indexedAliases: string[];
   /** Saving from the review queue counts as reviewing the aliases. */
@@ -133,6 +138,7 @@ export const planEntityDraft = (input: EntityDraftInput): {entity: WorldEntity; 
     name,
     fields: nextFields,
     systemNegativeSpace: input.systemNegativeSpace,
+    ...(input.place ? {place: input.place} : {}),
     isNew: false,
     needsCompletion: false,
     aliasesReviewedAt:

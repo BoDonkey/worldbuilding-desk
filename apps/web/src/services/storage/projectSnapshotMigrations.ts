@@ -10,7 +10,7 @@ import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
 import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
 
 export const MIN_SUPPORTED_PROJECT_SNAPSHOT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 11;
+export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 12;
 
 export interface ProjectSnapshotMigration {
   fromVersion: number;
@@ -218,6 +218,21 @@ export function migrateProjectSnapshotV10ToV11(
   };
 }
 
+/**
+ * 4.76: location records may carry a parent place and connections. Older
+ * backups have none, so nothing converts; the new version makes older apps
+ * refuse backups whose place data they would drop.
+ */
+export function migrateProjectSnapshotV11ToV12(
+  snapshot: Record<string, unknown>
+): Record<string, unknown> {
+  return {
+    ...snapshot,
+    schemaVersion: 12,
+    project: {...asRecord(snapshot.project), storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION}
+  };
+}
+
 const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
   {
     fromVersion: 1,
@@ -268,6 +283,11 @@ const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
     fromVersion: 10,
     toVersion: 11,
     migrate: migrateProjectSnapshotV10ToV11
+  },
+  {
+    fromVersion: 11,
+    toVersion: 12,
+    migrate: migrateProjectSnapshotV11ToV12
   }
 ];
 

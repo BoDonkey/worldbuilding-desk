@@ -115,6 +115,48 @@ describe('portable data export', () => {
     expect(readable).toContain('[[Glass Market]]');
     expect(readable).toContain('Old Archive');
   });
+
+  it('carries parent places and connections in Markdown, frontmatter, and CSV', () => {
+    const city: WorldEntity = {...linkedEntity, id: 'city', name: 'Varn'};
+    const region: WorldEntity = {...linkedEntity, id: 'region', name: 'The Reach'};
+    const archive: WorldEntity = {
+      ...entity,
+      links: [],
+      place: {
+        parentId: city.id,
+        connections: [
+          {id: 'c1', toId: 'ford', kind: 'road', distance: {words: 'three days'}, travelTimes: [{mode: 'by horse', amount: 1, unit: 'day'}]},
+          {id: 'c2', toId: 'missing', kind: 'portal'}
+        ]
+      }
+    };
+    const ford: WorldEntity = {
+      ...linkedEntity,
+      id: 'ford',
+      name: 'Ford',
+      place: {connections: [{id: 'c3', toId: archive.id, kind: 'chute', oneWay: true}]}
+    };
+    const zip = buildPortableDataZip({
+      categories: [category],
+      entities: [archive, {...city, place: {parentId: region.id}}, region, ford],
+      aliases: [],
+      canonicalFacts: [],
+      loreDocuments: [],
+      loreDocumentLinks: []
+    });
+    const readable = new TextDecoder().decode(zip);
+
+    expect(readable).toContain(
+      'place: {"inside":"Varn","connections":[{"to":"Ford","kind":"road","distance":{"words":"three days"},"travelTimes":[{"mode":"by horse","amount":1,"unit":"day"}]}]}'
+    );
+    expect(readable).toContain('## Inside\n\n[[Varn]] › [[The Reach]]');
+    expect(readable).toContain('- road to [[Ford]] — three days; by horse: 1 day');
+    expect(readable).toContain('- chute from [[Ford]] (one-way, arriving here)');
+    expect(readable).not.toContain('portal');
+    expect(readable).toContain('name,aliases,links,description,climate,inside,connections,accepted_facts');
+    expect(readable).toContain('Ember Archive,The Archive,,A library beneath the city.,Dry,Varn › The Reach,"road to Ford — three days; by horse: 1 day | chute from Ford (one-way, arriving here)",');
+    expect(readable).toContain('Ford,,,,,,road to Ember Archive — three days; by horse: 1 day | chute to Ember Archive (one-way),');
+  });
 });
 
 describe('portable Markdown import', () => {

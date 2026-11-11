@@ -309,6 +309,7 @@ function WorldBibleRoute() {
     name,
     fieldValues,
     systemNegativeSpace: draft.systemNegativeSpace,
+    place: draft.place,
     viewMode,
     selectedEntityQueueItem,
     filteredReviewQueue,

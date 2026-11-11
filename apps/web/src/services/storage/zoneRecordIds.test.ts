@@ -9,6 +9,7 @@ import {normalizeProjectSnapshot} from './projectBackupImport';
 import {getProjectById} from './repositories/projectStorage';
 import {getZoneAffinityProfilesByProject, getZoneAffinityProgress, recordZoneExposure} from './repositories/compendiumWorldStorage';
 import {rekeyZoneProfiles, rekeyZoneProgress} from './zoneRecordIds';
+import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
 
 /* Slice 5.15b: zone-affinity ids no longer embed the zone name (project schema 8). */
 
@@ -59,7 +60,7 @@ describe('zone record ids (schema 8)', () => {
     await transactionToPromise(tx);
     db.close();
 
-    expect((await getProjectById(projectId))?.storageSchemaVersion).toBe(9);
+    expect((await getProjectById(projectId))?.storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
     const profiles = await getZoneAffinityProfilesByProject(projectId);
     expect(profiles).toHaveLength(1);
     expect(profiles[0].id).not.toContain('emberglass');

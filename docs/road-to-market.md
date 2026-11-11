@@ -329,7 +329,7 @@ messages).
 | 4.75 | Local reply length from server context | 4 | S | Done `4bf1e2a` |
 | 4.82 | Ordinary assistant rolling summaries | 4 | M | — post-beta candidate; after the relevant 3.32 assistant/context seam |
 | 4.83 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
-| 4.76 | Places: containment and connections | 4 | M | — (before beta; brief 3.37) |
+| 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | — (after 4.76) |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | — (after 4.77) |
 | 4.79 | Maps and placements (data, distance) | 4 | L | — (after 4.76) |

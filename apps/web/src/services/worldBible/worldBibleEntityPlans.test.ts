@@ -106,6 +106,12 @@ describe('planEntityDraft', () => {
     expect(created.aliasesReviewedAt).toBeUndefined();
   });
 
+  it('stores place data when given and leaves the key out otherwise', () => {
+    const place = {parentId: 'city', connections: [{id: 'k', toId: 'ford', kind: 'road'}]};
+    expect(planEntityDraft(base({category: places, name: 'Gate', place})).entity.place).toEqual(place);
+    expect('place' in planEntityDraft(base({category: places, name: 'Gate'})).entity).toBe(false);
+  });
+
   it('keeps the old name as an alias on rename and marks aliases reviewed', () => {
     const existing = entity('e1', 'c-place', {name: 'Old Gate', createdAt: 5, aliasesReviewedAt: 7, links: ['linked-scene']});
     const {entity: renamed, aliases} = planEntityDraft(base({category: places, existing, name: 'Salt Door'}));

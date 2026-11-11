@@ -376,6 +376,31 @@ Project storage and backup snapshot schema 5 register the additive category
 and entity fields. Migration leaves existing categories and records
 unclassified and unlinked; it never guesses author intent.
 
+## 4.2 Places: Containment and Connections
+
+Design: `docs/places-and-maps-brief.md` § 3. A place is a World Bible record
+in a location category (slug hint `location`, `place`, `region`, `zone`); there
+is no separate record type. Location records may carry an optional
+author-maintained `place` structure (slice 4.76):
+
+- `parentId`: the one place this place is inside. Parents nest to any depth.
+  A parent that is the place itself or already inside it is refused, so
+  containment is always a tree. Being inside a place implies being inside
+  every place that contains it.
+- `connections`: links to other places, each with an `id`, `toId`, `kind`
+  (author's word), optional `oneWay` (from this record to `toId` only),
+  optional `distance`, and optional `travelTimes` by `mode`. Distances and
+  times are `AuthoredMeasure`s: the author's words and/or a number and unit.
+  A connection is stored once, on the record where it was added, and read
+  from both ends.
+
+Deterministic code (`services/worldBible/places.ts`) trims and de-duplicates
+connections, drops empty measures and links to missing or non-place records,
+and refuses cycles. Reads stop at missing parents and at cycles in stored data.
+AI may propose a parent or connection only as an observation the author
+accepts; nothing writes place data without an author save. Project storage
+schema 10 and backup snapshot schema 12 register the additive field.
+
 ## 5. AI Proposal Boundary and Item Authoring
 
 _Status: item authoring is a product proposal (2026-07-26); the shared

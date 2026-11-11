@@ -113,6 +113,20 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
+- Places: containment and connections (slice 4.76). A location record's
+  **Place** section names one parent place (**Inside**), nested to any depth;
+  only parents that cannot make a cycle are offered, and saving refuses one.
+  It lists the places inside it and its connections: a kind (road, river,
+  portal, stairway, or the author's word), two-way unless marked one-way, an
+  optional distance in the author's words plus a number and unit, and
+  optional travel times by mode. A connection is stored on the record where it
+  was added and shown on both ends, with **Edit on** the other record.
+  Backups carry it (ids remap on import as copy), and portable export writes a
+  `place` frontmatter map, **Inside** and **Connections** sections, and
+  `inside` / `connections` CSV columns for location categories. Project
+  storage schema 10 and backup snapshot schema 12 (both additive). References
+  to deleted or merged-away places are ignored when read, as record links
+  are; positions in the scene ledger still store place names as text (4.77).
 - World Bible document import detects Markdown `#` headings and DOCX heading
   paragraphs (Word style ids, Pages-style named styles with outline levels,
   `basedOn` chains, paragraph outline levels), treats a leading title heading
