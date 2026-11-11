@@ -41,6 +41,7 @@ import {
 } from './useConsistencyReviewRuns';
 import {useReviewPreferences} from './useReviewPreferences';
 import {useSceneSaveReview} from './useSceneSaveReview';
+import {buildStateSubjects} from '../services/state/stateSubjects';
 import {useStateMutationReview} from './useStateMutationReview';
 import {useUnknownCategorySuggestion} from './useUnknownCategorySuggestion';
 import {useUnknownEntityDismissal} from './useUnknownEntityDismissal';
@@ -160,14 +161,23 @@ export const useWorkspaceConsistency = ({
       }),
     [characterCategoryIds, characters, entities]
   );
+  const stateSubjects = useMemo(
+    () =>
+      buildStateSubjects({
+        characterSheets,
+        characterEntities: entities.filter((entity) => characterCategoryIds.has(entity.categoryId))
+      }),
+    [characterCategoryIds, characterSheets, entities]
+  );
   const knownConsistencyEntities = useMemo(
     () =>
       buildKnownConsistencyEntities({
         entities,
         aliases,
-        characterLoreEntityIdByCharacterId
+        characterLoreEntityIdByCharacterId,
+        characterCategoryIds
       }),
-    [aliases, characterLoreEntityIdByCharacterId, entities]
+    [aliases, characterCategoryIds, characterLoreEntityIdByCharacterId, entities]
   );
   const knownConsistencySurfaceSet = useMemo(
     () =>
@@ -237,7 +247,7 @@ export const useWorkspaceConsistency = ({
   const persistDoc = useSceneSaveReview({
     documents,
     setDocuments,
-    characterSheets,
+    stateSubjects,
     actorResolutions,
     ruleset,
     stateMutationEvents,
@@ -271,7 +281,7 @@ export const useWorkspaceConsistency = ({
     entities,
     characters,
     canonicalFacts,
-    characterSheets,
+    stateSubjects,
     actorResolutions,
     ruleset,
     stateMutationEvents,
@@ -343,7 +353,7 @@ export const useWorkspaceConsistency = ({
   );
 
   const stateMutationReview = useStateMutationReview({
-    characterSheets,
+    stateSubjects,
     actorResolutions,
     documents,
     ruleset,

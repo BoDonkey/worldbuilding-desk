@@ -1,4 +1,5 @@
 import {describe, expect, it} from 'vitest';
+import {buildStateSubjects} from './stateSubjects';
 import type {CharacterSheet, StateMutationEvent, StoredRuleset} from '../../entityTypes';
 import {
   buildStateMutationPreview,
@@ -123,7 +124,7 @@ describe('stateMutationPresentation', () => {
         }
       ],
       acceptedEvents: [acceptedEvent],
-      characterSheets: [sheet],
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
       ruleset
     });
 

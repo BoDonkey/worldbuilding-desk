@@ -2,6 +2,7 @@ import {describe, expect, it} from 'vitest';
 import type {CharacterSheet, StateMutationEvent, StoredRuleset} from '../../entityTypes';
 import type {ObservationProposal} from '../worldEngine';
 import {buildDerivedStateMutationEvents} from './stateMutationDerivation';
+import {buildStateSubjects} from './stateSubjects';
 
 const ruleset: StoredRuleset = {
   id: 'ruleset-1',
@@ -110,7 +111,7 @@ describe('stateMutationDerivation', () => {
           target: 'Lantern'
         })
       ],
-      characterSheets: [sheet],
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
       ruleset,
       existingEvents
     });
@@ -163,7 +164,7 @@ describe('stateMutationDerivation', () => {
           target: 'Rope'
         })
       ],
-      characterSheets: [sheet],
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
       ruleset,
       existingEvents: []
     });
@@ -185,7 +186,7 @@ describe('stateMutationDerivation', () => {
         target: 'Health Potion',
         evidence: {start: 4, end: 35, text: 'Kael drank a Health Potion'}
       })],
-      characterSheets: [sheet],
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
       ruleset,
       existingEvents: []
     });
@@ -201,5 +202,34 @@ describe('stateMutationDerivation', () => {
         itemName: 'Health Potion'
       }]
     });
+  });
+
+  it('derives location and item changes for a World Bible character without a sheet', () => {
+    const stateSubjects = buildStateSubjects({
+      characterSheets: [sheet],
+      characterEntities: [{id: 'entity-kael', name: 'Kael'}, {id: 'entity-sera', name: 'Sera'}]
+    });
+    const derived = buildDerivedStateMutationEvents({
+      projectId: 'project-1',
+      sceneId: 'scene-1',
+      sceneOrder: 1,
+      sourceRevision: 10,
+      sourceHash: 'h2',
+      observations: [
+        makeObservation({id: 'move', actor: 'entity-sera', operation: 'location_set', target: 'Highmoor'}),
+        makeObservation({id: 'take', actor: 'entity-sera', operation: 'inventory_add', target: 'Brass Key'}),
+        makeObservation({id: 'drop', actor: 'entity-sera', operation: 'inventory_remove', target: 'Lantern'}),
+        makeObservation({id: 'hurt', actor: 'entity-sera', operation: 'resource_change', target: 'hp', amount: -2}),
+        makeObservation({id: 'not-a-character', actor: 'entity-highmoor', operation: 'location_set', target: 'Docks'})
+      ],
+      stateSubjects,
+      ruleset: null,
+      existingEvents: []
+    });
+
+    expect(derived.map((event) => event.commands[0])).toEqual([
+      {type: 'location_set', actorId: 'entity-sera', locationName: 'Highmoor'},
+      {type: 'inventory_add', actorId: 'entity-sera', itemName: 'Brass Key'}
+    ]);
   });
 });

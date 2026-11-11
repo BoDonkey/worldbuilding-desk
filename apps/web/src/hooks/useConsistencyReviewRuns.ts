@@ -3,13 +3,13 @@ import type {Dispatch, SetStateAction} from 'react';
 import type {
   CanonicalFact,
   Character,
-  CharacterSheet,
   Project,
   StateMutationEvent,
   StoredRuleset,
   WorldEntity,
   WritingDocument
 } from '../entityTypes';
+import type {StateSubject} from '../services/state/stateSubjects';
 import type {GuardrailIssue, KnownEntityRef} from '../services/consistency';
 import {findCanonContradictions} from '../services/consistency';
 import {
@@ -70,7 +70,7 @@ export function useConsistencyReviewRuns({
   entities,
   characters,
   canonicalFacts,
-  characterSheets,
+  stateSubjects,
   actorResolutions,
   ruleset,
   stateMutationEvents,
@@ -89,7 +89,7 @@ export function useConsistencyReviewRuns({
   entities: WorldEntity[];
   characters: Character[];
   canonicalFacts: CanonicalFact[];
-  characterSheets: CharacterSheet[];
+  stateSubjects: StateSubject[];
   actorResolutions: ActorResolution[];
   ruleset: StoredRuleset | null;
   stateMutationEvents: StateMutationEvent[];
@@ -236,7 +236,7 @@ export function useConsistencyReviewRuns({
         documents: [doc],
         sceneOrderDocuments: documentsRef.current,
         knownEntities: knownConsistencyEntities,
-        characterSheets,
+        stateSubjects,
         actorResolutions,
         ruleset,
         stateMutationEvents
@@ -264,7 +264,7 @@ export function useConsistencyReviewRuns({
       setGuardrailIssues,
       filterDismissedUnknownIssues,
       canonicalFacts,
-      characterSheets,
+      stateSubjects,
       characters,
       entities,
       knownConsistencyEntities,
@@ -308,7 +308,7 @@ export function useConsistencyReviewRuns({
           documents: [doc],
           sceneOrderDocuments: documentsRef.current,
           knownEntities: knownConsistencyEntities,
-          characterSheets,
+          stateSubjects,
           actorResolutions,
           ruleset,
           stateMutationEvents
@@ -341,7 +341,7 @@ export function useConsistencyReviewRuns({
       announceStatus,
       filterDismissedUnknownIssues,
       canonicalFacts,
-      characterSheets,
+      stateSubjects,
       characters,
       entities,
       knownConsistencyEntities,
@@ -439,7 +439,7 @@ export function useConsistencyReviewRuns({
       const stateContinuityItems = findStateContinuityReviewItems({
         documents,
         knownEntities: knownConsistencyEntities,
-        characterSheets,
+        stateSubjects,
         actorResolutions,
         ruleset,
         stateMutationEvents
@@ -506,7 +506,7 @@ export function useConsistencyReviewRuns({
     activeProject,
     addSystemHistory,
     canonicalFacts,
-    characterSheets,
+    stateSubjects,
     characters,
     documents,
     entities,

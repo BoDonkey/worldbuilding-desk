@@ -1,6 +1,6 @@
 import type {Character, EntityCategory, WorldEntity} from '../../entityTypes';
 import type {ConsistencyAlias} from '../storage';
-import type {GuardrailIssue} from './types';
+import type {GuardrailIssue, KnownEntityRef} from './types';
 import type {ConsistencyReviewItem} from './reviewReadiness';
 import {createCharacterLinkResolver, isCharacterCategory} from '../characters/characterIdentity';
 
@@ -85,13 +85,17 @@ export function buildKnownConsistencyEntities(params: {
   entities: WorldEntity[];
   aliases: ConsistencyAlias[];
   characterLoreEntityIdByCharacterId: Map<string, string>;
-}): Array<{id: string; name: string; type: 'entity'}> {
+  /** Records in these categories are characters, so prose about them can propose state. */
+  characterCategoryIds?: Set<string>;
+}): KnownEntityRef[] {
   const entityById = new Map(params.entities.map((entity) => [entity.id, entity]));
+  const typeOf = (entity: WorldEntity): KnownEntityRef['type'] =>
+    params.characterCategoryIds?.has(entity.categoryId) ? 'character' : 'entity';
   return [
     ...params.entities.map((entity) => ({
       id: entity.id,
       name: entity.name,
-      type: 'entity' as const
+      type: typeOf(entity)
     })),
     ...params.aliases
       .map((alias) => {
@@ -101,13 +105,10 @@ export function buildKnownConsistencyEntities(params: {
             : alias.targetId;
         const linkedRecord = targetId ? entityById.get(targetId) : null;
         return linkedRecord
-          ? {id: linkedRecord.id, name: alias.alias, type: 'entity' as const}
+          ? {id: linkedRecord.id, name: alias.alias, type: typeOf(linkedRecord)}
           : null;
       })
-      .filter(
-        (entry): entry is {id: string; name: string; type: 'entity'} =>
-          Boolean(entry)
-      )
+      .filter((entry): entry is KnownEntityRef => Boolean(entry))
   ];
 }
 

@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-10-31
+Last updated: 2026-11-11
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at

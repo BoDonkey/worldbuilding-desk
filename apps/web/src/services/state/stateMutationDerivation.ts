@@ -1,34 +1,19 @@
-import type {
-  CharacterSheet,
-  StateMutationEvent,
-  StoredRuleset
-} from '../../entityTypes';
+import type {StateMutationEvent, StoredRuleset} from '../../entityTypes';
 import type {ObservationProposal} from '../worldEngine';
 import type {ActorResolution} from '../characters/characterIdentity';
 import {
-  replayCharacterState,
   validateStateMutationCommandAgainstState,
   validateStateMutationEventForRuleset
 } from './stateReplay';
 import {validateStateMutationEvent} from './stateMutationSchemas';
 import {stateDeltaObservationToCommand} from './kinds';
-
-export function findSheetForStateActor(
-  actor: string | undefined,
-  characterSheets: CharacterSheet[]
-): CharacterSheet | null {
-  if (!actor) {
-    return null;
-  }
-  return (
-    characterSheets.find(
-      (sheet) =>
-        sheet.characterEntityId === actor ||
-        sheet.id === actor ||
-        sheet.characterId === actor
-    ) ?? null
-  );
-}
+import {
+  findStateSubject,
+  recordableStateSubjects,
+  replayStateSubject,
+  stateSubjectAccepts,
+  type StateSubject
+} from './stateSubjects';
 
 export function buildDerivedStateMutationEvents(params: {
   projectId: string;
@@ -38,7 +23,7 @@ export function buildDerivedStateMutationEvents(params: {
   sourceRevision: number;
   sourceHash: string;
   observations: ObservationProposal[];
-  characterSheets: CharacterSheet[];
+  stateSubjects: StateSubject[];
   ruleset: StoredRuleset | null;
   existingEvents: StateMutationEvent[];
   actorResolutions?: ActorResolution[];
@@ -69,17 +54,14 @@ export function buildDerivedStateMutationEvents(params: {
       status: 'accepted' as const
     }));
 
+  const recordableSubjects = recordableStateSubjects(params.stateSubjects);
   relevantObservations.forEach((observation, index) => {
-    const sheet = findSheetForStateActor(observation.actor, params.characterSheets);
-    if (!sheet) {
+    const subject = findStateSubject(observation.actor, recordableSubjects);
+    if (!subject) {
       return;
     }
-    const actorId = sheet.characterEntityId;
-    if (!actorId) {
-      return;
-    }
-    const command = stateDeltaObservationToCommand(observation, actorId);
-    if (!command) {
+    const command = stateDeltaObservationToCommand(observation, subject.actorId);
+    if (!command || !stateSubjectAccepts(subject, command)) {
       return;
     }
 
@@ -100,16 +82,10 @@ export function buildDerivedStateMutationEvents(params: {
       createdAt: params.createdAt ?? Date.now()
     };
 
-    const stateBefore = replayCharacterState({
-      sheet,
+    const stateBefore = replayStateSubject({
+      subject,
       ruleset: params.ruleset,
       events: [...nonGeneratedEvents, ...acceptedPreviewEvents()],
-      target: {
-        actorId,
-        characterId: sheet.characterId,
-        sheetId: sheet.id,
-        actorName: sheet.name
-      },
       actorResolutions: params.actorResolutions,
       upToSceneOrder: params.sceneOrder
     });

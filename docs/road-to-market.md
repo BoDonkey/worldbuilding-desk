@@ -275,7 +275,8 @@ messages).
 | 4.24 | Fact-anchored canon contradiction detection | 4 | M | Done `ffcd1bd` |
 | 4.25 | Persisted, incremental project review | 4 | M | Done `d6e5ddd` |
 | 4.26 | State-backed continuity checks | 4 | M | Done `bd255cd` |
-| 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — (before beta, author decision 2026-11-08; after 4.76, before 4.77, so place positions reach general fiction) |
+| 4.27a | Sheet-free state: subjects in derivation, replay, and review | 4 | M | Done `925da03` — also fixed prose state suggestions for World Bible characters in every mode |
+| 4.27b | Sheet-free state: Workspace capture, scene drawer, Continuity overview | 4 | M | — (after 4.27a; before 4.77) |
 | 4.28 | Manuscript-order validity for canon facts | 4 | M | Done `42c86de` |
 | 4.29 | Portable Markdown/CSV export + Markdown-folder import | 4 | M | Done `7cd6895` |
 | 4.30 | World Canvas — record, view mode, premise, lenses, questions (WC-1) | 4 | M | Done `f9f3e54` |
@@ -729,17 +730,27 @@ Movement checks are review findings, never blocks.
   `CharacterSheet`: a minimal replay target keyed by World Bible entity id,
   the existing `location_set` / `inventory_*` commands only (through the
   3.34 kind modules), and the same accepted-ledger, scene-ordered,
-  invalidatable rules as mechanics state. Derivation stops discarding
-  sheet-less observations; the Workspace acquisition proposal (4.16b) and
-  Character continuity section gain the state-only path for general
-  fiction; 4.26's checks then apply to every project mode. Project and
-  snapshot schema bump with a migration and restorable backup per 4.2.
-  Update `docs/domain-model.md` §3 (subject scope) and the smoke procedures.
-  Do not add stats or resources to general fiction; this is descriptive
-  state only.
-  - **Verify.** Full-coverage tier; replay tests for a sheet-less character
-    beside a sheeted one; migration and backup-restore tests; e2e for the
-    general-fiction acquisition proposal and continuity section.
+  invalidatable rules as mechanics state. Do not add stats or resources to
+  general fiction; this is descriptive state only.
+  - **Decisions (author, 2026-11-11).** No stored starting state: a
+    sheet-less character starts with no location and nothing held, and the
+    author records their opening place and items in their first scene. So no
+    schema bump, migration, or backup change (this replaces the earlier plan
+    for one). Split in two PRs.
+  - **4.27a Subjects in derivation, replay, and review.** A state subject is
+    a sheet or a World Bible character without one. Derivation stops
+    discarding sheet-less observations; the review queue previews them; 4.26's
+    checks run for every project mode. Update `docs/domain-model.md` §3.
+    Verify: full-coverage tier; replay tests for a sheet-less character
+    beside a sheeted one; e2e for a General Fiction suggestion, acceptance,
+    and conflict finding.
+  - **4.27b Workspace surfaces.** The Workspace acquisition proposal (4.16b)
+    and scene drawer recording gain the state-only path for sheet-less
+    characters (turning on `canCaptureSelectionAsInventory` for General
+    Fiction); the World Bible Continuity overview shows each character's
+    current location and items held. Update the smoke procedures. Verify:
+    full-coverage tier; e2e for the General Fiction acquisition proposal and
+    the Continuity overview.
 
 - **4.77 Places: positions refer to place records.** Brief § 3. Add an
   optional place record id to `location_set` (through the 3.34 kind modules;

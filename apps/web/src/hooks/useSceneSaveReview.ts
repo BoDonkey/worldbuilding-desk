@@ -1,11 +1,11 @@
 import {useCallback} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import type {
-  CharacterSheet,
   StateMutationEvent,
   StoredRuleset,
   WritingDocument
 } from '../entityTypes';
+import type {StateSubject} from '../services/state/stateSubjects';
 import {
   saveWritingDocument,
   sortWritingDocuments,
@@ -34,7 +34,7 @@ import {downgradeUnknownIssuesToWarnings, hashString} from '../services/consiste
 export function useSceneSaveReview({
   documents,
   setDocuments,
-  characterSheets,
+  stateSubjects,
   actorResolutions,
   ruleset,
   stateMutationEvents,
@@ -54,7 +54,7 @@ export function useSceneSaveReview({
 }: {
   documents: WritingDocument[];
   setDocuments: Dispatch<SetStateAction<WritingDocument[]>>;
-  characterSheets: CharacterSheet[];
+  stateSubjects: StateSubject[];
   actorResolutions: ActorResolution[];
   ruleset: StoredRuleset | null;
   stateMutationEvents: StateMutationEvent[];
@@ -156,7 +156,7 @@ export function useSceneSaveReview({
                   sourceRevision: doc.updatedAt,
                   sourceHash: hashString(doc.content),
                   observations,
-                  characterSheets,
+                  stateSubjects,
                   actorResolutions,
                   ruleset,
                   existingEvents: stateMutationEvents
@@ -244,7 +244,7 @@ export function useSceneSaveReview({
       setGuardrailIssues,
       filterDismissedUnknownIssues,
       documents,
-      characterSheets,
+      stateSubjects,
       actorResolutions,
       knownConsistencyEntities,
       ruleset,

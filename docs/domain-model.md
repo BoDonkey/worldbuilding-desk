@@ -206,6 +206,15 @@ change; the mutation ledger says when it changed.
 - Replay: accepted events only, applied over a `CharacterSheet`-derived
   baseline; last accepted set-style command wins, additive commands
   accumulate, invalid commands are rejected before persistence.
+- Descriptive state (4.27): a World Bible character without a sheet is a
+  state subject keyed by its entity id. It replays from an empty baseline
+  (no location, nothing held, no ruleset defaults) and accepts only
+  `location_set` and `inventory_*` commands
+  (`DESCRIPTIVE_STATE_COMMAND_TYPES` in the engine). There is no stored
+  starting state: an author records a character's opening location and items
+  as changes in their first scene. App code builds subjects with
+  `buildStateSubjects` (`services/state/stateSubjects.ts`); derivation,
+  continuity review, and the review queue work on subjects, not sheets.
 - Deterministic review may compare prose observations with replay immediately
   before their evidence span. Impossible proposed commands surface as
   warning-level `INVALID_MUTATION` findings; incompatible custody, equipment,
@@ -217,8 +226,9 @@ change; the mutation ledger says when it changed.
   confidence/evidence/status) is strictly separate from the accepted mutation
   ledger. LLM integration affects proposal generation only; it never changes
   the event schema, replay rules, or ordering.
-- Subject scope is character-first; the event schema permits later expansion
-  to locations, factions, items, and world.
+- Subject scope is character-first: every World Bible character, with or
+  without a sheet. The event schema permits later expansion to locations,
+  factions, items, and world.
 - The command types, schemas, ordering, application, replay, and ruleset
   validation live in `packages/rules-engine/src/manuscript/`; persistence and
   project lookups stay in the web app.
