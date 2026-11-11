@@ -275,7 +275,7 @@ messages).
 | 4.24 | Fact-anchored canon contradiction detection | 4 | M | Done `ffcd1bd` |
 | 4.25 | Persisted, incremental project review | 4 | M | Done `d6e5ddd` |
 | 4.26 | State-backed continuity checks | 4 | M | Done `bd255cd` |
-| 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — (before beta, author decision 2026-11-08; after 4.76, before 4.77, so place positions reach general fiction) |
+| 4.27 | Sheet-free descriptive state for general fiction | 4 | L | WIP |
 | 4.28 | Manuscript-order validity for canon facts | 4 | M | Done `42c86de` |
 | 4.29 | Portable Markdown/CSV export + Markdown-folder import | 4 | M | Done `7cd6895` |
 | 4.30 | World Canvas — record, view mode, premise, lenses, questions (WC-1) | 4 | M | Done `f9f3e54` |
