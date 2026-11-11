@@ -492,14 +492,14 @@ export const planStatBlockInsert = (params: {
   selectedEntity: WorldEntity | null;
   style: StatBlockStyle;
   insertMode: StatBlockInsertMode;
-  projectMode: string;
+  insertsLiveStatBlocks: boolean;
   pendingRebindToken: string | null;
   content: string;
   renderCharacter: (sheet: CharacterSheet, style: StatBlockStyle, selection: StatBlockSelection) => string;
   renderItem: (entity: WorldEntity, style: StatBlockStyle) => string;
   renderTokenChip: (token: string) => string;
 }): StatBlockInsertPlan => {
-  const {sourceType, scopePreset, selection, selectedSheet, selectedEntity, style, insertMode, projectMode, pendingRebindToken} = params;
+  const {sourceType, scopePreset, selection, selectedSheet, selectedEntity, style, insertMode, insertsLiveStatBlocks, pendingRebindToken} = params;
   const hasCharacterSelection =
     scopePreset === 'all' ||
     (selection.selectedStatIds?.length ?? 0) > 0 ||
@@ -545,7 +545,7 @@ export const planStatBlockInsert = (params: {
   }
 
   const shouldInsertAsTemplate =
-    pendingRebindToken !== null || (insertMode === 'template' && projectMode !== 'litrpg');
+    pendingRebindToken !== null || (insertMode === 'template' && !insertsLiveStatBlocks);
   if (pendingRebindToken) {
     const result = replaceFirstStatBlockTokenInHtml(
       params.content,
@@ -574,7 +574,7 @@ export const planStatBlockInsert = (params: {
     insertContent: shouldInsertAsTemplate ? `<p>${params.renderTokenChip(token)}</p>` : html,
     message: shouldInsertAsTemplate
       ? 'Inserted STAT_BLOCK template token.'
-      : insertMode === 'template' && projectMode === 'litrpg'
+      : insertMode === 'template' && insertsLiveStatBlocks
         ? 'Inserted live status block (LitRPG mode auto-resolves placeholders).'
         : 'Inserted status block into scene.',
     history

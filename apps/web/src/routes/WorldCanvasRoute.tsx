@@ -50,7 +50,7 @@ function WorldCanvasRoute() {
             entities={entities}
             loreDocuments={loreDocuments}
             loreDocumentLinks={loreDocumentLinks}
-            isGeneralFiction={capabilities.isGeneralFiction}
+            hidesSystemCategories={capabilities.hidesSystemCategories}
             aliases={aliases}
             aiConfig={projectSettings?.aiSettings}
             onOpenSourceNote={(documentId) => navigate('/lore', {state: {focusLoreDocumentId: documentId}})}

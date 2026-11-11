@@ -32,7 +32,7 @@ interface WorldCanvasViewProps {
   entities?: WorldEntity[];
   loreDocuments?: LoreDocument[];
   loreDocumentLinks?: LoreDocumentLink[];
-  isGeneralFiction?: boolean;
+  hidesSystemCategories?: boolean;
   aliases?: ConsistencyAlias[];
   aiConfig?: ProjectAISettings;
   onOpenSourceNote?: (documentId: string) => void;
@@ -46,7 +46,7 @@ const targetKey = (target: CanonLinkTarget) => target.type === 'core-idea' ? 'co
 
 export function WorldCanvasView({
   worldCanvas, categories = [], entities = [], loreDocuments = [], loreDocumentLinks = [],
-  isGeneralFiction = false, aliases = [], aiConfig,
+  hidesSystemCategories = false, aliases = [], aiConfig,
   onOpenSourceNote, onOpenEntity, onProposeCanon, onFeedback
 }: WorldCanvasViewProps) {
   const [threadText, setThreadText] = useState('');
@@ -67,12 +67,12 @@ export function WorldCanvasView({
         entities,
         loreDocuments,
         links: loreDocumentLinks,
-        isGeneralFiction
+        hidesSystemCategories
       })
     : {pinned: [], suggested: [], browse: []}, [
       categories,
       entities,
-      isGeneralFiction,
+      hidesSystemCategories,
       loreDocumentLinks,
       loreDocuments,
       worldCanvas.canvas

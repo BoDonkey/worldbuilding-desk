@@ -69,12 +69,59 @@ export function normalizeFeatureToggles(params: {
   };
 }
 
-export interface ProjectCapabilities {
+/**
+ * Decisions fixed by the project mode itself (unlike the feature toggles,
+ * which the author can change). Changing what a mode does means editing
+ * this table, not the call sites.
+ */
+export interface ModeCapabilities {
+  /** Stat blocks always insert as live text, even when a placeholder is chosen. */
+  insertsLiveStatBlocks: boolean;
+  /** The story dashboard reads state events and the ruleset. */
+  tracksStoryMechanics: boolean;
+  /** Review prompts use story wording ("Add to World") instead of record wording. */
+  usesPlainReviewLanguage: boolean;
+  /** World Canvas leaves out system and negative-space categories. */
+  hidesSystemCategories: boolean;
+  /** Selected scene text can be captured as an inventory item. */
+  canCaptureSelectionAsInventory: boolean;
+}
+
+const MODE_CAPABILITIES: Record<ProjectMode, ModeCapabilities> = {
+  litrpg: {
+    insertsLiveStatBlocks: true,
+    tracksStoryMechanics: true,
+    usesPlainReviewLanguage: false,
+    hidesSystemCategories: false,
+    canCaptureSelectionAsInventory: true
+  },
+  game: {
+    insertsLiveStatBlocks: false,
+    tracksStoryMechanics: true,
+    usesPlainReviewLanguage: false,
+    hidesSystemCategories: false,
+    canCaptureSelectionAsInventory: true
+  },
+  general: {
+    insertsLiveStatBlocks: false,
+    tracksStoryMechanics: false,
+    usesPlainReviewLanguage: true,
+    hidesSystemCategories: true,
+    canCaptureSelectionAsInventory: false
+  }
+};
+
+/** Used before project settings have loaded. */
+const SETTINGS_PENDING_CAPABILITIES: ModeCapabilities = {
+  ...MODE_CAPABILITIES.litrpg,
+  tracksStoryMechanics: false
+};
+
+export interface ProjectCapabilities extends ModeCapabilities {
   canUseGameSystems: boolean;
   canUseRuntimeModifiers: boolean;
   canUseSettlementAndZoneSystems: boolean;
   canUseRuleAuthoring: boolean;
-  isGeneralFiction: boolean;
 }
 
 export function getProjectCapabilities(
@@ -82,14 +129,17 @@ export function getProjectCapabilities(
 ): ProjectCapabilities {
   const toggles = settings?.featureToggles;
   const canUseGameSystems = toggles?.enableGameSystems === true;
+  const modeCapabilities = settings
+    ? MODE_CAPABILITIES[settings.projectMode ?? 'litrpg']
+    : SETTINGS_PENDING_CAPABILITIES;
 
   return {
+    ...modeCapabilities,
     canUseGameSystems,
     canUseRuntimeModifiers:
       canUseGameSystems && toggles?.enableRuntimeModifiers === true,
     canUseSettlementAndZoneSystems:
       canUseGameSystems && toggles?.enableSettlementAndZoneSystems === true,
-    canUseRuleAuthoring: toggles?.enableRuleAuthoring === true,
-    isGeneralFiction: settings?.projectMode === 'general'
+    canUseRuleAuthoring: toggles?.enableRuleAuthoring === true
   };
 }

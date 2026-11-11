@@ -15,33 +15,33 @@ export interface WorkspaceReviewCopy {
 }
 
 export function getWorkspaceReviewCopy({
-  isGeneralFiction,
+  usesPlainReviewLanguage,
   hasBlockingIssues
 }: {
-  isGeneralFiction: boolean;
+  usesPlainReviewLanguage: boolean;
   /** Unknown names that strict save would stop on. */
   hasBlockingIssues: boolean;
 }): WorkspaceReviewCopy {
   return {
     bannerTitle: hasBlockingIssues
-      ? isGeneralFiction
+      ? usesPlainReviewLanguage
         ? 'This scene has names or places to review before strict save.'
         : 'This scene has detected references to review before strict save.'
-      : isGeneralFiction
+      : usesPlainReviewLanguage
         ? 'Project review found names or places in this scene.'
         : 'Project review found detected references in this scene.',
-    bannerBody: isGeneralFiction
+    bannerBody: usesPlainReviewLanguage
       ? 'Click an underline in the editor to add it to your world, connect it to something existing, or ignore it for now.'
       : 'Click an underline in the editor to add it to the world, connect it to an existing record, or ignore it for now.',
-    createLabel: isGeneralFiction ? 'Add to World' : 'Create record',
-    createAllLabel: isGeneralFiction ? 'Add all to World' : 'Create all as new records',
-    dismissAllLabel: isGeneralFiction
+    createLabel: usesPlainReviewLanguage ? 'Add to World' : 'Create record',
+    createAllLabel: usesPlainReviewLanguage ? 'Add all to World' : 'Create all as new records',
+    dismissAllLabel: usesPlainReviewLanguage
       ? 'Ignore all for now'
       : hasBlockingIssues
         ? 'Dismiss all for now'
         : 'Hide all warnings for now',
-    linkLabel: isGeneralFiction ? 'Connect to existing' : 'Link alias',
-    popoverMessage: isGeneralFiction
+    linkLabel: usesPlainReviewLanguage ? 'Connect to existing' : 'Link alias',
+    popoverMessage: usesPlainReviewLanguage
       ? 'Add this to your world, connect it to something you already track, or ignore it for now.'
       : 'Choose how to handle this detected reference.'
   };

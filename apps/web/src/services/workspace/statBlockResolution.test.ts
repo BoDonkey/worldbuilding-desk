@@ -210,7 +210,7 @@ describe('planStatBlockInsert', () => {
     selectedEntity: null,
     style: 'compact' as const,
     insertMode: 'block' as 'block' | 'template',
-    projectMode: 'general',
+    insertsLiveStatBlocks: false,
     pendingRebindToken: null,
     content: '<p>scene</p>',
     renderCharacter: () => '<p>CHARACTER</p>',
@@ -242,7 +242,7 @@ describe('planStatBlockInsert', () => {
     const template = planStatBlockInsert({...base, insertMode: 'template'});
     expect(template).toMatchObject({kind: 'insert', message: 'Inserted STAT_BLOCK template token.'});
     expect(template.kind === 'insert' && template.insertContent).toBe(`<p>[chip ${createStatBlockToken({sourceType: 'character', sourceRef: 's1', label: 'Sera', style: 'compact'})}]</p>`);
-    expect(planStatBlockInsert({...base, insertMode: 'template', projectMode: 'litrpg'}))
+    expect(planStatBlockInsert({...base, insertMode: 'template', insertsLiveStatBlocks: true}))
       .toMatchObject({insertContent: '<p>CHARACTER</p>', message: 'Inserted live status block (LitRPG mode auto-resolves placeholders).'});
   });
 
