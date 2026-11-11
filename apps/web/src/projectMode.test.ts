@@ -31,15 +31,13 @@ describe('mode capabilities', () => {
       insertsLiveStatBlocks,
       tracksStoryMechanics,
       usesPlainReviewLanguage,
-      hidesSystemCategories,
-      canCaptureSelectionAsInventory
+      hidesSystemCategories
     } = getProjectCapabilities(settings);
     return {
       insertsLiveStatBlocks,
       tracksStoryMechanics,
       usesPlainReviewLanguage,
-      hidesSystemCategories,
-      canCaptureSelectionAsInventory
+      hidesSystemCategories
     };
   };
 
@@ -48,8 +46,7 @@ describe('mode capabilities', () => {
       insertsLiveStatBlocks: true,
       tracksStoryMechanics: true,
       usesPlainReviewLanguage: false,
-      hidesSystemCategories: false,
-      canCaptureSelectionAsInventory: true
+      hidesSystemCategories: false
     });
   });
 
@@ -58,8 +55,7 @@ describe('mode capabilities', () => {
       insertsLiveStatBlocks: false,
       tracksStoryMechanics: true,
       usesPlainReviewLanguage: false,
-      hidesSystemCategories: false,
-      canCaptureSelectionAsInventory: true
+      hidesSystemCategories: false
     });
   });
 
@@ -68,8 +64,7 @@ describe('mode capabilities', () => {
       insertsLiveStatBlocks: false,
       tracksStoryMechanics: false,
       usesPlainReviewLanguage: true,
-      hidesSystemCategories: true,
-      canCaptureSelectionAsInventory: false
+      hidesSystemCategories: true
     });
   });
 

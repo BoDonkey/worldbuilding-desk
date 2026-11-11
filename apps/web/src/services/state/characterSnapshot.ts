@@ -14,7 +14,8 @@ import {
 } from '../compendium';
 import {sortWritingDocuments} from '../storage';
 import {findConsumableEntry} from './consumableEffects';
-import {replayCharacterState} from './stateReplay';
+import {replayCharacterState, type CharacterReplayState} from './stateReplay';
+import {replayStateSubject, type StateSubject} from './stateSubjects';
 
 export interface CharacterSnapshotStatLine {
   id: string;
@@ -87,6 +88,67 @@ const replayCutoff = (
   };
 };
 
+function describeReplayedInventory(
+  replayed: CharacterReplayState,
+  compendiumEntries: CompendiumEntry[],
+  entityById: ReadonlyMap<string, WorldEntity>
+): CharacterSnapshotInventoryLine[] {
+  return replayed.inventory.items.map((item) => {
+    const linkedEntry = item.definitionId
+      ? compendiumEntries.find((entry) => entry.id === item.definitionId) ?? null
+      : null;
+    const linkedEntityId = item.sourceEntityId ?? linkedEntry?.sourceEntityId;
+    const linkedEntity = linkedEntityId ? entityById.get(linkedEntityId) ?? null : null;
+    const resolvedItem = {
+      ...item,
+      name: linkedEntity?.name ?? linkedEntry?.name ?? item.name
+    };
+    const consumableEntry = findConsumableEntry({
+      entries: compendiumEntries,
+      item: resolvedItem
+    });
+    return {
+      ...resolvedItem,
+      equipped: replayed.inventory.equipped.some(
+        (name) => name.trim().toLocaleLowerCase() === item.name.trim().toLocaleLowerCase()
+      ),
+      consumable: consumableEntry?.consumable
+        ? {
+            definitionId: consumableEntry.id,
+            durationLabel: consumableEntry.consumable.durationLabel
+          }
+        : undefined
+    };
+  });
+}
+
+/** Where a character is and what they hold; all a character without a sheet tracks (4.27). */
+export interface DescriptiveCharacterState {
+  inventory: CharacterSnapshotInventoryLine[];
+  location?: string;
+}
+
+export function buildDescriptiveCharacterState(params: {
+  subject: StateSubject;
+  events: StateMutationEvent[];
+  actorResolutions?: ActorResolution[];
+  position: CharacterSnapshotPosition;
+  compendiumEntries: CompendiumEntry[];
+  entityById: ReadonlyMap<string, WorldEntity>;
+}): DescriptiveCharacterState {
+  const replayed = replayStateSubject({
+    subject: params.subject,
+    ruleset: null,
+    events: params.events,
+    actorResolutions: params.actorResolutions,
+    ...replayCutoff(params.position)
+  });
+  return {
+    inventory: describeReplayedInventory(replayed, params.compendiumEntries, params.entityById),
+    location: replayed.locationName
+  };
+}
+
 export function buildCharacterSnapshot(params: {
   sheet: CharacterSheet;
   ruleset: StoredRuleset | null;
@@ -147,33 +209,7 @@ export function buildCharacterSnapshot(params: {
         max: effective.max
       };
     }),
-    inventory: replayed.inventory.items.map((item) => {
-      const linkedEntry = item.definitionId
-        ? params.compendiumEntries.find((entry) => entry.id === item.definitionId) ?? null
-        : null;
-      const linkedEntityId = item.sourceEntityId ?? linkedEntry?.sourceEntityId;
-      const linkedEntity = linkedEntityId ? params.entityById.get(linkedEntityId) ?? null : null;
-      const resolvedItem = {
-        ...item,
-        name: linkedEntity?.name ?? linkedEntry?.name ?? item.name
-      };
-      const consumableEntry = findConsumableEntry({
-        entries: params.compendiumEntries,
-        item: resolvedItem
-      });
-      return {
-        ...resolvedItem,
-        equipped: replayed.inventory.equipped.some(
-          (name) => name.trim().toLocaleLowerCase() === item.name.trim().toLocaleLowerCase()
-        ),
-        consumable: consumableEntry?.consumable
-          ? {
-              definitionId: consumableEntry.id,
-              durationLabel: consumableEntry.consumable.durationLabel
-            }
-          : undefined
-      };
-    }),
+    inventory: describeReplayedInventory(replayed, params.compendiumEntries, params.entityById),
     statuses: Array.from(new Set([...replayed.statuses, ...runtimeModifiers.notes])),
     location: replayed.locationName
   };

@@ -34,10 +34,7 @@ import {
   saveStateMutationEvent,
   sortWritingDocuments
 } from '../services/storage';
-import {
-  replayCharacterState,
-  validateStateMutationEventForRuleset
-} from '../services/state/stateReplay';
+import {validateStateMutationEventForRuleset} from '../services/state/stateReplay';
 import {validateStateMutationEvent} from '../services/state/stateMutationSchemas';
 import {
   buildCharacterSnapshot,
@@ -49,6 +46,13 @@ import {
   buildSelectedSceneTimeline
 } from '../services/workspace/workspaceView';
 import {describeError} from '../services/errors';
+import {isCharacterCategory} from '../services/characters/characterIdentity';
+import {
+  buildStateSubjectLookup,
+  buildStateSubjects,
+  findStateSubject,
+  replayStateSubject
+} from '../services/state/stateSubjects';
 
 export type {PendingPositionedChange, PendingInventoryCapture} from '../services/workspace/sceneRosterMutationTypes';
 
@@ -146,6 +150,18 @@ export function useWorkspaceSceneRoster({
     ]
   );
 
+  // Every character whose state can be shown or recorded: sheets first, then
+  // World Bible characters without one (4.27).
+  const stateSubjects = useMemo(() => {
+    const characterCategoryIds = new Set(
+      categories.filter(isCharacterCategory).map((category) => category.id)
+    );
+    return buildStateSubjects({
+      characterSheets,
+      characterEntities: entities.filter((entity) => characterCategoryIds.has(entity.categoryId))
+    });
+  }, [categories, characterSheets, entities]);
+
   const addSceneRosterEntry = useCallback(
     (candidateKey: string) => {
       if (!selectedDocument) return;
@@ -157,8 +173,8 @@ export function useWorkspaceSceneRoster({
   const inventoryCaptureCharacters = useMemo(
     () =>
       sceneRosterModel.characters.flatMap((character) =>
-        character.sheetId
-          ? [{sheetId: character.sheetId, name: character.name}]
+        character.actorId
+          ? [{actorId: character.actorId, name: character.name, hasSheet: character.hasSheet}]
           : []
       ),
     [sceneRosterModel.characters]
@@ -172,21 +188,14 @@ export function useWorkspaceSceneRoster({
       ) + 1;
     if (sceneOrder <= 0) return [];
     return inventoryCaptureCharacters.flatMap((character) => {
-      const sheet = characterSheets.find((entry) => entry.id === character.sheetId);
-      if (!sheet?.characterEntityId) return [];
+      const subject = findStateSubject(character.actorId, stateSubjects);
+      if (!subject || subject.legacy) return [];
       return [{
         ...character,
-        actorId: sheet.characterEntityId,
-        before: replayCharacterState({
-          sheet,
+        before: replayStateSubject({
+          subject,
           ruleset,
           events: resolvedStateMutationEvents,
-          target: {
-            actorId: sheet.characterEntityId,
-            characterId: sheet.characterId,
-            sheetId: sheet.id,
-            actorName: sheet.name
-          },
           actorResolutions,
           upToSceneOrder: sceneOrder,
           upToScenePosition: pendingInventoryCapture?.position ?? sceneCursorPosition
@@ -195,14 +204,14 @@ export function useWorkspaceSceneRoster({
     });
   }, [
     actorResolutions,
-    characterSheets,
     documents,
     inventoryCaptureCharacters,
     pendingInventoryCapture?.position,
     resolvedStateMutationEvents,
     ruleset,
     sceneCursorPosition,
-    selectedDocument
+    selectedDocument,
+    stateSubjects
   ]);
 
   const openSelectionInventoryCapture = useCallback(
@@ -218,7 +227,7 @@ export function useWorkspaceSceneRoster({
       if (inventoryCaptureCharacters.length === 0) {
         setFeedback({
           tone: 'error',
-          message: 'Add a character with a mechanics sheet to the scene before recording inventory.'
+          message: 'Add a World Bible character to the scene before recording inventory.'
         });
         return;
       }
@@ -240,7 +249,7 @@ export function useWorkspaceSceneRoster({
         sourceHash: hashSceneContent(selectedDocument.content),
         itemName: detected?.itemName ?? input.itemName.trim(),
         evidenceText: input.itemName.trim(),
-        suggestedSheetId: detected?.sheetId,
+        suggestedActorId: detected?.actorId,
         action: detected?.action ?? 'acquire',
         position,
         anchor
@@ -258,7 +267,7 @@ export function useWorkspaceSceneRoster({
 
   const saveSelectionInventoryCapture = useCallback(
     async (input: {
-      sheetId: string;
+      actorId: string;
       itemName: string;
       quantity: number;
       saveReusable: boolean;
@@ -267,7 +276,7 @@ export function useWorkspaceSceneRoster({
     }) => {
       const result = planSelectionInventoryCapture({
         input, activeProject, selectedDocument,
-        pendingInventoryCapture, content, characterSheets, documents, categories,
+        pendingInventoryCapture, content, stateSubjects, documents, categories,
         entities, compendiumEntries, stateMutationEvents, now: Date.now(),
         ids: {entity: crypto.randomUUID(), definition: crypto.randomUUID(), event: crypto.randomUUID()}
       });
@@ -276,7 +285,7 @@ export function useWorkspaceSceneRoster({
         setFeedback({tone: 'error', message: result.error});
         return;
       }
-      const {sheet, plan} = result.value;
+      const {subject, plan} = result.value;
       setSavingInventoryCapture(true);
       try {
         await applyItemStateAuthoringPlan({plan, ruleset});
@@ -284,7 +293,7 @@ export function useWorkspaceSceneRoster({
         setFeedback({
           tone: 'success',
           message: `Added ${input.itemName}${input.quantity > 1 ? ` ×${input.quantity}` : ''
-            } to ${sheet.name}'s inventory.`
+            } to ${subject.name}'s inventory.`
         });
       } catch (error) {
         setFeedback({
@@ -299,7 +308,6 @@ export function useWorkspaceSceneRoster({
     [
       activeProject,
       categories,
-      characterSheets,
       compendiumEntries,
       content,
       documents,
@@ -310,13 +318,14 @@ export function useWorkspaceSceneRoster({
       setFeedback,
       setPendingInventoryCapture,
       setSavingInventoryCapture,
-      stateMutationEvents
+      stateMutationEvents,
+      stateSubjects
     ]
   );
 
   const saveSelectionConsumptionCapture = useCallback(
     async (input: {
-      sheetId: string;
+      actorId: string;
       itemName: string;
       commands: StateMutationEvent['commands'];
       rememberedConsumable?: CompendiumEntry['consumable'];
@@ -326,7 +335,7 @@ export function useWorkspaceSceneRoster({
     }) => {
       const result = planSelectionConsumptionCapture({
         input, activeProject, selectedDocument,
-        pendingInventoryCapture, content, characterSheets, documents, categories,
+        pendingInventoryCapture, content, stateSubjects, documents, categories,
         entities, compendiumEntries, stateMutationEvents, now: Date.now(),
         ids: {entity: crypto.randomUUID(), definition: crypto.randomUUID(), event: crypto.randomUUID()}
       });
@@ -335,15 +344,15 @@ export function useWorkspaceSceneRoster({
         setFeedback({tone: 'error', message: result.error});
         return;
       }
-      const {sheet, plan} = result.value;
-      const before = inventoryCaptureContexts.find((entry) => entry.sheetId === input.sheetId)?.before;
+      const {subject, plan} = result.value;
+      const before = inventoryCaptureContexts.find((entry) => entry.actorId === input.actorId)?.before;
       setSavingInventoryCapture(true);
       try {
         await applyItemStateAuthoringPlan({plan, ruleset, before});
         setPendingInventoryCapture(null);
         setFeedback({
           tone: 'success',
-          message: `Recorded ${sheet.name} using ${input.itemName}.`
+          message: `Recorded ${subject.name} using ${input.itemName}.`
         });
       } catch (error) {
         setFeedback({
@@ -357,7 +366,6 @@ export function useWorkspaceSceneRoster({
     [
       activeProject,
       categories,
-      characterSheets,
       compendiumEntries,
       content,
       documents,
@@ -369,7 +377,8 @@ export function useWorkspaceSceneRoster({
       setFeedback,
       setPendingInventoryCapture,
       setSavingInventoryCapture,
-      stateMutationEvents
+      stateMutationEvents,
+      stateSubjects
     ]
   );
 
@@ -387,31 +396,28 @@ export function useWorkspaceSceneRoster({
       !['inventory_add', 'inventory_consume'].includes(command.type)
     ) return;
     const inventoryCommand = command as InventoryQuantityStateMutationCommand;
-    const sheet = characterSheets.find(
-      (entry) =>
-        entry.characterEntityId === inventoryCommand.actorId ||
-        entry.characterId === inventoryCommand.actorId ||
-        entry.id === inventoryCommand.actorId
-    );
-    if (!sheet) return;
+    const subject = buildStateSubjectLookup(stateSubjects, actorResolutions)
+      .get(inventoryCommand.actorId);
+    if (!subject || subject.legacy) return;
     setPendingInventoryCapture({
       sceneId: event.sceneId,
       sourceHash: event.sourceHash,
       itemName: inventoryCommand.itemName,
-      evidenceText: event.label ?? `${sheet.name} · ${inventoryCommand.itemName}`,
-      suggestedSheetId: sheet.id,
+      evidenceText: event.label ?? `${subject.name} · ${inventoryCommand.itemName}`,
+      suggestedActorId: subject.actorId,
       action: inventoryCommand.type === 'inventory_consume' ? 'consume' : 'acquire',
       proposalEventId: event.id,
       position: event.scenePosition ?? 0,
       anchor: event.sceneAnchor ?? {before: '', after: ''}
     });
-  }, [characterSheets, setPendingInventoryCapture, stateMutationEvents]);
+  }, [actorResolutions, setPendingInventoryCapture, stateMutationEvents, stateSubjects]);
 
   const sceneRosterTimeline = useMemo(() => buildRosterTimeline({
-    selectedDocument, characterSheets, stateMutationEvents, stateMutationAnchorResolutionById,
+    selectedDocument, stateSubjects, actorResolutions, stateMutationEvents, stateMutationAnchorResolutionById,
     resourceDefinitionNameById, statDefinitionNameById
   }), [
-    characterSheets,
+    actorResolutions,
+    stateSubjects,
     resourceDefinitionNameById,
     selectedDocument,
     stateMutationAnchorResolutionById,
@@ -429,7 +435,7 @@ export function useWorkspaceSceneRoster({
 
   const recordSceneRosterChangeHere = useCallback(
     (character: SceneRosterCharacterCard) => {
-      if (!character.sheetId || !selectedDocument) return;
+      if ((!character.sheetId && !character.actorId) || !selectedDocument) return;
       if (selectedDocument.content !== content) {
         setFeedback({
           tone: 'error',
@@ -459,7 +465,7 @@ export function useWorkspaceSceneRoster({
 
   const consumeSceneRosterItemHere = useCallback(
     (character: SceneRosterCharacterCard, item: SceneRosterInventoryLine) => {
-      const result = planRosterConsumption({character, item, characterSheets, compendiumEntries, content, sceneCursorAnchor, selectedDocument});
+      const result = planRosterConsumption({character, item, stateSubjects, compendiumEntries, content, sceneCursorAnchor, selectedDocument});
       if (!result) return;
       if (result.error !== undefined) {
         setFeedback({tone: 'error', message: result.error});
@@ -469,20 +475,20 @@ export function useWorkspaceSceneRoster({
       setSceneRosterStateMoment('cursor');
     },
     [
-      characterSheets,
       compendiumEntries,
       content,
       sceneCursorAnchor,
       selectedDocument,
       setFeedback,
       setPendingPositionedChange,
-      setSceneRosterStateMoment
+      setSceneRosterStateMoment,
+      stateSubjects
     ]
   );
 
   const expireSceneRosterTimelineEvent = useCallback(
     (eventId: string) => {
-      const result = planRosterExpiration({eventId, characterSheets, compendiumEntries, content, sceneCursorAnchor, characters: sceneRosterModel.characters, selectedDocument, stateMutationEvents});
+      const result = planRosterExpiration({eventId, stateSubjects, compendiumEntries, content, sceneCursorAnchor, characters: sceneRosterModel.characters, selectedDocument, stateMutationEvents});
       if (!result) return;
       if (result.error !== undefined) {
         setFeedback({tone: 'error', message: result.error});
@@ -492,7 +498,6 @@ export function useWorkspaceSceneRoster({
       setSceneRosterStateMoment('cursor');
     },
     [
-      characterSheets,
       compendiumEntries,
       content,
       sceneCursorAnchor,
@@ -501,13 +506,14 @@ export function useWorkspaceSceneRoster({
       setFeedback,
       setPendingPositionedChange,
       setSceneRosterStateMoment,
-      stateMutationEvents
+      stateMutationEvents,
+      stateSubjects
     ]
   );
 
   const editSceneRosterTimelineEvent = useCallback(
     (eventId: string) => {
-      const result = planRosterTimelineEdit({eventId, characterSheets, characters: sceneRosterModel.characters, stateMutationEvents, stateMutationAnchorResolutionById, sceneCursorSnapshot});
+      const result = planRosterTimelineEdit({eventId, stateSubjects, characters: sceneRosterModel.characters, stateMutationEvents, stateMutationAnchorResolutionById, sceneCursorSnapshot});
       if (!result) return;
       if (result.error !== undefined) {
         setFeedback({tone: 'error', message: result.error});
@@ -520,7 +526,6 @@ export function useWorkspaceSceneRoster({
       setPendingPositionedChange(pending);
     },
     [
-      characterSheets,
       sceneCursorSnapshot,
       sceneRosterModel.characters,
       setFeedback,
@@ -529,7 +534,8 @@ export function useWorkspaceSceneRoster({
       setSceneCursorPosition,
       setSceneRosterStateMoment,
       stateMutationAnchorResolutionById,
-      stateMutationEvents
+      stateMutationEvents,
+      stateSubjects
     ]
   );
 
@@ -590,25 +596,19 @@ export function useWorkspaceSceneRoster({
     ]
   );
 
-  const pendingPositionedSheet = useMemo(
-    () =>
-      pendingPositionedChange?.character.sheetId
-        ? characterSheets.find(
-          (candidate) =>
-            candidate.id === pendingPositionedChange.character.sheetId
-        ) ?? null
-        : null,
-    [characterSheets, pendingPositionedChange]
-  );
+  const pendingPositionedSubject = useMemo(() => {
+    const card = pendingPositionedChange?.character;
+    return card ? findStateSubject(card.actorId ?? card.sheetId, stateSubjects) : null;
+  }, [pendingPositionedChange, stateSubjects]);
 
   const positionedChangeBefore = useMemo(() => buildPositionedChangeBefore({
-    pendingPositionedSheet, selectedDocument, documents, ruleset, resolvedStateMutationEvents,
+    pendingPositionedSubject, selectedDocument, documents, ruleset, resolvedStateMutationEvents,
     pendingPositionedChange, actorResolutions, sceneCursorPosition
   }), [
     actorResolutions,
     documents,
     pendingPositionedChange,
-    pendingPositionedSheet,
+    pendingPositionedSubject,
     ruleset,
     sceneCursorPosition,
     selectedDocument,
@@ -620,7 +620,7 @@ export function useWorkspaceSceneRoster({
       if (
         !activeProject ||
         !selectedDocument ||
-        !pendingPositionedSheet ||
+        !pendingPositionedSubject ||
         !pendingPositionedChange ||
         input.commands.length === 0
       ) {
@@ -628,7 +628,7 @@ export function useWorkspaceSceneRoster({
       }
       const result = planPositionedChange({
         input, projectId: activeProject.id, selectedDocument,
-        documents, pendingPositionedSheet, pendingPositionedChange, stateMutationEvents,
+        documents, pendingPositionedSubject, pendingPositionedChange, stateMutationEvents,
         sceneCursorPosition, sceneCursorAnchor, eventId: crypto.randomUUID(), now: Date.now()
       });
       if (!result) return;
@@ -641,7 +641,10 @@ export function useWorkspaceSceneRoster({
       setSavingPositionedChange(true);
       try {
         validateStateMutationEvent(event);
-        const rulesetIssues = validateStateMutationEventForRuleset({event, ruleset});
+        const rulesetIssues = validateStateMutationEventForRuleset({
+          event,
+          ruleset: pendingPositionedSubject.sheet ? ruleset : null
+        });
         if (rulesetIssues.length > 0) {
           throw new Error(rulesetIssues.join(' '));
         }
@@ -668,7 +671,7 @@ export function useWorkspaceSceneRoster({
       activeProject,
       documents,
       pendingPositionedChange,
-      pendingPositionedSheet,
+      pendingPositionedSubject,
       ruleset,
       sceneCursorAnchor,
       sceneCursorPosition,
@@ -776,7 +779,7 @@ export function useWorkspaceSceneRoster({
     editSceneRosterTimelineEvent,
     invalidateSceneRosterTimelineEvent,
     reanchorSceneRosterTimelineEvent,
-    pendingPositionedSheet,
+    pendingPositionedSubject,
     positionedChangeBefore,
     savePositionedChange,
     selectedSceneTimeline,

@@ -214,7 +214,9 @@ change; the mutation ledger says when it changed.
   starting state: an author records a character's opening location and items
   as changes in their first scene. App code builds subjects with
   `buildStateSubjects` (`services/state/stateSubjects.ts`); derivation,
-  continuity review, and the review queue work on subjects, not sheets.
+  continuity review, the review queue, and the Workspace scene roster and
+  capture dialogs (4.27b) work on subjects, not sheets; new commands use the
+  subject's World Bible id.
 - Deterministic review may compare prose observations with replay immediately
   before their evidence span. Impossible proposed commands surface as
   warning-level `INVALID_MUTATION` findings; incompatible custody, equipment,

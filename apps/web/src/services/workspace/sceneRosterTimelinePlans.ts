@@ -1,4 +1,4 @@
-import type {CharacterSheet, CompendiumEntry, StateMutationEvent, WritingDocument} from '../../entityTypes';
+import type {CompendiumEntry, StateMutationEvent, WritingDocument} from '../../entityTypes';
 import type {SceneRosterCharacterCard, SceneRosterInventoryLine, SceneRosterTimelineEvent} from './sceneRosterTypes';
 import {type PendingPositionedChange, type RosterPlanResult} from './sceneRosterMutationTypes';
 import {buildConsumableCommands, buildConsumableExpirationCommands} from '../state/consumableEffects';
@@ -10,9 +10,23 @@ import {
 } from '../state/stateMutationAnchor';
 import {compareStateMutationEvents} from '../state/stateReplay';
 import {summarizeStateMutationCommand} from '../state/stateMutationPresentation';
+import {buildStateSubjectLookup, findStateSubject, type StateSubject} from '../state/stateSubjects';
+import type {ActorResolution} from '../characters/characterIdentity';
+/** The roster card showing this subject, if the character is in the scene. */
+export function findRosterCardForSubject(
+  characters: SceneRosterCharacterCard[],
+  subject: StateSubject | null
+): SceneRosterCharacterCard | null {
+  if (!subject) return null;
+  return characters.find((card) =>
+    (card.actorId !== undefined && card.actorId === subject.actorId) ||
+    (subject.sheet !== null && card.sheetId === subject.sheet.id)
+  ) ?? null;
+}
+
 type AnchorResolutions = Map<string, ReturnType<typeof resolveStateMutationAnchor> | null>;
 interface TimelineContext {
-  characterSheets: CharacterSheet[];
+  stateSubjects: StateSubject[];
   compendiumEntries: CompendiumEntry[];
   content: string;
   sceneCursorAnchor: StateMutationTextAnchor;
@@ -24,7 +38,7 @@ interface TimelineContext {
 export function planRosterConsumption({
   character,
   item,
-  characterSheets,
+  stateSubjects,
   compendiumEntries,
   content,
   sceneCursorAnchor,
@@ -44,13 +58,13 @@ export function planRosterConsumption({
   const entry = compendiumEntries.find((candidate) => candidate.id === item.consumable?.definitionId);
   if (!entry?.consumable)
     return null;
-  const sheet = characterSheets.find((candidate) => candidate.id === character.sheetId);
-  if (!sheet)
+  const subject = findStateSubject(character.sheetId, stateSubjects);
+  if (!subject?.sheet)
     return null;
-  if (!sheet.characterEntityId) {
+  if (subject.legacy) {
     return {error: 'Resolve this legacy sheet to a World Bible character before recording state.'};
   }
-  const actorId = sheet.characterEntityId;
+  const actorId = subject.actorId;
   return {
     value: {
       character,
@@ -72,7 +86,7 @@ export function planRosterConsumption({
 
 export function planRosterExpiration({
   eventId,
-  characterSheets,
+  stateSubjects,
   compendiumEntries,
   content,
   sceneCursorAnchor,
@@ -93,8 +107,7 @@ export function planRosterExpiration({
   }
   const entry = compendiumEntries.find((candidate) => candidate.id === sourceEvent.consumableEffect?.definitionId);
   const actorId = sourceEvent.commands[0]?.actorId;
-  const sheet = characterSheets.find((candidate) => candidate.id === actorId || candidate.characterId === actorId);
-  const character = characters.find((candidate) => candidate.sheetId === sheet?.id);
+  const character = findRosterCardForSubject(characters, findStateSubject(actorId, stateSubjects));
   if (!entry?.consumable || !actorId || !character) {
     return {error: 'Add the affected character to the scene roster before placing the expiration.'};
   }
@@ -119,12 +132,12 @@ export function planRosterExpiration({
 
 export function planRosterTimelineEdit({
   eventId,
-  characterSheets,
+  stateSubjects,
   characters,
   stateMutationEvents,
   stateMutationAnchorResolutionById,
   sceneCursorSnapshot
-}: Pick<TimelineContext, 'characterSheets' | 'characters' | 'stateMutationEvents'> & {
+}: Pick<TimelineContext, 'stateSubjects' | 'characters' | 'stateMutationEvents'> & {
   eventId: string;
   stateMutationAnchorResolutionById: AnchorResolutions;
   sceneCursorSnapshot: EditorTextSnapshot;
@@ -137,9 +150,8 @@ export function planRosterTimelineEdit({
   if (!event || event.scenePosition === undefined)
     return null;
   const actorId = event.commands[0]?.actorId;
-  const sheet = characterSheets.find((candidate) => candidate.id === actorId || candidate.characterId === actorId);
-  const character = characters.find((entry) => entry.sheetId === sheet?.id);
-  if (!sheet || !character) {
+  const character = findRosterCardForSubject(characters, findStateSubject(actorId, stateSubjects));
+  if (!character) {
     return {error: 'Add this character to the scene roster before editing the change.'};
   }
   const resolution = stateMutationAnchorResolutionById.get(event.id);
@@ -158,14 +170,16 @@ export function planRosterTimelineEdit({
 
 export function buildRosterTimeline({
   selectedDocument,
-  characterSheets,
+  stateSubjects,
+  actorResolutions,
   stateMutationEvents,
   stateMutationAnchorResolutionById,
   resourceDefinitionNameById,
   statDefinitionNameById
 }: {
   selectedDocument: WritingDocument | null;
-  characterSheets: CharacterSheet[];
+  stateSubjects: StateSubject[];
+  actorResolutions?: ActorResolution[];
   stateMutationEvents: StateMutationEvent[];
   stateMutationAnchorResolutionById: AnchorResolutions;
   resourceDefinitionNameById: Map<string, string>;
@@ -173,12 +187,7 @@ export function buildRosterTimeline({
 }): SceneRosterTimelineEvent[] {
   if (!selectedDocument)
     return [];
-  const sheetByActorId = new Map<string, CharacterSheet>();
-  characterSheets.forEach((sheet) => {
-    sheetByActorId.set(sheet.id, sheet);
-    if (sheet.characterId)
-      sheetByActorId.set(sheet.characterId, sheet);
-  });
+  const subjectByActorId = buildStateSubjectLookup(stateSubjects, actorResolutions);
   const expiredSourceIds = new Set(stateMutationEvents
     .filter((event) => event.status === 'accepted' && event.consumableEffect?.phase === 'expire')
     .flatMap((event) => event.consumableEffect?.sourceEventId
@@ -191,11 +200,11 @@ export function buildRosterTimeline({
     .map((event) => {
     const anchorResolution = stateMutationAnchorResolutionById.get(event.id);
     const actorId = event.commands[0]?.actorId;
-    const sheet = actorId ? sheetByActorId.get(actorId) : null;
+    const subject = actorId ? subjectByActorId.get(actorId) : null;
     return {
       id: event.id,
       label: event.label?.trim() || `Scene change ${event.sceneSequence ?? ''}`.trim(),
-      actorLabel: sheet?.name ?? 'Unknown character',
+      actorLabel: subject?.name ?? 'Unknown character',
       position: anchorResolution && anchorResolution.status !== 'unresolved'
         ? anchorResolution.position
         : event.scenePosition,

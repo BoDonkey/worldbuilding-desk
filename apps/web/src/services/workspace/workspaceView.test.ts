@@ -165,6 +165,53 @@ describe('buildSceneRosterModel', () => {
   });
 });
 
+describe('buildSceneRosterModel for characters without a sheet (4.27b)', () => {
+  const sera: WorldEntity = {
+    id: 'entity-sera', projectId: 'project-1', categoryId: 'characters', name: 'Sera',
+    fields: {role: 'Smuggler'}, links: [], createdAt: 1, updatedAt: 1
+  };
+  const seraScene: WritingDocument = {...scene, content: '<p>Sera waits as Mira visits the Citadel.</p>'};
+  const event: StateMutationEvent = {
+    id: 'event-sera', projectId: 'project-1', sceneId: scene.id, sceneTitle: scene.title,
+    sceneOrder: 1, sceneSequence: 1, scenePosition: 0, sourceRevision: 2, sourceHash: 'h',
+    status: 'accepted', sourceType: 'manual', createdAt: 1,
+    commands: [
+      {type: 'location_set', actorId: 'entity-sera', locationName: 'South Harbor'},
+      {type: 'inventory_add', actorId: 'entity-sera', itemName: 'Brass Key', quantity: 1}
+    ]
+  };
+  const build = (overrides: Partial<Parameters<typeof buildSceneRosterModel>[0]> = {}) =>
+    buildSceneRosterModel({
+      selectedDocument: seraScene, categories, characters: [character],
+      entities: [...entities, sera], characterSheets: [sheet], aliases: [],
+      content: seraScene.content, overrides: {pinnedKeys: [], hiddenKeys: []},
+      documents: [seraScene], ruleset: null, stateMutationEvents: [event],
+      stateMoment: 'ending', cursorPosition: 0, runtimeModifiers,
+      statDefinitionNameById: new Map(), resourceDefinitionNameById: new Map(),
+      compendiumEntries: [], ...overrides
+    });
+
+  it('adds a World Bible character with no sheet or record, carrying place and items', () => {
+    const card = build().characters.find((entry) => entry.name === 'Sera');
+    expect(card).toMatchObject({
+      key: 'character-entity:entity-sera', id: 'entity-sera', actorId: 'entity-sera',
+      role: 'Smuggler', hasSheet: false, location: 'South Harbor', stats: [], resources: []
+    });
+    expect(card?.inventory).toEqual([
+      expect.objectContaining({name: 'Brass Key', quantity: 1})
+    ]);
+    expect(card?.sheetId).toBeUndefined();
+  });
+
+  it('shows no state before the change and lists each character once', () => {
+    const model = build({stateMoment: 'opening'});
+    expect(model.characters.map((entry) => entry.name).sort()).toEqual(['Mira', 'Sera']);
+    expect(model.characters.find((entry) => entry.name === 'Sera')).toMatchObject({
+      location: undefined, inventory: []
+    });
+  });
+});
+
 describe('buildSelectedSceneTimeline', () => {
   it('returns null without a selected scene', () => {
     expect(

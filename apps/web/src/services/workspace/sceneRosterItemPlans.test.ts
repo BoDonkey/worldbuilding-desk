@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {planSelectionConsumptionCapture, planSelectionInventoryCapture} from './sceneRosterItemPlans';
-import {captureContext, pickupInput, sheet, definition, event, capture, scene} from './sceneRosterPlanFixtures.testSupport';
+import {captureContext, pickupInput, sheet, subjectsFor, definition, event, capture, scene} from './sceneRosterPlanFixtures.testSupport';
 import {replayCharacterState} from '../state/stateReplay';
 import {validateItemStateAuthoringPlan} from '../state/itemStateAuthoringService';
 
@@ -45,7 +45,7 @@ describe('scene roster item write plans', () => {
     const context = build === planSelectionInventoryCapture ? {...base, pendingInventoryCapture: capture} : base;
     expect(build({...context, content: scene.content + ' changed'})?.error).toContain('source prose changed');
     expect(build({...context, pendingInventoryCapture: {...context.pendingInventoryCapture, sceneId: 'other'}})?.error).toContain('source prose changed');
-    expect(build({...context, characterSheets: [{...sheet, characterEntityId: undefined}]})?.error).toContain('before recording state');
+    expect(build({...context, stateSubjects: subjectsFor({...sheet, characterEntityId: undefined})})?.error).toContain('before recording state');
     expect(build({...context, categories: [], input: {...context.input, saveReusable: true}})?.error).toContain('Items category');
     expect(build({...context, documents: []})).toBeNull();
   });
@@ -53,8 +53,8 @@ describe('scene roster item write plans', () => {
   it('pins distinct acquire/consume no-op and wrong-action guards', () => {
     expect(planSelectionInventoryCapture({...consumeContext, input: pickupInput})?.error).toContain('consumption proposal');
     expect(planSelectionConsumptionCapture({...captureContext, input: consumeInput})).toBeNull();
-    expect(planSelectionInventoryCapture({...captureContext, characterSheets: [], input: pickupInput})).toBeNull();
-    expect(planSelectionConsumptionCapture({...consumeContext, characterSheets: [], input: consumeInput})?.error).toContain('World Bible canon');
+    expect(planSelectionInventoryCapture({...captureContext, stateSubjects: [], input: pickupInput})).toBeNull();
+    expect(planSelectionConsumptionCapture({...consumeContext, stateSubjects: [], input: consumeInput})?.error).toContain('World Bible canon');
   });
 
   it('consumes the corpus baseline once and supersedes only the reviewed proposal', () => {
@@ -85,5 +85,18 @@ describe('scene roster item write plans', () => {
     const result = planSelectionConsumptionCapture({...consumeContext, compendiumEntries: [definition], input: {...consumeInput, rememberedConsumable: {effects: []}}})!.value!.plan;
     expect(result.compendiumEntryToSave).toMatchObject({id: definition.id, tags: definition.tags, createdAt: 1, updatedAt: 100, consumable: {effects: []}});
     expect(result.event.consumableEffect?.definitionId).toBe(definition.id);
+  });
+
+  it('records a pickup and a plain item use for a World Bible character without a sheet (4.27b)', () => {
+    const wren = {actorId: 'entity-wren', name: 'Wren', sheet: null, legacy: false};
+    const pickup = planSelectionInventoryCapture({...captureContext, stateSubjects: [wren], input: {...pickupInput, actorId: 'entity-wren'}})!.value!;
+    expect(pickup.subject).toBe(wren);
+    expect(pickup.plan.event.commands).toEqual([expect.objectContaining({type: 'inventory_add', actorId: 'entity-wren', quantity: 2})]);
+    const consume = {...consumeContext, stateSubjects: [wren]};
+    const used = planSelectionConsumptionCapture({...consume, input: {...consumeInput, actorId: 'entity-wren'}})!.value!;
+    expect(used.plan.event.commands).toEqual([expect.objectContaining({type: 'inventory_consume', actorId: 'entity-wren'})]);
+    const withEffect = [...event.commands, {type: 'stat_change' as const, actorId: 'x', statDefinitionId: 'strength', delta: 3}];
+    expect(planSelectionConsumptionCapture({...consume, input: {...consumeInput, actorId: 'entity-wren', commands: withEffect}})?.error)
+      .toContain('only item and place changes');
   });
 });

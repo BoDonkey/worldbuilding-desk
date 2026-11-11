@@ -49,7 +49,7 @@ export function WorkspaceSceneStateDialogs({
     isSavingInventoryCapture
   } = sceneCursor;
   const {
-    pendingPositionedSheet,
+    pendingPositionedSubject,
     positionedChangeBefore,
     savePositionedChange,
     inventoryCaptureCharacters,
@@ -85,7 +85,7 @@ export function WorkspaceSceneStateDialogs({
     : null;
 
   const isPositionedChangeDialogOpen = Boolean(
-    pendingPositionedChange && pendingPositionedSheet && positionedChangeBefore
+    pendingPositionedChange && pendingPositionedSubject && positionedChangeBefore
   );
   const closePositionedChangeDialog = useCallback(() => {
     setPendingPositionedChange(null);
@@ -104,7 +104,7 @@ export function WorkspaceSceneStateDialogs({
 
   return (
     <>
-      {pendingPositionedChange && pendingPositionedSheet && positionedChangeBefore && (
+      {pendingPositionedChange && pendingPositionedSubject && positionedChangeBefore && (
         <div
           ref={positionedChangeDialogRef}
           role='dialog'
@@ -119,8 +119,9 @@ export function WorkspaceSceneStateDialogs({
               characterName={pendingPositionedChange.character.name}
               sceneTitle={sceneTitle}
               cursorPosition={pendingPositionedChange.event?.scenePosition ?? sceneCursorPosition}
-              actorId={pendingPositionedSheet.characterEntityId ?? ''}
+              actorId={pendingPositionedSubject.actorId}
               ruleset={ruleset}
+              descriptiveOnly={!pendingPositionedSubject.sheet}
               before={positionedChangeBefore}
               existingEvent={pendingPositionedChange.event}
               initialLabel={pendingPositionedChange.initialLabel}
@@ -151,7 +152,7 @@ export function WorkspaceSceneStateDialogs({
                 itemName={pendingInventoryCapture.itemName}
                 evidenceText={pendingInventoryCapture.evidenceText}
                 contexts={inventoryCaptureContexts}
-                suggestedSheetId={pendingInventoryCapture.suggestedSheetId}
+                suggestedActorId={pendingInventoryCapture.suggestedActorId}
                 ruleset={ruleset}
                 approvedEntry={pendingConsumableEntry}
                 itemReference={{
@@ -175,7 +176,7 @@ export function WorkspaceSceneStateDialogs({
                 itemName={pendingInventoryCapture.itemName}
                 characters={inventoryCaptureCharacters}
                 evidenceText={pendingInventoryCapture.evidenceText}
-                suggestedSheetId={pendingInventoryCapture.suggestedSheetId}
+                suggestedActorId={pendingInventoryCapture.suggestedActorId}
                 exactReusableItem={exactReusableInventoryEntity}
                 reusableItemMatches={pendingInventoryResolution?.entityMatches ?? []}
                 canCreateReusableItem={categories.some(isItemCategory)}

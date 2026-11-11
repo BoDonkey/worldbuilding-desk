@@ -248,7 +248,9 @@ export function SceneRosterPanel({
                     <button
                       type='button'
                       className={styles.sceneRosterNameButton}
-                      onClick={() => onOpenRecord({id: character.id, type: 'character'})}
+                      onClick={() => onOpenRecord(character.actorId
+                        ? {id: character.actorId, type: 'entity'}
+                        : {id: character.id, type: 'character'})}
                     >
                       {character.name}
                     </button>
@@ -274,7 +276,7 @@ export function SceneRosterPanel({
                 <CharacterResourceMeters resources={character.resources} />
                 <CharacterStatusChips statuses={character.statuses} />
 
-                {character.hasSheet ? (
+                {character.hasSheet || character.actorId ? (
                   <>
                   <button
                     type='button'
@@ -291,12 +293,12 @@ export function SceneRosterPanel({
                     />
                   )}
                   <CharacterStateDetails
-                    summary='Full state at this moment'
+                    summary={character.hasSheet ? 'Full state at this moment' : 'Place and items at this moment'}
                     location={character.location}
                     stats={character.stats}
                     inventory={character.inventory}
                     renderItemAction={(item) =>
-                      item.consumable && (
+                      character.hasSheet && item.consumable && (
                         <button type='button' onClick={() => onConsumeHere(character, item)}>
                           Consume here
                         </button>

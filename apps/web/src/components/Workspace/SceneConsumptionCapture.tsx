@@ -13,8 +13,9 @@ import type {CharacterReplayState} from '../../services/state/stateReplay';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface ConsumptionContext {
-  sheetId: string;
   actorId: string;
+  /** A character without a sheet records the item use only, with no effects. */
+  hasSheet: boolean;
   name: string;
   before: CharacterReplayState;
 }
@@ -23,7 +24,7 @@ interface SceneConsumptionCaptureProps {
   itemName: string;
   evidenceText?: string;
   contexts: ConsumptionContext[];
-  suggestedSheetId?: string;
+  suggestedActorId?: string;
   ruleset: StoredRuleset | null;
   approvedEntry?: CompendiumEntry | null;
   itemReference?: {sourceEntityId?: string; definitionId?: string};
@@ -33,7 +34,7 @@ interface SceneConsumptionCaptureProps {
   isSaving: boolean;
   onCancel: () => void;
   onSave: (input: {
-    sheetId: string;
+    actorId: string;
     itemName: string;
     commands: StateMutationCommand[];
     rememberedConsumable?: CompendiumConsumableDefinition;
@@ -59,7 +60,7 @@ export function SceneConsumptionCapture({
   itemName,
   evidenceText,
   contexts,
-  suggestedSheetId,
+  suggestedActorId,
   ruleset,
   approvedEntry,
   itemReference,
@@ -74,10 +75,10 @@ export function SceneConsumptionCapture({
     ? approvedEntry.consumable
     : undefined;
   const initialEffect = approvedConsumable?.effects[0];
-  const [sheetId, setSheetId] = useState(
-    suggestedSheetId && contexts.some((entry) => entry.sheetId === suggestedSheetId)
-      ? suggestedSheetId
-      : contexts[0]?.sheetId ?? ''
+  const [actorId, setActorId] = useState(
+    suggestedActorId && contexts.some((entry) => entry.actorId === suggestedActorId)
+      ? suggestedActorId
+      : contexts[0]?.actorId ?? ''
   );
   const [customize, setCustomize] = useState(!approvedConsumable);
   const [effectKind, setEffectKind] = useState<'resource' | 'stat'>(
@@ -99,7 +100,8 @@ export function SceneConsumptionCapture({
     exactReusableItem?.id ?? ''
   );
   const [canonicalName, setCanonicalName] = useState(itemName);
-  const context = contexts.find((entry) => entry.sheetId === sheetId) ?? contexts[0];
+  const context = contexts.find((entry) => entry.actorId === actorId) ?? contexts[0];
+  const tracksEffects = context?.hasSheet ?? true;
   const itemIsPresent = context
     ? hasInventoryItem(context.before, itemName, itemReference)
     : false;
@@ -127,6 +129,7 @@ export function SceneConsumptionCapture({
       );
     }
 
+    if (!tracksEffects) return inventoryCommands;
     if (!customize && approvedConsumable) {
       return [
         ...inventoryCommands,
@@ -171,7 +174,8 @@ export function SceneConsumptionCapture({
     hasNumericValue,
     missingChoice,
     numericValue,
-    operation
+    operation,
+    tracksEffects
   ]);
   const preview = useMemo(
     () => context
@@ -191,7 +195,7 @@ export function SceneConsumptionCapture({
     [commands, context, ruleset]
   );
   const rememberedConsumable: CompendiumConsumableDefinition | undefined =
-    customize && rememberEffect && operation === 'change' && definitionId &&
+    tracksEffects && customize && rememberEffect && operation === 'change' && definitionId &&
     hasNumericValue
       ? {
           effects: [{
@@ -202,7 +206,7 @@ export function SceneConsumptionCapture({
         }
       : undefined;
   const inventoryChoiceReady = itemIsPresent || Boolean(missingChoice);
-  const effectReady = !customize || (Boolean(definitionId) && hasNumericValue);
+  const effectReady = !tracksEffects || !customize || (Boolean(definitionId) && hasNumericValue);
   const reusableReady = !saveReusable || Boolean(
     reusableEntityId || (canCreateReusableItem && canonicalName.trim())
   );
@@ -225,12 +229,12 @@ export function SceneConsumptionCapture({
         </label>
         <label>
           Character
-          <select value={sheetId} onChange={(event) => {
-            setSheetId(event.target.value);
+          <select value={actorId} onChange={(event) => {
+            setActorId(event.target.value);
             setMissingChoice('');
           }}>
             {contexts.map((entry) => (
-              <option key={entry.sheetId} value={entry.sheetId}>{entry.name}</option>
+              <option key={entry.actorId} value={entry.actorId}>{entry.name}</option>
             ))}
           </select>
         </label>
@@ -247,13 +251,19 @@ export function SceneConsumptionCapture({
             >
               <option value=''>Choose what to do…</option>
               <option value='add-and-consume'>Add one and consume it</option>
-              <option value='without-tracking'>Consume without inventory tracking</option>
+              {tracksEffects && (
+                <option value='without-tracking'>Consume without inventory tracking</option>
+              )}
             </select>
           </label>
         </div>
       )}
 
-      {approvedConsumable && !customize ? (
+      {!tracksEffects ? (
+        <p className={styles.modalDescription}>
+          {context?.name} has no character sheet, so this records the item being used up.
+        </p>
+      ) : approvedConsumable && !customize ? (
         <div className={styles.changeComposerPreview}>
           <strong>Remembered effect: {approvedEntry?.name ?? itemName}</strong>
           <p>The approved effect is prefilled for this use.</p>
@@ -379,7 +389,7 @@ export function SceneConsumptionCapture({
           type='button'
           disabled={isSaving || !canConfirm}
           onClick={() => context && onSave({
-            sheetId: context.sheetId,
+            actorId: context.actorId,
             itemName,
             commands,
             rememberedConsumable,

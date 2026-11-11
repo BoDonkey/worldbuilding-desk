@@ -6,10 +6,10 @@ const baseProps = {
   itemName: 'health potion',
   evidenceText: 'Bill found a health potion.',
   characters: [
-    {sheetId: 'sheet-mira', name: 'Mira'},
-    {sheetId: 'sheet-bill', name: 'Bill'}
+    {actorId: 'sheet-mira', name: 'Mira'},
+    {actorId: 'sheet-bill', name: 'Bill'}
   ],
-  suggestedSheetId: 'sheet-bill',
+  suggestedActorId: 'sheet-bill',
   exactReusableItem: null,
   reusableItemMatches: [],
   canCreateReusableItem: true,
@@ -30,7 +30,7 @@ describe('SceneInventoryCapture', () => {
 
     fireEvent.click(screen.getByRole('button', {name: 'Add at selection'}));
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
-      sheetId: 'sheet-bill', itemName: 'health potion', quantity: 1,
+      actorId: 'sheet-bill', itemName: 'health potion', quantity: 1,
       saveReusable: false
     }));
   });

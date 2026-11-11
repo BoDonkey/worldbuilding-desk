@@ -26,8 +26,9 @@ behind it is correct and checkable.
 - **Continuity review** (1.2b, 4.26) flags prose that puts a character
   somewhere other than the ledger says, without a movement cue in between.
   It compares names as text.
-- **Sheet-free state** for general fiction (4.27) is not built yet. Until
-  it lands, only characters with a sheet carry location state.
+- **Sheet-free state** (4.27): every World Bible character carries location
+  and items held, with or without a sheet. Positions are free-text names
+  until 4.77.
 - **No in-story time.** Scenes have an order, not a date or an elapsed time.
 - **World Canvas** is a text brainstorming surface, not a spatial one.
 

@@ -15,7 +15,7 @@ export interface PendingInventoryCapture {
   sourceHash: string;
   itemName: string;
   evidenceText: string;
-  suggestedSheetId?: string;
+  suggestedActorId?: string;
   action: 'acquire' | 'consume';
   proposalEventId?: string;
   position: number;

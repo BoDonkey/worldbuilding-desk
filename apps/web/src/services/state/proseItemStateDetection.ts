@@ -4,7 +4,7 @@ export interface DetectedProseItemAction {
   action: ProseItemAction;
   itemName: string;
   characterName?: string;
-  sheetId?: string;
+  actorId?: string;
 }
 
 const ACTION_PATTERNS: Array<{action: ProseItemAction; verbs: string}> = [
@@ -31,7 +31,7 @@ const normalizeItemSurface = (value: string): string =>
 
 export function detectProseItemAction(params: {
   text: string;
-  characters: Array<{name: string; sheetId: string}>;
+  characters: Array<{name: string; actorId: string}>;
 }): DetectedProseItemAction | null {
   const text = params.text.trim();
   if (!text) return null;
@@ -51,7 +51,7 @@ export function detectProseItemAction(params: {
           action: pattern.action,
           itemName,
           characterName: character.name,
-          sheetId: character.sheetId
+          actorId: character.actorId
         };
       }
     }

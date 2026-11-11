@@ -3,6 +3,7 @@ import {CONTINUITY_CORPUS} from '../../fixtures/continuityCorpus';
 import {captureStateMutationAnchor, textSnapshotFromPlainText} from '../state/stateMutationAnchor';
 import {hashSceneContent, type PendingInventoryCapture} from './sceneRosterMutationTypes';
 import type {SceneRosterCharacterCard} from './sceneRosterTypes';
+import {buildStateSubjects, type StateSubject} from '../state/stateSubjects';
 
 // Exercise the same Sera/Pale Draught baseline as the trust-dogfood continuity corpus.
 export const corpus = CONTINUITY_CORPUS.find((entry) => entry.id === 'state-pale-draught-baseline-consumption')!;
@@ -15,9 +16,12 @@ export const snapshot = textSnapshotFromPlainText(scene.content);
 export const position = 20;
 export const anchor = captureStateMutationAnchor(snapshot, position);
 export const character: SceneRosterCharacterCard = {
-  key: 'character:sera', id: 'sera', sheetId: sheet.id, name: sheet.name, role: '',
+  key: 'character:sera', id: 'sera', actorId: 'sera', sheetId: sheet.id, name: sheet.name, role: '',
   source: 'scene', stats: [], resources: [], inventory: [], statuses: [], hasSheet: true
 };
+export const subjectsFor = (...sheets: typeof sheet[]): StateSubject[] =>
+  buildStateSubjects({characterSheets: sheets, characterEntities: []});
+export const subject = subjectsFor(sheet)[0];
 export const definition: CompendiumEntry = {
   id: 'draught-definition', projectId: 'corpus', name: 'Pale Draught', domain: 'artifact',
   actions: [], tags: ['healing'], createdAt: 1, updatedAt: 1,
@@ -39,13 +43,13 @@ export const capture: PendingInventoryCapture = {
 };
 export const captureContext = {
   activeProject: {id: 'corpus'} as Project, selectedDocument: scene,
-  pendingInventoryCapture: capture, content: scene.content, characterSheets: [sheet],
+  pendingInventoryCapture: capture, content: scene.content, stateSubjects: subjectsFor(sheet),
   documents: [scene], categories: [category], entities: [], compendiumEntries: [],
   stateMutationEvents: [event], now: 100,
   ids: {entity: 'new-world-item', definition: 'new-definition', event: 'new-event'}
 };
-export const pickupInput = {sheetId: sheet.id, itemName: definition.name, quantity: 2, saveReusable: false, canonicalName: ''};
+export const pickupInput = {actorId: sheet.id, itemName: definition.name, quantity: 2, saveReusable: false, canonicalName: ''};
 export const timelineContext = {
-  characterSheets: [sheet], compendiumEntries: [definition], content: scene.content,
+  stateSubjects: subjectsFor(sheet), compendiumEntries: [definition], content: scene.content,
   sceneCursorAnchor: anchor, characters: [character], selectedDocument: scene, stateMutationEvents: [event]
 };

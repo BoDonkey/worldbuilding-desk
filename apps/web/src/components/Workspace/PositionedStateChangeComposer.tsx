@@ -11,7 +11,7 @@ import {
   type PositionedChangeDraft,
   type PositionedChangeKind
 } from '../../services/state/positionedStateChange';
-import {stateMutationCommandTypes} from '@worldbuilding-desk/rules-engine';
+import {isDescriptiveStateCommand, stateMutationCommandTypes} from '@worldbuilding-desk/rules-engine';
 import {getAppStateKind} from '../../services/state/kinds';
 import styles from '../../styles/WorkspaceRoute.module.css';
 import {inventoryChoicesForChange} from './positionedStateChangeInventory';
@@ -33,11 +33,22 @@ const BASIC_CHANGE_TYPES = CHANGE_TYPES.flatMap((entry) => {
   return input.type === 'definition' ? [{...entry, label: input.basicLabel}] : [];
 });
 const BASIC_KINDS = new Set(BASIC_CHANGE_TYPES.map((entry) => entry.value));
+// A character without a sheet records places and items only (4.27).
+const DESCRIPTIVE_CHANGE_TYPES = CHANGE_TYPES.filter((entry) =>
+  isDescriptiveStateCommand({type: entry.value})
+);
 
 const draftFromCommand = (command: StateMutationCommand): PositionedChangeDraft => ({
   id: crypto.randomUUID(),
   kind: command.type,
   ...getAppStateKind(command.type).composer.load(command)
+});
+
+const newDescriptiveDraft = (): PositionedChangeDraft => ({
+  id: crypto.randomUUID(),
+  kind: 'location_set',
+  name: '',
+  quantity: '1'
 });
 
 const newDraft = (ruleset: StoredRuleset | null): PositionedChangeDraft => ({
@@ -57,6 +68,8 @@ interface PositionedStateChangeComposerProps {
   cursorPosition: number;
   actorId: string;
   ruleset: StoredRuleset | null;
+  /** The character has no sheet, so only place and item changes apply. */
+  descriptiveOnly?: boolean;
   before: CharacterReplayState;
   existingEvent?: StateMutationEvent | null;
   initialLabel?: string;
@@ -71,7 +84,8 @@ export function PositionedStateChangeComposer({
   sceneTitle,
   cursorPosition,
   actorId,
-  ruleset,
+  ruleset: rulesetProp,
+  descriptiveOnly = false,
   before,
   existingEvent,
   initialLabel,
@@ -80,16 +94,18 @@ export function PositionedStateChangeComposer({
   onCancel,
   onSave
 }: PositionedStateChangeComposerProps) {
+  const ruleset = descriptiveOnly ? null : rulesetProp;
+  const createDraft = () => descriptiveOnly ? newDescriptiveDraft() : newDraft(ruleset);
   const [label, setLabel] = useState(existingEvent?.label ?? initialLabel ?? '');
   const [showAdvanced, setShowAdvanced] = useState(Boolean(
-    existingEvent || (initialCommands?.length ?? 0) > 1 || initialCommands?.some((command) => !BASIC_KINDS.has(command.type))
+    descriptiveOnly || existingEvent || (initialCommands?.length ?? 0) > 1 || initialCommands?.some((command) => !BASIC_KINDS.has(command.type))
   ));
   const [drafts, setDrafts] = useState<PositionedChangeDraft[]>(
     existingEvent?.commands.length
       ? existingEvent.commands.map(draftFromCommand)
       : initialCommands?.length
         ? initialCommands.map(draftFromCommand)
-      : [newDraft(ruleset)]
+      : [createDraft()]
   );
   const commands = useMemo(
     () =>
@@ -127,7 +143,7 @@ export function PositionedStateChangeComposer({
         {existingEvent ? 'Edit scene change' : 'Record change here'}
       </h3>
       <p className={styles.modalDescription}>
-        {characterName} · {sceneTitle}{showAdvanced ? ` · position ${cursorPosition}` : ''}
+        {characterName} · {sceneTitle}{showAdvanced && !descriptiveOnly ? ` · position ${cursorPosition}` : ''}
       </p>
 
       {showAdvanced && (
@@ -137,7 +153,7 @@ export function PositionedStateChangeComposer({
           type='text'
           value={label}
           onChange={(event) => setLabel(event.target.value)}
-          placeholder='Drinks Potion of Giant Strength'
+          placeholder={descriptiveOnly ? 'Arrives at the harbor' : 'Drinks Potion of Giant Strength'}
         />
       </label>
       )}
@@ -196,7 +212,10 @@ export function PositionedStateChangeComposer({
                       });
                     }}
                   >
-                    {(showAdvanced ? CHANGE_TYPES : BASIC_CHANGE_TYPES).map((type) => (
+                    {(descriptiveOnly
+                      ? DESCRIPTIVE_CHANGE_TYPES
+                      : showAdvanced ? CHANGE_TYPES : BASIC_CHANGE_TYPES
+                    ).map((type) => (
                       <option key={type.value} value={type.value}>{type.label}</option>
                     ))}
                   </select>
@@ -325,7 +344,7 @@ export function PositionedStateChangeComposer({
       {showAdvanced ? <button
         type='button'
         className={styles.changeComposerAddButton}
-        onClick={() => setDrafts((current) => [...current, newDraft(ruleset)])}
+        onClick={() => setDrafts((current) => [...current, createDraft()])}
       >
         Add another change
       </button> : (

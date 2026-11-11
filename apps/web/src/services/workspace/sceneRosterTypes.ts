@@ -10,6 +10,11 @@ export type SceneRosterInventoryLine = CharacterSnapshotInventoryLine;
 export interface SceneRosterCharacterCard {
   key: string;
   id: string;
+  /**
+   * World Bible character id that new state changes use. Absent for a
+   * legacy sheet or character record not linked to the World Bible.
+   */
+  actorId?: string;
   sheetId?: string;
   name: string;
   role: string;

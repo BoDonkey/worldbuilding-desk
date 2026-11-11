@@ -606,10 +606,23 @@ desktop and at the narrow/mobile breakpoint.
    defaults and results, traps/restores focus, announces validation and
    success, keeps confirm/cancel visible, and does not overflow behind mobile
    navigation. The complete basic path is keyboard operable.
+9. **General Fiction, no sheet (4.27b).** In a General Fiction project with
+   a World Bible character Sera and no sheet, write `Sera picked up the brass
+   key.` Use `Record item/state` on the selection: Sera is preselected and
+   `Add at selection` records the item. In the Context drawer's `Scene` view,
+   Sera's card shows `Place and items at this moment` (no stats or
+   resources) and `Record change here`. That dialog offers only place and
+   item changes; record `Set location` → `Highmoor`. Write `Sera drank the
+   tonic.` and record the use: the dialog says Sera has no character sheet
+   and records only the item being used up, with no effect fields. Open Sera
+   in the World Bible → `Continuity`: `After the latest scene` shows Highmoor
+   and the items she still holds.
 
 Failure signals: navigation away from Workspace for the basic path; automatic
 World Bible or Compendium creation; inferred genre-standard effect values;
 silent ambiguous matching; display-name-only links that break after rename;
 partial writes after validation failure; consumption of absent inventory with
 no explicit author choice; duplicate definitions/events; cancellation or
-stale prose writing data; or different desktop/narrow results.
+stale prose writing data; different desktop/narrow results; or a General
+Fiction character without a sheet being offered stats, resources, or
+consumable effects.

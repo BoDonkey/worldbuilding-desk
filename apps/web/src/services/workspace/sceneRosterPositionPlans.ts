@@ -1,6 +1,6 @@
 import type {ActorResolution} from '../characters/characterIdentity';
-import {replayCharacterState} from '../state/stateReplay';
-import type {CharacterSheet, StateMutationEvent, StoredRuleset, WritingDocument} from '../../entityTypes';
+import type {StateMutationEvent, StoredRuleset, WritingDocument} from '../../entityTypes';
+import {replayStateSubject, stateSubjectAccepts, type StateSubject} from '../state/stateSubjects';
 import {sortWritingDocuments} from '../storage';
 import {hashSceneContent, type PendingPositionedChange, type RosterPlanResult} from './sceneRosterMutationTypes';
 import type {StateMutationTextAnchor} from '../state/stateMutationAnchor';
@@ -9,7 +9,7 @@ export function planPositionedChange({
   projectId,
   selectedDocument,
   documents,
-  pendingPositionedSheet,
+  pendingPositionedSubject,
   pendingPositionedChange,
   stateMutationEvents,
   sceneCursorPosition,
@@ -24,7 +24,7 @@ export function planPositionedChange({
   projectId: string;
   selectedDocument: WritingDocument;
   documents: WritingDocument[];
-  pendingPositionedSheet: CharacterSheet;
+  pendingPositionedSubject: StateSubject;
   pendingPositionedChange: PendingPositionedChange;
   stateMutationEvents: StateMutationEvent[];
   sceneCursorPosition: number;
@@ -35,10 +35,13 @@ export function planPositionedChange({
   const sceneOrder = sortWritingDocuments(documents).findIndex((document) => document.id === selectedDocument.id) + 1;
   if (sceneOrder <= 0)
     return null;
-  const canonicalActorId = pendingPositionedSheet.characterEntityId;
-  if (!canonicalActorId) {
+  if (pendingPositionedSubject.legacy) {
     return {error: 'Resolve this legacy sheet to a World Bible character before recording state.'};
   }
+  if (!input.commands.every((command) => stateSubjectAccepts(pendingPositionedSubject, command))) {
+    return {error: `${pendingPositionedSubject.name} has no character sheet, so only item and place changes can be recorded.`};
+  }
+  const canonicalActorId = pendingPositionedSubject.actorId;
   const existingEvent = pendingPositionedChange.event ?? null;
   const event: StateMutationEvent = {
     id: existingEvent?.id ?? eventId,
@@ -104,7 +107,7 @@ export function planRosterInvalidation(eventId: string) {
 }
 
 export function buildPositionedChangeBefore({
-  pendingPositionedSheet,
+  pendingPositionedSubject,
   selectedDocument,
   documents,
   ruleset,
@@ -113,7 +116,7 @@ export function buildPositionedChangeBefore({
   actorResolutions,
   sceneCursorPosition
 }: {
-  pendingPositionedSheet: CharacterSheet | null;
+  pendingPositionedSubject: StateSubject | null;
   selectedDocument: WritingDocument | null;
   documents: WritingDocument[];
   ruleset: StoredRuleset | null;
@@ -122,13 +125,13 @@ export function buildPositionedChangeBefore({
   actorResolutions: ActorResolution[];
   sceneCursorPosition: number;
 }) {
-  if (!pendingPositionedSheet || !selectedDocument)
+  if (!pendingPositionedSubject || !selectedDocument)
     return null;
   const sceneOrder = sortWritingDocuments(documents).findIndex((document) => document.id === selectedDocument.id) + 1;
   if (sceneOrder <= 0)
     return null;
-  return replayCharacterState({
-    sheet: pendingPositionedSheet,
+  return replayStateSubject({
+    subject: pendingPositionedSubject,
     ruleset,
     events: resolvedStateMutationEvents.filter((event) => {
       if (event.id === pendingPositionedChange?.event?.id)
@@ -143,12 +146,6 @@ export function buildPositionedChangeBefore({
       }
       return true;
     }),
-    target: {
-      actorId: pendingPositionedSheet.characterEntityId,
-      characterId: pendingPositionedSheet.characterId,
-      sheetId: pendingPositionedSheet.id,
-      actorName: pendingPositionedSheet.name
-    },
     actorResolutions,
     upToSceneOrder: sceneOrder,
     upToScenePosition: pendingPositionedChange?.event?.scenePosition ?? sceneCursorPosition
