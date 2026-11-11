@@ -275,7 +275,7 @@ messages).
 | 4.24 | Fact-anchored canon contradiction detection | 4 | M | Done `ffcd1bd` |
 | 4.25 | Persisted, incremental project review | 4 | M | Done `d6e5ddd` |
 | 4.26 | State-backed continuity checks | 4 | M | Done `bd255cd` |
-| 4.27a | Sheet-free state: subjects in derivation, replay, and review | 4 | M | WIP |
+| 4.27a | Sheet-free state: subjects in derivation, replay, and review | 4 | M | Done `925da03` — also fixed prose state suggestions for World Bible characters in every mode |
 | 4.27b | Sheet-free state: Workspace capture, scene drawer, Continuity overview | 4 | M | — (after 4.27a; before 4.77) |
 | 4.28 | Manuscript-order validity for canon facts | 4 | M | Done `42c86de` |
 | 4.29 | Portable Markdown/CSV export + Markdown-folder import | 4 | M | Done `7cd6895` |
