@@ -1,4 +1,5 @@
 import {describe, expect, it} from 'vitest';
+import {buildStateSubjects} from './stateSubjects';
 import type {
   CharacterSheet,
   StateMutationCommand,
@@ -82,7 +83,7 @@ describe('state-backed continuity review', () => {
       documents: [scenes[1]!],
       sceneOrderDocuments: scenes,
       knownEntities,
-      characterSheets: [sheet],
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
       ruleset,
       stateMutationEvents: [event(1, 'The Salt Door', {
         type: 'inventory_consume',
@@ -108,7 +109,7 @@ describe('state-backed continuity review', () => {
     expect(findStateContinuityReviewItems({
       documents: [current],
       knownEntities,
-      characterSheets: [sheet],
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
       ruleset,
       stateMutationEvents: [accepted]
     })).toEqual([]);
@@ -127,7 +128,7 @@ describe('state-backed continuity review', () => {
     const findings = findStateContinuityReviewItems({
       documents: scenes,
       knownEntities,
-      characterSheets: [sheet],
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
       ruleset,
       stateMutationEvents: [event(3, 'The Weighing House', {
         type: 'inventory_remove',
@@ -159,7 +160,7 @@ describe('state-backed continuity review', () => {
     const input = {
       sceneOrderDocuments: [scene(1, 'The Camp', ''), staticClaim],
       knownEntities,
-      characterSheets: [sheet],
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
       ruleset,
       stateMutationEvents: [prior]
     };
@@ -192,7 +193,7 @@ describe('state-backed continuity review', () => {
       documents: [scenes[1]!],
       sceneOrderDocuments: scenes,
       knownEntities,
-      characterSheets: [armedSheet],
+      stateSubjects: buildStateSubjects({characterSheets: [armedSheet], characterEntities: []}),
       ruleset,
       stateMutationEvents: [event(1, 'After the Fight', {
         type: 'inventory_unequip',
@@ -213,9 +214,89 @@ describe('state-backed continuity review', () => {
     expect(findStateContinuityReviewItems({
       documents: [scene(1, 'Scene', 'Sera drank the Pale Draught.')],
       knownEntities,
-      characterSheets: [sheet],
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
       ruleset: null,
       stateMutationEvents: []
     })).toEqual([]);
+  });
+
+  describe('characters without a sheet (general fiction)', () => {
+    const sheetless = buildStateSubjects({
+      characterSheets: [],
+      characterEntities: [{id: 'sera', name: 'Sera'}]
+    });
+
+    it('flags a static location that contradicts an accepted move, with no ruleset', () => {
+      const scenes = [
+        scene(1, 'The Camp', 'Sera slept by the fire.'),
+        scene(2, 'The Harbor', 'Sera waited at South Harbor.')
+      ];
+      const findings = findStateContinuityReviewItems({
+        documents: [scenes[1]!],
+        sceneOrderDocuments: scenes,
+        knownEntities,
+        stateSubjects: sheetless,
+        ruleset: null,
+        stateMutationEvents: [event(1, 'The Camp', {
+          type: 'location_set',
+          actorId: 'sera',
+          locationName: 'North Camp'
+        })]
+      });
+
+      expect(findings).toEqual([expect.objectContaining({
+        id: expect.stringContaining(':scene-2:sera:'),
+        issue: expect.objectContaining({
+          code: 'STATE_CONFLICT',
+          relatedEntities: [{id: 'sera', name: 'Sera', type: 'character'}],
+          message: expect.stringContaining('places them at North Camp')
+        })
+      })]);
+    });
+
+    it('flags using an item the ledger says she gave away', () => {
+      const scenes = [
+        scene(1, 'The Vault', 'Sera found the Emberglass Key.'),
+        scene(2, 'The Weighing House', 'Sera handed over the Emberglass Key.'),
+        scene(3, 'The Hollow Court', 'Sera pressed the Emberglass Key into the lock.')
+      ];
+      const findings = findStateContinuityReviewItems({
+        documents: [scenes[2]!],
+        sceneOrderDocuments: scenes,
+        knownEntities,
+        stateSubjects: sheetless,
+        ruleset: null,
+        stateMutationEvents: [
+          event(1, 'The Vault', {type: 'inventory_add', actorId: 'sera', itemName: 'Emberglass Key'}),
+          event(2, 'The Weighing House', {type: 'inventory_remove', actorId: 'sera', itemName: 'Emberglass Key'})
+        ]
+      });
+
+      expect(findings).toEqual([expect.objectContaining({
+        sceneId: 'scene-3',
+        issue: expect.objectContaining({
+          code: 'STATE_CONFLICT',
+          message: expect.stringContaining('The Weighing House')
+        })
+      })]);
+    });
+
+    it('stays quiet when the scenes agree with the ledger', () => {
+      const scenes = [
+        scene(1, 'The Camp', 'Sera slept by the fire.'),
+        scene(2, 'The Camp Again', 'Sera waited at North Camp.')
+      ];
+      expect(findStateContinuityReviewItems({
+        documents: scenes,
+        knownEntities,
+        stateSubjects: sheetless,
+        ruleset: null,
+        stateMutationEvents: [event(1, 'The Camp', {
+          type: 'location_set',
+          actorId: 'sera',
+          locationName: 'North Camp'
+        })]
+      })).toEqual([]);
+    });
   });
 });

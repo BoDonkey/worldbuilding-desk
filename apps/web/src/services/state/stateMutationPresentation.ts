@@ -1,5 +1,5 @@
+import type {ReplaySheet} from '@worldbuilding-desk/rules-engine';
 import type {
-  CharacterSheet,
   StateMutationCommand,
   StateMutationEvent,
   StoredRuleset
@@ -12,6 +12,11 @@ import {
   type CharacterReplayState,
   type ReplayableCharacterTarget
 } from './stateReplay';
+import {
+  buildStateSubjectLookup,
+  stateSubjectPreviewInputs,
+  type StateSubject
+} from './stateSubjects';
 import {
   summarizeStateMutationCommand,
   summarizeStateMutationEffects,
@@ -49,22 +54,8 @@ export function describeStateMutationAcceptance(params: {
   return 'This suggested change is not ready to accept yet.';
 }
 
-function getSheetByActorId(characterSheets: CharacterSheet[]): Map<string, CharacterSheet> {
-  const map = new Map<string, CharacterSheet>();
-  characterSheets.forEach((sheet) => {
-    map.set(sheet.id, sheet);
-    if (sheet.characterId) {
-      map.set(sheet.characterId, sheet);
-    }
-    if (sheet.characterEntityId) {
-      map.set(sheet.characterEntityId, sheet);
-    }
-  });
-  return map;
-}
-
 export function buildStateMutationPreview(params: {
-  sheet: CharacterSheet;
+  sheet: ReplaySheet;
   ruleset: StoredRuleset | null;
   events: StateMutationEvent[];
   target: ReplayableCharacterTarget;
@@ -106,13 +97,13 @@ export function buildStateMutationPreview(params: {
 export function computeBatchAcceptableStateMutationEventIds(params: {
   proposedEvents: StateMutationEvent[];
   acceptedEvents: StateMutationEvent[];
-  characterSheets: CharacterSheet[];
+  stateSubjects: StateSubject[];
   ruleset: StoredRuleset | null;
   labels?: StateMutationLabelMaps;
   actorResolutions?: ActorResolution[];
 }): Set<string> {
   const batchAcceptableIds = new Set<string>();
-  const sheetByActorId = getSheetByActorId(params.characterSheets);
+  const subjectByActorId = buildStateSubjectLookup(params.stateSubjects);
   const proposedEventsBySceneId = new Map(
     params.proposedEvents
       .reduce<Array<[string, StateMutationEvent[]]>>((entries, event) => {
@@ -138,20 +129,13 @@ export function computeBatchAcceptableStateMutationEventIds(params: {
     const workingAccepted = [...params.acceptedEvents];
     sceneEvents.forEach((event) => {
       const primaryCommand = event.commands[0];
-      const sheet = primaryCommand ? sheetByActorId.get(primaryCommand.actorId) ?? null : null;
-      if (!sheet || !primaryCommand) {
+      const subject = primaryCommand ? subjectByActorId.get(primaryCommand.actorId) ?? null : null;
+      if (!subject || !primaryCommand) {
         return;
       }
       const preview = buildStateMutationPreview({
-        sheet,
-        ruleset: params.ruleset,
+        ...stateSubjectPreviewInputs(subject, params.ruleset, primaryCommand.actorId),
         events: workingAccepted,
-        target: {
-          actorId: primaryCommand.actorId,
-          characterId: sheet.characterId,
-          sheetId: sheet.id,
-          actorName: sheet.name
-        },
         actorResolutions: params.actorResolutions,
         command: primaryCommand,
         upToSceneOrder: event.sceneOrder ?? Number.MAX_SAFE_INTEGER,

@@ -1,5 +1,4 @@
 import type {
-  CharacterSheet,
   StateMutationEvent,
   StoredRuleset,
   WritingDocument
@@ -15,6 +14,11 @@ import {
   describeStateMutationEventStaleness,
   getStateMutationEventStaleness
 } from '../state/stateMutationStaleness';
+import {
+  buildStateSubjectLookup,
+  stateSubjectPreviewInputs,
+  type StateSubject
+} from '../state/stateSubjects';
 
 export interface StateMutationReviewItem {
   id: string;
@@ -62,34 +66,17 @@ export function getHiddenStateMutationReviewKey(event: {
 }
 
 export function buildStateMutationReviewItems(params: {
-  characterSheets: CharacterSheet[];
+  stateSubjects: StateSubject[];
   actorResolutions?: ActorResolution[];
   documents: WritingDocument[];
   hiddenReviewKeys: string[];
   ruleset: StoredRuleset | null;
   stateMutationEvents: StateMutationEvent[];
 }): StateMutationReviewItem[] {
-  const actorLabelById = new Map<string, string>();
-  const sheetByActorId = new Map<string, CharacterSheet>();
-  params.characterSheets.forEach((sheet) => {
-    actorLabelById.set(sheet.id, sheet.name);
-    sheetByActorId.set(sheet.id, sheet);
-    if (sheet.characterId) {
-      actorLabelById.set(sheet.characterId, sheet.name);
-      sheetByActorId.set(sheet.characterId, sheet);
-    }
-    if (sheet.characterEntityId) {
-      actorLabelById.set(sheet.characterEntityId, sheet.name);
-      sheetByActorId.set(sheet.characterEntityId, sheet);
-    }
-  });
-  params.actorResolutions?.forEach((resolution) => {
-    const sheet = sheetByActorId.get(resolution.entityId);
-    if (sheet) {
-      actorLabelById.set(resolution.legacyActorId, sheet.name);
-      sheetByActorId.set(resolution.legacyActorId, sheet);
-    }
-  });
+  const subjectByActorId = buildStateSubjectLookup(
+    params.stateSubjects,
+    params.actorResolutions
+  );
   const resourceDefinitionNameById = new Map(
     (params.ruleset?.resourceDefinitions ?? []).map((definition) => [
       definition.id,
@@ -113,7 +100,7 @@ export function buildStateMutationReviewItems(params: {
   const batchAcceptableIds = computeBatchAcceptableStateMutationEventIds({
     proposedEvents,
     acceptedEvents,
-    characterSheets: params.characterSheets,
+    stateSubjects: params.stateSubjects,
     actorResolutions: params.actorResolutions,
     ruleset: params.ruleset,
     labels: {resourceDefinitionNameById, statDefinitionNameById}
@@ -130,21 +117,14 @@ export function buildStateMutationReviewItems(params: {
         documents: params.documents
       });
       const primaryCommand = event.commands[0];
-      const sheet = primaryCommand
-        ? sheetByActorId.get(primaryCommand.actorId) ?? null
+      const subject = primaryCommand
+        ? subjectByActorId.get(primaryCommand.actorId) ?? null
         : null;
       const preview =
-        sheet && primaryCommand
+        subject && primaryCommand
           ? buildStateMutationPreview({
-              sheet,
-              ruleset: params.ruleset,
+              ...stateSubjectPreviewInputs(subject, params.ruleset, primaryCommand.actorId),
               events: acceptedEvents,
-              target: {
-                actorId: primaryCommand.actorId,
-                characterId: sheet.characterId,
-                sheetId: sheet.id,
-                actorName: sheet.name
-              },
               actorResolutions: params.actorResolutions,
               command: primaryCommand,
               upToSceneOrder: event.sceneOrder ?? Number.MAX_SAFE_INTEGER,
@@ -159,7 +139,7 @@ export function buildStateMutationReviewItems(params: {
         sceneTitle: event.sceneTitle || 'Untitled scene',
         sceneSequence: event.sceneSequence,
         actorLabel:
-          actorLabelById.get(event.commands[0]?.actorId ?? '') ?? 'Unknown actor',
+          subjectByActorId.get(event.commands[0]?.actorId ?? '')?.name ?? 'Unknown actor',
         summaryLines: event.commands.map((command) =>
           summarizeStateMutationCommand({
             command,

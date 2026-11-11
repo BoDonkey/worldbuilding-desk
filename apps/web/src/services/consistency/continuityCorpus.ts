@@ -12,6 +12,7 @@ import {findCanonContradictions} from './contradictionReview';
 import {buildKnownConsistencyEntities} from './reviewLinkOptions';
 import type {GuardrailIssue, KnownEntityRef} from './types';
 import {findStateContinuityReviewItems} from '../state/stateContinuityReview';
+import {buildStateSubjects} from '../state/stateSubjects';
 
 /**
  * Runs the real deterministic review path over a corpus case: the same
@@ -110,7 +111,8 @@ export function buildCorpusKnownEntities(corpusCase: ContinuityCorpusCase): Know
   return buildKnownConsistencyEntities({
     entities: toWorldEntities(corpusCase),
     aliases: toAliases(corpusCase),
-    characterLoreEntityIdByCharacterId: new Map()
+    characterLoreEntityIdByCharacterId: new Map(),
+    characterCategoryIds: new Set([CHARACTER_CATEGORY_ID])
   });
 }
 
@@ -162,7 +164,10 @@ export async function runContinuityCase(corpusCase: ContinuityCorpusCase): Promi
     findStateContinuityReviewItems({
       documents,
       knownEntities,
-      characterSheets: corpusCase.state.characterSheets,
+      stateSubjects: buildStateSubjects({
+        characterSheets: corpusCase.state.characterSheets,
+        characterEntities: []
+      }),
       ruleset: corpusCase.state.ruleset,
       stateMutationEvents: corpusCase.state.mutationEvents
     }).forEach((item) => findings.push(issueToFinding(item.sceneId, item.issue)));

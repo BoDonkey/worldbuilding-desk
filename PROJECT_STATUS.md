@@ -410,6 +410,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   contradict the last accepted location without an intervening movement cue.
   Findings cite the earlier accepted scene and never block saving. The
   assistant and review share one ordered manuscript-custody interpreter.
+- Descriptive state without a sheet (slice 4.27a). World Bible characters
+  with no Character Sheet, in any project mode, now carry where they are and
+  what they hold. Manual-save prose such as "Sera entered Highmoor" proposes a
+  location or item change in Project Review; accepted changes replay from an
+  empty start (nothing held, no location), so a character's starting place and
+  items are recorded in their first scene. Only location and item changes
+  apply; stats, resources, statuses, and XP stay with sheets. The same review
+  findings (contradicted location, using an item given away) now run for
+  General Fiction. No stored-data change. Fixed alongside: prose had stopped
+  proposing state for any World Bible character because the Workspace no
+  longer marked them as characters for the scanner; it now does.
 
 - The project's daily AI consultation budget is now one explained model rather
   than a hidden counter. It stays one budget per project (not per feature) but

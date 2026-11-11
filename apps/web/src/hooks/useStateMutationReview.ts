@@ -1,6 +1,7 @@
 import {useCallback, useMemo, useState} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
-import type {CharacterSheet, StateMutationEvent, StoredRuleset, WritingDocument} from '../entityTypes';
+import type {StateMutationEvent, StoredRuleset, WritingDocument} from '../entityTypes';
+import type {StateSubject} from '../services/state/stateSubjects';
 import type {ActorResolution} from '../services/characters/characterIdentity';
 import {
   invalidateStateMutationEventById,
@@ -18,7 +19,7 @@ import type {ConsistencyFeedback, ConsistencySystemHistory} from './useConsisten
 
 /** Suggested state changes in Project Review: accept, reject, hide, restore. */
 export function useStateMutationReview({
-  characterSheets,
+  stateSubjects,
   actorResolutions,
   documents,
   ruleset,
@@ -28,7 +29,7 @@ export function useStateMutationReview({
   setFeedback,
   addSystemHistory
 }: {
-  characterSheets: CharacterSheet[];
+  stateSubjects: StateSubject[];
   actorResolutions: ActorResolution[];
   documents: WritingDocument[];
   ruleset: StoredRuleset | null;
@@ -43,7 +44,7 @@ export function useStateMutationReview({
   const stateMutationReviewItems = useMemo<StateMutationReviewItem[]>(
     () =>
       buildStateMutationReviewItems({
-        characterSheets,
+        stateSubjects,
         actorResolutions,
         documents,
         hiddenReviewKeys: hiddenStateMutationReviewKeys,
@@ -51,7 +52,7 @@ export function useStateMutationReview({
         stateMutationEvents
       }),
     [
-      characterSheets,
+      stateSubjects,
       actorResolutions,
       documents,
       hiddenStateMutationReviewKeys,

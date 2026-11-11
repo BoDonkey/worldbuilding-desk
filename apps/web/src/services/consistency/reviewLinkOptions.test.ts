@@ -39,9 +39,10 @@ describe('review link option models', () => {
         aliases: [
           {id: 'alias', projectId: 'project', targetId: 'character', targetType: 'character', alias: 'Harry', createdAt: 1, updatedAt: 1}
         ],
-        characterLoreEntityIdByCharacterId: links
+        characterLoreEntityIdByCharacterId: links,
+        characterCategoryIds
       })
-    ).toContainEqual({id: 'harrison', name: 'Harry', type: 'entity'});
+    ).toContainEqual({id: 'harrison', name: 'Harry', type: 'character'});
   });
 
   it('ranks exact matches first and avoids duplicate character targets', () => {

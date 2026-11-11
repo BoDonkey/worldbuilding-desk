@@ -1,5 +1,4 @@
 import type {
-  CharacterSheet,
   StateMutationCommand,
   StateMutationEvent,
   StoredRuleset,
@@ -14,13 +13,20 @@ import {
   manuscriptPlainText,
   normalizeCustodyText
 } from './manuscriptCustody';
-import {findSheetForStateActor} from './stateMutationDerivation';
 import {stateDeltaObservationToCommand} from './kinds';
 import {
   compareStateMutationEvents,
-  replayCharacterState,
-  validateStateMutationCommandAgainstState
+  validateStateMutationCommandAgainstState,
+  type CharacterReplayState
 } from './stateReplay';
+import {
+  findStateSubject,
+  recordableStateSubjects,
+  replayStateSubject,
+  stateSubjectAccepts,
+  stateSubjectIds,
+  type StateSubject
+} from './stateSubjects';
 
 export interface StateContinuityReviewItem {
   id: string;
@@ -33,7 +39,7 @@ interface StateContinuityReviewInput {
   documents: WritingDocument[];
   sceneOrderDocuments?: WritingDocument[];
   knownEntities: KnownEntityRef[];
-  characterSheets: CharacterSheet[];
+  stateSubjects: StateSubject[];
   actorResolutions?: ActorResolution[];
   ruleset: StoredRuleset | null;
   stateMutationEvents: StateMutationEvent[];
@@ -51,14 +57,13 @@ const resolveActorId = (
 ): string =>
   actorResolutions?.find((entry) => entry.legacyActorId === actorId)?.entityId ?? actorId;
 
-const commandMatchesSheet = (
+const commandMatchesSubject = (
   command: StateMutationCommand,
-  sheet: CharacterSheet,
+  subject: StateSubject,
   actorResolutions: ActorResolution[] | undefined
 ): boolean => {
   const actorId = resolveActorId(command.actorId, actorResolutions);
-  return [sheet.characterEntityId, sheet.characterId, sheet.id]
-    .filter((id): id is string => Boolean(id))
+  return stateSubjectIds(subject)
     .map((id) => resolveActorId(id, actorResolutions))
     .includes(actorId);
 };
@@ -77,16 +82,16 @@ const commandItemName = (command: StateMutationCommand): string | null => {
 };
 
 const inventoryContains = (
-  sheetState: ReturnType<typeof replayCharacterState>,
+  state: CharacterReplayState,
   itemName: string
-): boolean => sheetState.inventory.items.some(
+): boolean => state.inventory.items.some(
   (item) => normalize(item.name) === normalize(itemName) && item.quantity > 0
 );
 
 const inventoryEquipped = (
-  sheetState: ReturnType<typeof replayCharacterState>,
+  state: CharacterReplayState,
   itemName: string
-): boolean => sheetState.inventory.equipped.some(
+): boolean => state.inventory.equipped.some(
   (name) => normalize(name) === normalize(itemName)
 );
 
@@ -103,7 +108,7 @@ const eventIsBefore = (
 
 const latestRelevantEvent = (params: {
   events: StateMutationEvent[];
-  sheet: CharacterSheet;
+  subject: StateSubject;
   sceneOrder: number;
   orderBySceneId: Map<string, number>;
   actorResolutions?: ActorResolution[];
@@ -117,7 +122,7 @@ const latestRelevantEvent = (params: {
       params.orderBySceneId
     ))
     .filter((event) => event.commands.some((command) =>
-      commandMatchesSheet(command, params.sheet, params.actorResolutions) &&
+      commandMatchesSubject(command, params.subject, params.actorResolutions) &&
       params.commandMatches(command)
     ));
   return candidates.sort((left, right) => {
@@ -133,19 +138,18 @@ const sourceLabel = (event: StateMutationEvent | null): string =>
     ? `the accepted change in “${event.sceneTitle || 'an earlier scene'}”`
     : 'the character sheet baseline';
 
-const relatedEntity = (sheet: CharacterSheet): GuardrailIssue['relatedEntities'] => {
-  const id = sheet.characterEntityId;
-  return id ? [{id, name: sheet.name, type: 'character'}] : undefined;
-};
+const relatedEntity = (subject: StateSubject): GuardrailIssue['relatedEntities'] =>
+  [{id: subject.actorId, name: subject.name, type: 'character'}];
 
 const makeItem = (params: {
   code: 'STATE_CONFLICT' | 'INVALID_MUTATION';
   scene: WritingDocument;
   focusText: string;
   message: string;
-  sheet: CharacterSheet;
+  subject: StateSubject;
 }): StateContinuityReviewItem => ({
-  id: `state:${params.code}:${params.scene.id}:${params.sheet.id}:${normalize(params.focusText)}`,
+  // Sheeted characters keep their sheet id here so earlier dismissals still match.
+  id: `state:${params.code}:${params.scene.id}:${params.subject.sheet?.id ?? params.subject.actorId}:${normalize(params.focusText)}`,
   sceneId: params.scene.id,
   sceneTitle: params.scene.title || 'Untitled scene',
   issue: {
@@ -153,15 +157,15 @@ const makeItem = (params: {
     severity: 'warning',
     message: params.message,
     focusText: params.focusText,
-    relatedEntities: relatedEntity(params.sheet)
+    relatedEntities: relatedEntity(params.subject)
   }
 });
 
 const inventorySubjects = (
-  sheets: CharacterSheet[],
+  subjects: StateSubject[],
   events: StateMutationEvent[]
 ): string[] => Array.from(new Map([
-  ...sheets.flatMap((sheet) => [
+  ...subjects.flatMap(({sheet}) => !sheet ? [] : [
     ...(sheet.inventoryEntries ?? []).map((entry) => entry.name),
     ...(sheet.equipmentEntries ?? []).map((entry) => entry.name),
     ...sheet.inventory,
@@ -172,25 +176,25 @@ const inventorySubjects = (
   ))
 ].filter(Boolean).map((name) => [normalize(name), name])).values());
 
-const namesForSheet = (
-  sheet: CharacterSheet,
+const namesForSubject = (
+  subject: StateSubject,
   knownEntities: KnownEntityRef[]
 ): string[] => {
-  const ids = new Set([sheet.characterEntityId, sheet.characterId, sheet.id].filter(Boolean));
+  const ids = new Set(stateSubjectIds(subject));
   return Array.from(new Set([
-    sheet.name,
+    subject.name,
     ...knownEntities.filter((entity) => ids.has(entity.id)).map((entity) => entity.name)
   ].filter(Boolean)));
 };
 
 const staticLocationClaims = (
   scene: WritingDocument,
-  sheet: CharacterSheet,
+  subject: StateSubject,
   knownEntities: KnownEntityRef[]
 ): Array<{location: string; start: number; evidence: string}> => {
   const text = manuscriptPlainText(scene.content);
   const claims: Array<{location: string; start: number; evidence: string}> = [];
-  namesForSheet(sheet, knownEntities).forEach((name) => {
+  namesForSubject(subject, knownEntities).forEach((name) => {
     const pattern = new RegExp(
       `\\b${escapeRegex(name)}\\b\\s+(?:is|was|waited|waits|remained|remains|stood|stays|stayed)\\s+(?:at|in|inside|outside)\\s+(?:the\\s+)?([^.!?,;\\n]+)`,
       'gi'
@@ -241,12 +245,15 @@ export function findStateContinuityReviewItems({
   documents,
   sceneOrderDocuments = documents,
   knownEntities,
-  characterSheets,
+  stateSubjects,
   actorResolutions,
   ruleset,
   stateMutationEvents
 }: StateContinuityReviewInput): StateContinuityReviewItem[] {
-  if (!ruleset || characterSheets.length === 0) return [];
+  // Sheets need their ruleset; characters without a sheet do not.
+  const recordable = recordableStateSubjects(stateSubjects);
+  const subjects = ruleset ? recordable : recordable.filter((subject) => !subject.sheet);
+  if (subjects.length === 0) return [];
   const orderedScenes = sceneOrderDocuments.slice().sort(compareWritingDocuments);
   const orderBySceneId = new Map(orderedScenes.map((scene, index) => [scene.id, index + 1]));
   const reviewedIds = new Set(documents.map((scene) => scene.id));
@@ -270,20 +277,14 @@ export function findStateContinuityReviewItems({
     }).filter((observation) => observation.type === 'state_delta_candidate');
 
     observations.forEach((observation) => {
-      const sheet = findSheetForStateActor(observation.actor, characterSheets);
-      if (!sheet?.characterEntityId) return;
-      const command = stateDeltaObservationToCommand(observation, sheet.characterEntityId);
-      if (!command) return;
-      const state = replayCharacterState({
-        sheet,
+      const subject = findStateSubject(observation.actor, subjects);
+      if (!subject) return;
+      const command = stateDeltaObservationToCommand(observation, subject.actorId);
+      if (!command || !stateSubjectAccepts(subject, command)) return;
+      const state = replayStateSubject({
+        subject,
         ruleset,
         events: stateMutationEvents,
-        target: {
-          actorId: sheet.characterEntityId,
-          characterId: sheet.characterId,
-          sheetId: sheet.id,
-          actorName: sheet.name
-        },
         actorResolutions,
         upToSceneOrder: sceneOrder,
         upToScenePosition: observation.evidence.start - 1
@@ -292,7 +293,7 @@ export function findStateContinuityReviewItems({
       if (errors.length === 0) return;
       const prior = latestRelevantEvent({
         events: stateMutationEvents,
-        sheet,
+        subject,
         sceneOrder,
         orderBySceneId,
         actorResolutions,
@@ -307,27 +308,20 @@ export function findStateContinuityReviewItems({
         code: 'INVALID_MUTATION',
         scene,
         focusText: observation.evidence.text,
-        sheet,
+        subject,
         message:
-          `This proposed state change cannot replay for ${sheet.name}: ${errors.join(' ')} ` +
+          `This proposed state change cannot replay for ${subject.name}: ${errors.join(' ')} ` +
           `The conflicting state comes from ${sourceLabel(prior)}.`
       }));
     });
 
-    characterSheets.forEach((sheet) => {
-      if (!sheet.characterEntityId) return;
-      const actorId = sheet.characterEntityId;
-      staticLocationClaims(scene, sheet, knownEntities).forEach((claim) => {
-        const state = replayCharacterState({
-          sheet,
+    subjects.forEach((subject) => {
+      const actorId = subject.actorId;
+      staticLocationClaims(scene, subject, knownEntities).forEach((claim) => {
+        const state = replayStateSubject({
+          subject,
           ruleset,
           events: stateMutationEvents,
-          target: {
-            actorId,
-            characterId: sheet.characterId,
-            sheetId: sheet.id,
-            actorName: sheet.name
-          },
           actorResolutions,
           upToSceneOrder: sceneOrder,
           upToScenePosition: claim.start
@@ -335,7 +329,7 @@ export function findStateContinuityReviewItems({
         if (!state.locationName || normalize(state.locationName) === normalize(claim.location)) return;
         const prior = latestRelevantEvent({
           events: stateMutationEvents,
-          sheet,
+          subject,
           sceneOrder,
           orderBySceneId,
           actorResolutions,
@@ -356,58 +350,52 @@ export function findStateContinuityReviewItems({
           code: 'STATE_CONFLICT',
           scene,
           focusText: claim.evidence,
-          sheet,
+          subject,
           message:
-            `${sheet.name} is described at ${claim.location}, but ${sourceLabel(prior)} ` +
+            `${subject.name} is described at ${claim.location}, but ${sourceLabel(prior)} ` +
             `places them at ${state.locationName}, with no movement cue in between.`
         }));
       });
     });
   });
 
-  inventorySubjects(characterSheets, stateMutationEvents).forEach((subject) => {
-    const analysis = analyzeManuscriptCustody(subject, orderedScenes);
+  inventorySubjects(subjects, stateMutationEvents).forEach((itemName) => {
+    const analysis = analyzeManuscriptCustody(itemName, orderedScenes);
     analysis.events
       .filter((event) => reviewedIds.has(event.scene.id))
       .filter((event) => event.kind === 'held-by' || event.kind === 'used-by')
-      .filter((event) => normalize(event.evidence).includes(normalize(subject)))
+      .filter((event) => normalize(event.evidence).includes(normalize(itemName)))
       .forEach((event) => {
         const holder = normalizeCustodyText(event.holder ?? '');
-        const sheet = characterSheets.find((candidate) =>
-          namesForSheet(candidate, knownEntities).some(
+        const subject = subjects.find((candidate) =>
+          namesForSubject(candidate, knownEntities).some(
             (name) => normalizeCustodyText(name) === holder
           )
         );
-        if (!sheet?.characterEntityId) return;
+        if (!subject) return;
         const sceneOrder = orderBySceneId.get(event.scene.id);
         if (!sceneOrder) return;
-        const state = replayCharacterState({
-          sheet,
+        const state = replayStateSubject({
+          subject,
           ruleset,
           events: stateMutationEvents,
-          target: {
-            actorId: sheet.characterEntityId,
-            characterId: sheet.characterId,
-            sheetId: sheet.id,
-            actorName: sheet.name
-          },
           actorResolutions,
           upToSceneOrder: sceneOrder,
           upToScenePosition: event.position
         });
-        const missing = !inventoryContains(state, subject);
+        const missing = !inventoryContains(state, itemName);
         const requiresEquipped = /\b(?:attacked|slashed|stabbed|struck|wielded)\b/i.test(event.evidence);
-        const unequipped = requiresEquipped && !inventoryEquipped(state, subject);
+        const unequipped = requiresEquipped && !inventoryEquipped(state, itemName);
         if (!missing && !unequipped) return;
         const prior = latestRelevantEvent({
           events: stateMutationEvents,
-          sheet,
+          subject,
           sceneOrder,
           orderBySceneId,
           actorResolutions,
           commandMatches: (command) => {
             const name = commandItemName(command);
-            return Boolean(name && normalize(name) === normalize(subject) && (
+            return Boolean(name && normalize(name) === normalize(itemName) && (
               command.type === 'inventory_remove' ||
               command.type === 'inventory_consume' ||
               command.type === 'inventory_unequip'
@@ -419,10 +407,10 @@ export function findStateContinuityReviewItems({
           code: 'STATE_CONFLICT',
           scene: event.scene,
           focusText: event.evidence,
-          sheet,
+          subject,
           message: missing
-            ? `${sheet.name} uses or holds ${subject}, but ${sourceLabel(prior)} removed it and no later acquisition is accepted.`
-            : `${sheet.name} attacks or wields ${subject}, but ${sourceLabel(prior)} leaves it unequipped.`
+            ? `${subject.name} uses or holds ${itemName}, but ${sourceLabel(prior)} removed it and no later acquisition is accepted.`
+            : `${subject.name} attacks or wields ${itemName}, but ${sourceLabel(prior)} leaves it unequipped.`
         }));
       });
   });

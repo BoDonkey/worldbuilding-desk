@@ -1,4 +1,5 @@
 import {describe, expect, it} from 'vitest';
+import {buildStateSubjects} from '../state/stateSubjects';
 import type {
   CharacterSheet,
   StateMutationEvent,
@@ -54,7 +55,7 @@ describe('mutation review grouping', () => {
 
   it('builds labeled preview items and filters hidden suggestions', () => {
     const items = buildStateMutationReviewItems({
-      characterSheets: [sheet],
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
       documents: [document],
       hiddenReviewKeys: [],
       ruleset,
@@ -69,7 +70,7 @@ describe('mutation review grouping', () => {
 
     expect(
       buildStateMutationReviewItems({
-        characterSheets: [sheet], documents: [document], ruleset,
+        stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}), documents: [document], ruleset,
         hiddenReviewKeys: [getHiddenStateMutationReviewKey(proposedEvent)],
         stateMutationEvents: [proposedEvent]
       })
@@ -87,5 +88,30 @@ describe('mutation review grouping', () => {
         hiddenReviewKeys: [hiddenKey]
       })
     ).toEqual({scene: 1});
+  });
+
+  it('previews a suggestion for a World Bible character without a sheet', () => {
+    const items = buildStateMutationReviewItems({
+      stateSubjects: buildStateSubjects({
+        characterSheets: [],
+        characterEntities: [{id: 'entity-sera', name: 'Sera'}]
+      }),
+      documents: [document],
+      hiddenReviewKeys: [],
+      ruleset: null,
+      stateMutationEvents: [{
+        ...proposedEvent,
+        commands: [{type: 'location_set', actorId: 'entity-sera', locationName: 'Highmoor'}]
+      }]
+    });
+    expect(items).toEqual([
+      expect.objectContaining({
+        actorLabel: 'Sera',
+        summaryLines: ['Move to Highmoor'],
+        effectLines: ['Location: unset -> Highmoor'],
+        canAccept: true,
+        canAcceptInBatch: true
+      })
+    ]);
   });
 });
