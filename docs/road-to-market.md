@@ -330,6 +330,7 @@ messages).
 | 4.75 | Local reply length from server context | 4 | S | Done `4bf1e2a` |
 | 4.82 | Ordinary assistant rolling summaries | 4 | M | — post-beta candidate; after the relevant 3.32 assistant/context seam |
 | 4.83 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
+| 4.84 | Workspace dialogs open above the context drawer | 4 | S | — (independent; found in 4.27b) |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | — (after 4.76) |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | — (after 4.77) |
@@ -858,6 +859,25 @@ Movement checks are review findings, never blocks.
     persistence, provider, or prompt-assembly code changes. Record the exact
     fixture revision, model, quantization, context, hardware, settings, and
     measured outputs for reproducibility.
+
+- **4.84 Workspace dialogs open above the context drawer.** Found while
+  building 4.27b. Dialogs opened from the Workspace context drawer render
+  underneath it: `.modalOverlay` uses `z-index: 1000` and the drawer's
+  `.contextOverlay` uses `1250` (`WorkspaceRoute.module.css`). Below roughly
+  1,200px wide, the open drawer covers part of the dialog. In the scene
+  roster, `Record change here` hid the change dialog's Location field at
+  1,000px. Affected: the positioned change dialog (`Record change here`,
+  `Consume here`, timeline `Edit` and expiration) and the selection item
+  capture dialogs when the drawer is open. Check every Workspace dialog that
+  can open while the scene or context drawer is open. Fix the stacking order
+  so a dialog always sits above both drawers and below nothing it should
+  cover (the consistency popover is `1300`). Prefer one shared layer scale
+  over another one-off number. Focus trap, Escape, and focus return to the
+  drawer control must keep working.
+  - **Verify.** Fast battery plus the Workspace Cypress specs; e2e at
+    1,000px wide that opens `Record change here` from the scene roster with
+    the drawer open and types into the dialog without forcing. Then remove
+    the wide-viewport workaround in `general-fiction-state.cy.ts`.
 
 ### Phase 5 — Release engineering
 
