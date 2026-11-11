@@ -66,6 +66,13 @@ Other files:
   placement, provisional metadata, coverage targets, sourcing rules, and the
   resume protocol; the roadmap and domain/architecture documents remain
   authoritative.
+- `docs/context-memory-investigation-2026-11-11.md` — active,
+  non-authoritative Slice 1.6 audit and deterministic baseline for indexed
+  context, project memory, and conversation compression. It corrects the
+  external `writing-block.md` assumptions and records the evidence gates for
+  any rolling-summary, scene-digest, extraction-model, or bundled-model work.
+  Archive it after accepted decisions are folded into the authority docs and
+  roadmap.
 - `docs/archive/world-canvas.md` and `docs/archive/world-canvas-plan.md` —
   archived 2026-09-20; historical prompt and initial World Canvas plan for
   completed slices 4.30–4.33.
