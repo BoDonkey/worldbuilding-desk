@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {EntityCategory, StateMutationEvent, WorldEntity} from '../../entityTypes';
-import type {ConsistencyAlias} from '../storage/repositories/aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {
   buildPlaceNameIndex,
   findUnlinkedPlaceNames,

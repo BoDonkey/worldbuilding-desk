@@ -32,11 +32,9 @@ function normalizeCommandValue(value: unknown): unknown {
  * is derived, so it must not make an accepted move look different.
  */
 function getEventCommandFingerprint(event: StateMutationEvent): string {
-  return JSON.stringify(event.commands.map((command) => {
-    if (command.type !== 'location_set') return normalizeCommandValue(command);
-    const {placeId: _placeId, ...change} = command;
-    return normalizeCommandValue(change);
-  }));
+  return JSON.stringify(event.commands.map((command) =>
+    normalizeCommandValue(command.type === 'location_set' ? {...command, placeId: undefined} : command)
+  ));
 }
 
 export function reconcileSceneStateMutationEvents(params: {

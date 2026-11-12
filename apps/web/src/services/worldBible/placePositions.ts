@@ -4,7 +4,7 @@ import type {
   StateMutationEvent,
   WorldEntity
 } from '../../entityTypes';
-import type {ConsistencyAlias} from '../storage/repositories/aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {placesById, type PlacesById} from './places';
 
 /*
