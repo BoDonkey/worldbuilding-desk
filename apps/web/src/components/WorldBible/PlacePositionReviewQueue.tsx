@@ -30,7 +30,9 @@ export function PlacePositionReviewQueue({review}: {review: UnlinkedPlacePositio
       <ul className={styles.identityQueueList}>
         {queue.map((item) => {
           const isResolving = resolvingKey === item.key;
-          const targetId = targetByKey[item.key] ?? '';
+          // A name that matches one place is suggested, never linked until confirmed.
+          const suggestedId = item.candidateIds.length === 1 ? item.candidateIds[0] : '';
+          const targetId = targetByKey[item.key] ?? suggestedId;
           const candidates = item.candidateIds.length > 1
             ? places.filter((place) => item.candidateIds.includes(place.id))
             : places;
@@ -45,7 +47,9 @@ export function PlacePositionReviewQueue({review}: {review: UnlinkedPlacePositio
               <p>
                 {item.candidateIds.length > 1
                   ? 'This name matches more than one place. Choose the one it means.'
-                  : 'No place record has this name or alias.'}
+                  : item.candidateIds.length === 1
+                    ? 'This name matches one place. Link it to confirm.'
+                    : 'No place record has this name or alias.'}
               </p>
               <div className={styles.identityLinkRow}>
                 <label>
