@@ -332,7 +332,7 @@ messages).
 | 4.83 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
 | 4.84 | Workspace dialogs open above the context drawer | 4 | S | — (independent; found in 4.27b) |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
-| 4.77 | Places: positions refer to place records | 4 | M | — (after 4.76) |
+| 4.77 | Places: positions refer to place records | 4 | M | WIP |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | — (after 4.77) |
 | 4.79 | Maps and placements (data, distance) | 4 | L | — (after 4.76) |
 | 4.80 | Map surface: image import, pins, scene view, export | 4 | L | — (after 4.78, 4.79) |

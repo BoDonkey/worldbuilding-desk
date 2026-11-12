@@ -111,6 +111,7 @@ export function buildCharacterReplayBaseline(params: {
     },
     statuses,
     locationName: undefined,
+    locationPlaceId: undefined,
     progression: {...startingProgression, level: deriveLevel(startingProgression)}
   };
 }
@@ -149,6 +150,7 @@ export function applyStateMutationCommand(
     },
     statuses: [...state.statuses],
     locationName: state.locationName,
+    locationPlaceId: state.locationPlaceId,
     // The level table is never changed by replay, so it is shared.
     progression: {...state.progression}
   };
@@ -197,6 +199,7 @@ export function replayCharacterState(params: {
     },
     statuses: [...baseline.statuses],
     locationName: baseline.locationName,
+    locationPlaceId: baseline.locationPlaceId,
     progression: {...baseline.progression}
   };
 
