@@ -251,13 +251,13 @@ export const useCharacterSheetSceneChanges = (params: {
       if (stateValidationErrors.length > 0) {
         throw new Error(stateValidationErrors.join(' '));
       }
-      await saveStateMutationEvent(event);
+      const saved = await saveStateMutationEvent(event);
       setStateMutationEvents((prev) => {
-        const existingIndex = prev.findIndex((entry) => entry.id === event.id);
+        const existingIndex = prev.findIndex((entry) => entry.id === saved.id);
         if (existingIndex === -1) {
-          return [...prev, event];
+          return [...prev, saved];
         }
-        return prev.map((entry) => (entry.id === event.id ? event : entry));
+        return prev.map((entry) => (entry.id === saved.id ? saved : entry));
       });
       resetMutationForm();
       setFeedback({

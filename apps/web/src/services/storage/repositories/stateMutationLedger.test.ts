@@ -115,3 +115,27 @@ describe('stateMutationLedger reconciliation', () => {
     ]);
   });
 });
+
+describe('place links in reconciliation (slice 4.77)', () => {
+  it('keeps an accepted move and its place link when the regenerated move has none', () => {
+    const accepted = makeEvent({
+      id: 'accepted-move',
+      status: 'accepted',
+      commands: [{type: 'location_set', actorId: 'entity-sera', locationName: 'the Archive', placeId: 'archive'}]
+    });
+    const regenerated = makeEvent({
+      id: 'regenerated-move',
+      commands: [{type: 'location_set', actorId: 'entity-sera', locationName: 'the Archive'}]
+    });
+    const result = reconcileSceneStateMutationEvents({
+      existingEvents: [accepted],
+      nextEvents: [regenerated],
+      invalidationReason: 'rerun',
+      invalidatedAt: 2
+    });
+    expect(result.eventsToInvalidate).toEqual([]);
+    expect(result.eventsToSave).toHaveLength(1);
+    expect(result.eventsToSave[0]).toMatchObject({id: 'accepted-move', status: 'accepted'});
+    expect(result.eventsToSave[0].commands[0]).toMatchObject({placeId: 'archive'});
+  });
+});
