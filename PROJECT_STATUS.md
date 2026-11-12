@@ -126,7 +126,18 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   `inside` / `connections` CSV columns for location categories. Project
   storage schema 10 and backup snapshot schema 12 (both additive). References
   to deleted or merged-away places are ignored when read, as record links
-  are; positions in the scene ledger still store place names as text (4.77).
+  are.
+- Positions refer to place records (slice 4.77). A move (`location_set`)
+  keeps its written name and links to a place record when the name or an
+  alias matches exactly one place; otherwise it stays text. Location fields
+  in scene changes suggest place names. The World Bible **Review** view lists
+  **Positions not linked to a place**, grouped by name, with **Link to
+  place**, **Create place** (for names matching no record), and **Keep as
+  text**; a single match is preselected but never linked without the author.
+  Linked positions show the place's current name, and the location continuity
+  check treats a tavern inside a city as agreeing with the city. Project
+  storage schema 11 and backup snapshot schema 13 link existing positions
+  once, unambiguous names only.
 - World Bible document import detects Markdown `#` headings and DOCX heading
   paragraphs (Word style ids, Pages-style named styles with outline levels,
   `basedOn` chains, paragraph outline levels), treats a leading title heading
