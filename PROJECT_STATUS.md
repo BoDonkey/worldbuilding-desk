@@ -657,8 +657,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - `useCharacterSheetMutationPreview` now owns scene-mutation form state, deterministic preview/replay derivation, and mutation-history orchestration; pure mutation command construction lives in the tested character ruleset service.
 - Shared text matching contract added for smoke-critical lore/review matching paths.
 - Current targeted architecture sizes are `WorkspaceRoute.tsx` 991 lines (3.32),
-  `WorldBibleRoute.tsx` 2,044, `CharacterSheetsRoute.tsx` 2,140,
+  `WorldBibleRoute.tsx` 2,044, `CharacterSheetsRoute.tsx` 249 (3.32),
   `CompendiumRoute.tsx` 1,551, and `useWorkspaceConsistency.ts` 2,072.
+- Character Sheets (3.32): the route keeps view switching and layout. Hooks
+  own loading (`useCharacterSheetsData`), the sheet form
+  (`useCharacterSheetEditor`), requests from other screens to open a sheet
+  (`useCharacterSheetOpenRequests`), recording scene changes
+  (`useCharacterSheetSceneChanges`, on top of
+  `useCharacterSheetMutationPreview`), and the ruleset memory summary.
+  Sections render from `components/CharacterSheets/`
+  (`CharacterSheetEditorForm`, `TrackedEntryEditor`, `SceneChangePanel`,
+  `SceneChangeHistory`, `RulesetReferencePanel`).
 - The desktop app keeps its route in the URL hash (`index.html#/workspace`)
   because it loads the renderer from disk; a path route there pointed at a
   file that does not exist, so a reload showed a blank page. The browser
@@ -737,8 +746,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 `docs/architecture-review.md`.*
 
 - **Zustand store, slice by slice** — app shell and workspace UI slices are now in place. Continue with dedicated, behavior-preserving slices only; do not move editor `title`, `content`, `saveStatus`, or autosave ownership without a focused editor-state pass.
-- Continue trimming `WorkspaceRoute`, `WorldBibleRoute`, and
-  `CharacterSheetsRoute` through cohesive orchestration or presentation
+- Continue trimming `WorkspaceRoute` and `WorldBibleRoute` through cohesive
+  orchestration or presentation
   boundaries; canon sync and larger editor-state orchestration remain candidates
   after the workspace UI shell settles.
 - Add targeted smoke coverage for the newer World Bible rename / alias / ignore resolution paths after the recent extraction and workflow pass.
