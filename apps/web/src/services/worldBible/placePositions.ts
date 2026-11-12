@@ -203,6 +203,11 @@ export const linkPlaceName = (params: {
     return changed ? [{...event, commands}] : [];
   });
 
+/** Place record names, for suggesting while the author types a position. */
+export const placeNameSuggestions = (categories: EntityCategory[], entities: WorldEntity[]): string[] =>
+  [...new Set([...placesById(categories, entities).values()].map((place) => place.name))]
+    .sort((a, b) => a.localeCompare(b));
+
 /** The place's current name when the position links to one, else the text the author wrote. */
 export const positionLabel = (
   position: {locationName?: string; locationPlaceId?: string},

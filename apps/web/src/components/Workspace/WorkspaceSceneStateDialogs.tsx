@@ -6,6 +6,7 @@ import type {useWorkspaceSceneCursor} from '../../hooks/useWorkspaceSceneCursor'
 import type {useWorkspaceSceneRoster} from '../../hooks/useWorkspaceSceneRoster';
 import {resolveReusableItem} from '../../services/state/itemStateAuthoringService';
 import {isItemCategory} from '../../services/worldBible/worldBibleSummary';
+import {placeNameSuggestions} from '../../services/worldBible/placePositions';
 import styles from '../../styles/WorkspaceRoute.module.css';
 import {PositionedStateChangeComposer} from './PositionedStateChangeComposer';
 import {SceneConsumptionCapture} from './SceneConsumptionCapture';
@@ -60,6 +61,10 @@ export function WorkspaceSceneStateDialogs({
   const positionedChangeDialogRef = useRef<HTMLDivElement | null>(null);
   const inventoryCaptureDialogRef = useRef<HTMLDivElement | null>(null);
 
+  const placeNames = useMemo(
+    () => placeNameSuggestions(categories, entities),
+    [categories, entities]
+  );
   const pendingInventoryResolution = useMemo(
     () => pendingInventoryCapture
       ? resolveReusableItem({
@@ -127,6 +132,7 @@ export function WorkspaceSceneStateDialogs({
               initialLabel={pendingPositionedChange.initialLabel}
               initialCommands={pendingPositionedChange.initialCommands}
               isSaving={isSavingPositionedChange}
+              placeNames={placeNames}
               onCancel={() => setPendingPositionedChange(null)}
               onSave={(input) => void savePositionedChange(input)}
             />

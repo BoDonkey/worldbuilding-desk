@@ -9,6 +9,7 @@ interface SceneChangePanelProps {
   sceneChanges: CharacterSheetSceneChanges;
   sheets: CharacterSheet[];
   ruleset: StoredRuleset;
+  placeNames: string[];
   hidden: boolean;
 }
 
@@ -16,7 +17,7 @@ interface SceneChangePanelProps {
  * "Record scene changes": draft a detailed change against a sheet and scene,
  * preview it and the replayed state, then record it.
  */
-export function SceneChangePanel({sceneChanges, sheets, ruleset, hidden}: SceneChangePanelProps) {
+export function SceneChangePanel({sceneChanges, sheets, ruleset, placeNames, hidden}: SceneChangePanelProps) {
   const {
     editingMutationEventId, mutationTargetSheetId, setMutationTargetSheetId,
     mutationSceneId, setMutationSceneId, orderedDocuments, mutationType, setMutationType,
@@ -62,6 +63,7 @@ export function SceneChangePanel({sceneChanges, sheets, ruleset, hidden}: SceneC
         setMutationLocationName={setMutationLocationName}
         ruleset={ruleset}
         selectedMutationStatDefinition={selectedMutationStatDefinition}
+        placeNames={placeNames}
       />
       <div
         className={`${styles.inlineMarginBottom09rem} ${styles.inlinePadding075rem} ${styles.inlineBorderRadius8px} ${styles.inlineBackgroundColorVarColorBgPrimary} ${styles.inlineBorder1pxSolidVarColorBorder} ${styles.inlineFontSize09rem}`}

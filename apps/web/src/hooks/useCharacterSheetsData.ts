@@ -13,8 +13,10 @@ import {
   getCharacterSheetsByProject, deriveCharacterSheetNames, findCharacterSheetCollisions,
   getCharactersByProject, getEntitiesByProject, getActorResolutionsByProject,
   getRulesetByProjectId, getOrCreateSettlementState, getSettlementModulesByProject,
-  getCompendiumEntriesByProject, getDocumentsByProject, getStateMutationEventsByProject
+  getCompendiumEntriesByProject, getDocumentsByProject, getStateMutationEventsByProject,
+  getCategoriesByProject
 } from '../services/storage';
+import {placeNameSuggestions} from '../services/worldBible/placePositions';
 import type {ActorResolution} from '../services/characters/characterIdentity';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../services/shodh/getShodhService';
@@ -57,6 +59,7 @@ export const useCharacterSheetsData = (params: {
   const [settlementModules, setSettlementModules] = useState<Awaited<
     ReturnType<typeof getSettlementModulesByProject>
   >>([]);
+  const [placeNames, setPlaceNames] = useState<string[]>([]);
   const [shodhService, setShodhService] = useState<ShodhMemoryProvider | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -75,6 +78,7 @@ export const useCharacterSheetsData = (params: {
           setCompendiumEntries([]);
           setDocuments([]);
           setStateMutationEvents([]);
+          setPlaceNames([]);
           setShodhService(null);
           setIsLoaded(true);
         }
@@ -94,7 +98,8 @@ export const useCharacterSheetsData = (params: {
         loadedDocuments,
         loadedStateMutationEvents,
         loadedEntities,
-        loadedActorResolutions
+        loadedActorResolutions,
+        loadedCategories
       ] = await Promise.all(
         [
           getCharacterSheetsByProject(activeProject.id),
@@ -106,7 +111,8 @@ export const useCharacterSheetsData = (params: {
           getDocumentsByProject(activeProject.id),
           getStateMutationEventsByProject(activeProject.id),
           getEntitiesByProject(activeProject.id),
-          getActorResolutionsByProject(activeProject.id)
+          getActorResolutionsByProject(activeProject.id),
+          getCategoriesByProject(activeProject.id)
         ]
       );
 
@@ -156,6 +162,7 @@ export const useCharacterSheetsData = (params: {
         setCompendiumEntries(loadedCompendiumEntries);
         setDocuments(loadedDocuments);
         setStateMutationEvents(loadedStateMutationEvents);
+        setPlaceNames(placeNameSuggestions(loadedCategories, loadedEntities));
         const shodh = await getShodhService(shodhOptions);
         if (!cancelled) {
           setShodhService(shodh);
@@ -192,7 +199,7 @@ export const useCharacterSheetsData = (params: {
 
   return {
     sheets, setSheets, ruleset, characters, actorResolutions, compendiumEntries,
-    documents, stateMutationEvents, setStateMutationEvents, shodhService,
+    documents, stateMutationEvents, setStateMutationEvents, placeNames, shodhService,
     isLoaded, runtimeModifiers
   };
 };
