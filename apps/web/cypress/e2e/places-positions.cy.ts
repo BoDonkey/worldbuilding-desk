@@ -101,7 +101,8 @@ describe('Places: positions refer to place records', () => {
     cy.contains('Created the place "the old mill"').should('be.visible');
 
     // The new place now appears in the other cards' place lists, so check card names.
-    queueItems().find('strong').then((names) => {
+    // `should` retries until the queue re-renders without the created name.
+    queueItems().find('strong').should((names) => {
       expect([...names].map((name) => name.textContent)).to.deep.eq(['Ashford', 'Lantern Row']);
     });
     cy.get('section[aria-labelledby="place-position-queue-title"]').within(() => {

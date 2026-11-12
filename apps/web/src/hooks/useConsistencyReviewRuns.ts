@@ -76,6 +76,7 @@ export function useConsistencyReviewRuns({
   ruleset,
   stateMutationEvents,
   placeNameIndex,
+  placeNamesKeptAsText,
   resolvedActionCues,
   worldEngine,
   setFeedback,
@@ -96,6 +97,7 @@ export function useConsistencyReviewRuns({
   ruleset: StoredRuleset | null;
   stateMutationEvents: StateMutationEvent[];
   placeNameIndex: PlaceNameIndex;
+  placeNamesKeptAsText?: string[];
   resolvedActionCues: string[];
   worldEngine: WorldEngine;
   setFeedback: ConsistencyFeedback;
@@ -243,7 +245,8 @@ export function useConsistencyReviewRuns({
         actorResolutions,
         ruleset,
         stateMutationEvents,
-        places: placeNameIndex
+        places: placeNameIndex,
+        placeNamesKeptAsText
       });
       setGuardrailIssues(presentedIssues);
       setConsistencyReviewItems((prev) => [
@@ -277,6 +280,7 @@ export function useConsistencyReviewRuns({
       ruleset,
       stateMutationEvents,
       placeNameIndex,
+      placeNamesKeptAsText,
       worldEngine
     ]
   );
@@ -317,7 +321,8 @@ export function useConsistencyReviewRuns({
           actorResolutions,
           ruleset,
           stateMutationEvents,
-          places: placeNameIndex
+          places: placeNameIndex,
+          placeNamesKeptAsText
         });
         setGuardrailIssues(presentedIssues);
         setConsistencyReviewItems((prev) => [
@@ -356,6 +361,7 @@ export function useConsistencyReviewRuns({
       ruleset,
       stateMutationEvents,
       placeNameIndex,
+      placeNamesKeptAsText,
       worldEngine
     ]
   );
@@ -450,7 +456,8 @@ export function useConsistencyReviewRuns({
         actorResolutions,
         ruleset,
         stateMutationEvents,
-        places: placeNameIndex
+        places: placeNameIndex,
+        placeNamesKeptAsText
       });
       const continuityItems = [...contradictionItems, ...stateContinuityItems];
       const combinedItems = [...items, ...continuityItems];
@@ -527,6 +534,7 @@ export function useConsistencyReviewRuns({
     setFeedback,
     stateMutationEvents,
     placeNameIndex,
+    placeNamesKeptAsText,
     worldEngine
   ]);
 

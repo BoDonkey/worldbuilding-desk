@@ -373,4 +373,101 @@ describe('state-backed continuity review', () => {
       })).toHaveLength(1);
     });
   });
+
+  describe('movement checks (slice 4.78)', () => {
+    const sheetless = buildStateSubjects({
+      characterSheets: [],
+      characterEntities: [{id: 'sera', name: 'Sera'}]
+    });
+    const place = (id: string, name: string, connections?: Array<{id: string; toId: string; kind: string}>) => ({
+      id, projectId: 'project', categoryId: 'cat-loc', name, fields: {}, links: [],
+      place: connections ? {connections} : undefined, createdAt: 1, updatedAt: 1
+    });
+    const places = buildPlaceNameIndex({
+      categories: [{
+        id: 'cat-loc', projectId: 'project', kind: 'general', name: 'Locations', slug: 'locations',
+        fieldSchema: [], createdAt: 1
+      }],
+      entities: [
+        place('varn', 'Varn', [{id: 'road', toId: 'kell', kind: 'road'}]),
+        place('kell', 'Kell'),
+        place('isle', 'Isle'),
+        place('mill', 'Mill'),
+        place('mill-2', 'Mill')
+      ],
+      aliases: []
+    });
+    const review = (
+      secondScene: string,
+      moves: StateMutationCommand[],
+      placeNamesKeptAsText?: string[]
+    ) => {
+      const scenes = [scene(1, 'Varn', 'Sera woke in Varn.'), scene(2, 'Later', secondScene)];
+      return findStateContinuityReviewItems({
+        documents: [scenes[1]!],
+        sceneOrderDocuments: scenes,
+        knownEntities,
+        stateSubjects: sheetless,
+        ruleset: null,
+        stateMutationEvents: moves.map((command, i) => event(i + 1, `Scene ${i + 1}`, command, 0)),
+        places,
+        placeNamesKeptAsText
+      });
+    };
+    const at = (locationName: string, placeId?: string): StateMutationCommand =>
+      ({type: 'location_set', actorId: 'sera', locationName, placeId});
+
+    it('flags a move with no route and no travel cue', () => {
+      expect(review('The Isle was cold. Gulls cried.', [at('Varn', 'varn'), at('Isle', 'isle')]))
+        .toEqual([expect.objectContaining({
+          id: 'state:teleport:scene-2:sera:event-2-location_set',
+          issue: expect.objectContaining({
+            code: 'STATE_CONFLICT',
+            placeCheck: 'teleport',
+            focusText: 'The Isle was cold.',
+            message: expect.stringContaining('from Varn to Isle')
+          })
+        })]);
+    });
+
+    it('accepts the same move when the prose says she travelled', () => {
+      expect(review('Sera sailed for three days. The Isle was cold.', [at('Varn', 'varn'), at('Isle', 'isle')]))
+        .toEqual([]);
+    });
+
+    it('accepts a move along a connection', () => {
+      expect(review('Kell was loud.', [at('Varn', 'varn'), at('Kell', 'kell')])).toEqual([]);
+    });
+
+    it('flags a position that names no place record, unless kept as text', () => {
+      const moves = [at('Varn', 'varn'), at('Old Barn')];
+      expect(review('Hay everywhere.', moves)).toEqual([expect.objectContaining({
+        issue: expect.objectContaining({
+          placeCheck: 'unknown-place',
+          message: expect.stringContaining('"Old Barn" names no place record')
+        })
+      })]);
+      expect(review('Hay everywhere.', moves, ['old barn'])).toEqual([]);
+    });
+
+    it('asks which place an ambiguous name means', () => {
+      expect(review('Flour dust.', [at('Varn', 'varn'), at('Mill')])).toEqual([expect.objectContaining({
+        issue: expect.objectContaining({
+          placeCheck: 'unknown-place',
+          message: expect.stringContaining('could mean 2 places')
+        })
+      })]);
+    });
+
+    it('runs no place checks without place records', () => {
+      const scenes = [scene(1, 'Varn', ''), scene(2, 'Later', 'The Isle was cold.')];
+      expect(findStateContinuityReviewItems({
+        documents: scenes,
+        knownEntities,
+        stateSubjects: sheetless,
+        ruleset: null,
+        stateMutationEvents: [event(1, 'A', at('Old Barn'), 0), event(2, 'B', at('Isle', 'isle'), 0)]
+      })).toEqual([]);
+    });
+  });
 });

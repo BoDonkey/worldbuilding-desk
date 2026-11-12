@@ -1,0 +1,158 @@
+.panel {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.header h2,
+.pathSection h3 {
+  margin: 0;
+}
+
+.header p,
+.empty {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-secondary);
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.field select {
+  min-width: 12rem;
+  max-width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--color-text-primary);
+}
+
+.field select:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 30%, transparent);
+}
+
+.placeList,
+.chips,
+.path {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.placeList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+
+.placeCard {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--color-bg-primary);
+}
+
+.placeName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.placeName small {
+  color: var(--color-text-secondary);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip,
+.badge {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.badge {
+  color: var(--color-text-secondary);
+}
+
+.pathSection {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.pathControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.path {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.path li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--color-bg-primary);
+}
+
+.sceneLink {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.sceneLink:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 620px) {
+  .field,
+  .field select {
+    width: 100%;
+  }
+
+  .sceneLink {
+    margin-left: 0;
+  }
+}
