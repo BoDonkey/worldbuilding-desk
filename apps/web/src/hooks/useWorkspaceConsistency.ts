@@ -46,6 +46,7 @@ import {useStateMutationReview} from './useStateMutationReview';
 import {useUnknownCategorySuggestion} from './useUnknownCategorySuggestion';
 import {useUnknownEntityDismissal} from './useUnknownEntityDismissal';
 import {useUnknownEntityResolution} from './useUnknownEntityResolution';
+import {buildPlaceNameIndex} from '../services/worldBible/placePositions';
 
 export {mapReviewAnnotationsByIssueKey};
 export type {
@@ -151,6 +152,10 @@ export const useWorkspaceConsistency = ({
   const characterCategoryIds = useMemo(
     () => buildCharacterCategoryIds(categories),
     [categories]
+  );
+  const placeNameIndex = useMemo(
+    () => buildPlaceNameIndex({categories, entities, aliases}),
+    [aliases, categories, entities]
   );
   const characterLoreEntityIdByCharacterId = useMemo(
     () =>
@@ -285,6 +290,7 @@ export const useWorkspaceConsistency = ({
     actorResolutions,
     ruleset,
     stateMutationEvents,
+    placeNameIndex,
     resolvedActionCues,
     worldEngine,
     setFeedback,

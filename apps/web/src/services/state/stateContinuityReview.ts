@@ -14,6 +14,12 @@ import {
   normalizeCustodyText
 } from './manuscriptCustody';
 import {stateDeltaObservationToCommand} from './kinds';
+import {isPlaceWithin} from '../worldBible/places';
+import {
+  matchPlaceId,
+  positionLabel,
+  type PlaceNameIndex
+} from '../worldBible/placePositions';
 import {
   compareStateMutationEvents,
   validateStateMutationCommandAgainstState,
@@ -43,6 +49,8 @@ interface StateContinuityReviewInput {
   actorResolutions?: ActorResolution[];
   ruleset: StoredRuleset | null;
   stateMutationEvents: StateMutationEvent[];
+  /** Place records, so positions compare by record and containment (slice 4.77). */
+  places?: PlaceNameIndex;
 }
 
 const normalize = (value: string): string =>
@@ -212,6 +220,29 @@ const staticLocationClaims = (
   return claims;
 };
 
+/**
+ * Whether the prose position agrees with the replayed one. When both name a
+ * place record, being in a place agrees with being anywhere it is inside or
+ * anywhere inside it (tavern and city). Otherwise the names compare as text.
+ */
+const positionsAgree = (
+  state: CharacterReplayState,
+  claimedLocation: string,
+  places: PlaceNameIndex | undefined
+): boolean => {
+  if (places && state.locationName) {
+    const statePlaceId = state.locationPlaceId && places.places.has(state.locationPlaceId)
+      ? state.locationPlaceId
+      : matchPlaceId(state.locationName, places);
+    const claimPlaceId = matchPlaceId(claimedLocation, places);
+    if (statePlaceId && claimPlaceId) {
+      return isPlaceWithin(statePlaceId, claimPlaceId, places.places) ||
+        isPlaceWithin(claimPlaceId, statePlaceId, places.places);
+    }
+  }
+  return normalize(state.locationName ?? '') === normalize(claimedLocation);
+};
+
 const hasMovementCueBetween = (params: {
   orderedScenes: WritingDocument[];
   knownEntities: KnownEntityRef[];
@@ -248,7 +279,8 @@ export function findStateContinuityReviewItems({
   stateSubjects,
   actorResolutions,
   ruleset,
-  stateMutationEvents
+  stateMutationEvents,
+  places
 }: StateContinuityReviewInput): StateContinuityReviewItem[] {
   // Sheets need their ruleset; characters without a sheet do not.
   const recordable = recordableStateSubjects(stateSubjects);
@@ -326,7 +358,7 @@ export function findStateContinuityReviewItems({
           upToSceneOrder: sceneOrder,
           upToScenePosition: claim.start
         });
-        if (!state.locationName || normalize(state.locationName) === normalize(claim.location)) return;
+        if (!state.locationName || positionsAgree(state, claim.location, places)) return;
         const prior = latestRelevantEvent({
           events: stateMutationEvents,
           subject,
@@ -353,7 +385,8 @@ export function findStateContinuityReviewItems({
           subject,
           message:
             `${subject.name} is described at ${claim.location}, but ${sourceLabel(prior)} ` +
-            `places them at ${state.locationName}, with no movement cue in between.`
+            `places them at ${places ? positionLabel(state, places.places) : state.locationName}, ` +
+            'with no movement cue in between.'
         }));
       });
     });

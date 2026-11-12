@@ -8,6 +8,7 @@ import type {
   WritingDocument
 } from '../../entityTypes';
 import {findStateContinuityReviewItems} from './stateContinuityReview';
+import {buildPlaceNameIndex} from '../worldBible/placePositions';
 
 const ruleset: StoredRuleset = {
   id: 'rules',
@@ -297,6 +298,79 @@ describe('state-backed continuity review', () => {
           locationName: 'North Camp'
         })]
       })).toEqual([]);
+    });
+  });
+
+  describe('positions that name place records (slice 4.77)', () => {
+    const sheetless = buildStateSubjects({
+      characterSheets: [],
+      characterEntities: [{id: 'sera', name: 'Sera'}]
+    });
+    const place = (id: string, name: string, parentId?: string) => ({
+      id, projectId: 'project', categoryId: 'cat-loc', name, fields: {}, links: [],
+      place: parentId ? {parentId} : undefined, createdAt: 1, updatedAt: 1
+    });
+    const places = buildPlaceNameIndex({
+      categories: [{
+        id: 'cat-loc', projectId: 'project', kind: 'general', name: 'Locations', slug: 'locations',
+        fieldSchema: [], createdAt: 1
+      }],
+      entities: [
+        place('varn', 'Varn'),
+        place('tavern', 'Gilded Gull', 'varn'),
+        place('harbor', 'South Harbor')
+      ],
+      aliases: [{
+        id: 'alias-gull', projectId: 'project', targetId: 'tavern', targetType: 'entity',
+        entityId: 'tavern', alias: 'the Gull', createdAt: 1, updatedAt: 1
+      }]
+    });
+    const findingsFor = (prose: string, move: StateMutationCommand) => {
+      const scenes = [scene(1, 'Arrival', 'Sera came ashore.'), scene(2, 'Later', prose)];
+      return findStateContinuityReviewItems({
+        documents: [scenes[1]!],
+        sceneOrderDocuments: scenes,
+        knownEntities,
+        stateSubjects: sheetless,
+        ruleset: null,
+        stateMutationEvents: [event(1, 'Arrival', move)],
+        places
+      });
+    };
+    const atTavern: StateMutationCommand = {
+      type: 'location_set', actorId: 'sera', locationName: 'the tavern', placeId: 'tavern'
+    };
+
+    it('accepts prose naming a place that contains the recorded one', () => {
+      expect(findingsFor('Sera waited in Varn.', atTavern)).toEqual([]);
+    });
+
+    it('accepts prose naming a place inside the recorded one', () => {
+      expect(findingsFor('Sera waited in the Gull.', {
+        type: 'location_set', actorId: 'sera', locationName: 'Varn', placeId: 'varn'
+      })).toEqual([]);
+    });
+
+    it('compares by record, so a different name for the same place agrees', () => {
+      expect(findingsFor('Sera waited at the Gilded Gull.', atTavern)).toEqual([]);
+    });
+
+    it('flags a place outside the recorded one and names the record', () => {
+      expect(findingsFor('Sera waited at South Harbor.', atTavern)).toEqual([expect.objectContaining({
+        issue: expect.objectContaining({
+          code: 'STATE_CONFLICT',
+          message: expect.stringContaining('places them at Gilded Gull')
+        })
+      })]);
+    });
+
+    it('falls back to text for an old position with no record', () => {
+      expect(findingsFor('Sera waited at North Camp.', {
+        type: 'location_set', actorId: 'sera', locationName: 'North Camp'
+      })).toEqual([]);
+      expect(findingsFor('Sera waited at Old Mill.', {
+        type: 'location_set', actorId: 'sera', locationName: 'North Camp'
+      })).toHaveLength(1);
     });
   });
 });

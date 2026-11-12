@@ -17,6 +17,7 @@ import {
 } from '../components/WorldBible/CharacterIntakeTasks';
 import type {CharacterVoicePosition} from '../services/characterLab';
 import {CharacterIdentityResolutionQueue} from '../components/WorldBible/CharacterIdentityResolutionQueue';
+import {PlacePositionReviewQueue} from '../components/WorldBible/PlacePositionReviewQueue';
 import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategoryRail';
 import {WorldBibleCategoryOverview} from '../components/WorldBible/WorldBibleCategoryOverview';
 import {WorldBibleParentCanonBanner} from '../components/WorldBible/WorldBibleParentCanonBanner';
@@ -51,6 +52,7 @@ import {indexWorldBibleEntity} from '../services/worldBible/indexWorldBibleEntit
 import {useWorldBibleProjectData} from '../hooks/useWorldBibleProjectData';
 import {useWorldBibleSelectedEntity} from '../hooks/useWorldBibleSelectedEntity';
 import {useCharacterIdentityResolutionQueue} from '../hooks/useCharacterIdentityResolutionQueue';
+import {useUnlinkedPlacePositions} from '../hooks/useUnlinkedPlacePositions';
 import {
   useWorldBibleAuthoringAssistant
 } from '../hooks/useWorldBibleAuthoringAssistant';
@@ -121,6 +123,10 @@ function WorldBibleRoute() {
   const characterIdentityResolution = useCharacterIdentityResolutionQueue({
     activeProject, projectSettings, saveProjectSettings, categories, entities,
     characters, characterSheets, report: characterIdentityReport, setFeedback
+  });
+  const placePositionReview = useUnlinkedPlacePositions({
+    activeProject, projectSettings, saveProjectSettings, categories, entities, aliases,
+    stateMutationEvents, setFeedback
   });
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -418,7 +424,10 @@ function WorldBibleRoute() {
         <WorldBibleCategoryRail
           isCollapsed={isCategoryRailCollapsed} categories={worldBibleCategories}
           viewMode={viewMode} activeTab={activeTab}
-          reviewCount={reviewQueue.length + characterIdentityResolution.queue.length}
+          reviewCount={
+            reviewQueue.length + characterIdentityResolution.queue.length +
+            placePositionReview.queue.length
+          }
           showCategoryManager={showCategoryManager}
           isImportingEntities={isImportingEntities} isImportingJson={isImportingJson}
           importInputRef={importInputRef} jsonImportInputRef={jsonImportInputRef}
@@ -451,6 +460,7 @@ function WorldBibleRoute() {
           canonReviewItems={filteredReviewQueue} onOpenCanonReview={handleOpenReviewItem}
         />
       )}
+      {viewMode === 'review' && <PlacePositionReviewQueue review={placePositionReview} />}
 
 
       {activeCategory && viewMode === 'category' && !isRecordEditorOpen && (

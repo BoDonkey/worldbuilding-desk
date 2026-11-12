@@ -218,6 +218,7 @@ function CharacterSheetsRoute({
           sceneChanges={sceneChanges}
           sheets={sheets}
           ruleset={ruleset}
+          placeNames={data.placeNames}
           hidden={taskView !== 'scene-history'}
         />
         <CharacterSheetList

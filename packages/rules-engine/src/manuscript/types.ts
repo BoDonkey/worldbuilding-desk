@@ -125,6 +125,8 @@ export interface CharacterReplayState {
   };
   statuses: string[];
   locationName?: string;
+  /** The World Bible place record for `locationName`, when the position links to one (slice 4.77). */
+  locationPlaceId?: string;
   progression: CharacterProgressionState;
 }
 

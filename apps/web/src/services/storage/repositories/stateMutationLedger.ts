@@ -2,6 +2,15 @@ import type {StateMutationEvent} from '../../../entityTypes';
 import {openDb, STATE_MUTATION_EVENT_STORE_NAME} from '../db';
 import {getAllByProject, readProjectRecords} from '../projectIndex';
 import {requestToPromise} from '../idbRequest';
+import {
+  buildPlaceNameIndex,
+  keepManualPlaceLinks,
+  linkEventPlaces,
+  type PlaceNameIndex
+} from '../../worldBible/placePositions';
+import {getAliasesByProject} from './aliasStorage';
+import {getCategoriesByProject} from './categoryStorage';
+import {getEntitiesByProject} from './entityStorage';
 
 function normalizeCommandValue(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -17,8 +26,15 @@ function normalizeCommandValue(value: unknown): unknown {
   return value;
 }
 
+/**
+ * What a change does, for matching re-derived changes to accepted ones. A
+ * position's place link (slice 4.77) is left out: it is added after the change
+ * is derived, so it must not make an accepted move look different.
+ */
 function getEventCommandFingerprint(event: StateMutationEvent): string {
-  return JSON.stringify(event.commands.map((command) => normalizeCommandValue(command)));
+  return JSON.stringify(event.commands.map((command) =>
+    normalizeCommandValue(command.type === 'location_set' ? {...command, placeId: undefined} : command)
+  ));
 }
 
 export function reconcileSceneStateMutationEvents(params: {
@@ -87,10 +103,47 @@ export function reconcileSceneStateMutationEvents(params: {
   };
 }
 
-export async function saveStateMutationEvent(event: StateMutationEvent): Promise<void> {
+async function loadPlaceNameIndex(projectId: string): Promise<PlaceNameIndex> {
+  const [categories, entities, aliases] = await Promise.all([
+    getCategoriesByProject(projectId),
+    getEntitiesByProject(projectId),
+    getAliasesByProject(projectId)
+  ]);
+  return buildPlaceNameIndex({categories, entities, aliases});
+}
+
+/**
+ * Saves a scene change. A position whose name means exactly one place record
+ * is linked to it, and an edit that keeps a position's name keeps its earlier
+ * link (slice 4.77). Returns the event as saved.
+ */
+export async function saveStateMutationEvent(event: StateMutationEvent): Promise<StateMutationEvent> {
+  let saved = event;
+  if (event.commands.some((command) => command.type === 'location_set')) {
+    const [index, previous] = await Promise.all([
+      loadPlaceNameIndex(event.projectId),
+      openDb().then((db) => requestToPromise(
+        db.transaction(STATE_MUTATION_EVENT_STORE_NAME, 'readonly')
+          .objectStore(STATE_MUTATION_EVENT_STORE_NAME)
+          .get(event.id)
+      ) as Promise<StateMutationEvent | undefined>)
+    ]);
+    saved = linkEventPlaces(keepManualPlaceLinks(event, previous), index);
+  }
   const db = await openDb();
   const tx = db.transaction(STATE_MUTATION_EVENT_STORE_NAME, 'readwrite');
-  await requestToPromise(tx.objectStore(STATE_MUTATION_EVENT_STORE_NAME).put(event));
+  await requestToPromise(tx.objectStore(STATE_MUTATION_EVENT_STORE_NAME).put(saved));
+  window.dispatchEvent(new CustomEvent('wbd:state-mutation-events-changed'));
+  return saved;
+}
+
+/** Saves several changed events at once, as they are (no place linking). */
+export async function saveStateMutationEvents(events: StateMutationEvent[]): Promise<void> {
+  if (events.length === 0) return;
+  const db = await openDb();
+  const tx = db.transaction(STATE_MUTATION_EVENT_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STATE_MUTATION_EVENT_STORE_NAME);
+  await Promise.all(events.map((event) => requestToPromise(store.put(event))));
   window.dispatchEvent(new CustomEvent('wbd:state-mutation-events-changed'));
 }
 
@@ -190,6 +243,15 @@ export async function replaceSceneStateMutationEventsBySourceType(params: {
   invalidationReason: string;
   invalidatedAt?: number;
 }): Promise<void> {
+  // Read before opening the write transaction, which would close while waiting.
+  const index = params.nextEvents.some((event) =>
+    event.commands.some((command) => command.type === 'location_set')
+  )
+    ? await loadPlaceNameIndex(params.projectId)
+    : null;
+  const nextEvents = index
+    ? params.nextEvents.map((event) => linkEventPlaces(event, index))
+    : params.nextEvents;
   const db = await openDb();
   const tx = db.transaction(STATE_MUTATION_EVENT_STORE_NAME, 'readwrite');
   const store = tx.objectStore(STATE_MUTATION_EVENT_STORE_NAME);
@@ -203,7 +265,7 @@ export async function replaceSceneStateMutationEventsBySourceType(params: {
   );
   const {eventsToInvalidate, eventsToSave} = reconcileSceneStateMutationEvents({
     existingEvents: matching,
-    nextEvents: params.nextEvents,
+    nextEvents,
     invalidationReason: params.invalidationReason,
     invalidatedAt
   });

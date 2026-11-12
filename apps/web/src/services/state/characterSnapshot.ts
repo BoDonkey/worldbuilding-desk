@@ -122,6 +122,14 @@ function describeReplayedInventory(
   });
 }
 
+/** The linked place's current name, or the text the author wrote (slice 4.77). */
+const positionName = (
+  replayed: CharacterReplayState,
+  entityById: ReadonlyMap<string, WorldEntity>
+): string | undefined =>
+  (replayed.locationPlaceId ? entityById.get(replayed.locationPlaceId)?.name : undefined) ??
+  replayed.locationName;
+
 /** Where a character is and what they hold; all a character without a sheet tracks (4.27). */
 export interface DescriptiveCharacterState {
   inventory: CharacterSnapshotInventoryLine[];
@@ -145,7 +153,7 @@ export function buildDescriptiveCharacterState(params: {
   });
   return {
     inventory: describeReplayedInventory(replayed, params.compendiumEntries, params.entityById),
-    location: replayed.locationName
+    location: positionName(replayed, params.entityById)
   };
 }
 
@@ -211,7 +219,7 @@ export function buildCharacterSnapshot(params: {
     }),
     inventory: describeReplayedInventory(replayed, params.compendiumEntries, params.entityById),
     statuses: Array.from(new Set([...replayed.statuses, ...runtimeModifiers.notes])),
-    location: replayed.locationName
+    location: positionName(replayed, params.entityById)
   };
 }
 

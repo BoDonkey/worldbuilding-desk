@@ -1,4 +1,4 @@
-import {Fragment} from 'react';
+import {Fragment, useId} from 'react';
 import {stateMutationCommandTypes} from '@worldbuilding-desk/rules-engine';
 import styles from '../../styles/CharacterSheetsRoute.module.css';
 import type {
@@ -43,6 +43,8 @@ interface MutationFormProps {
   selectedMutationStatDefinition:
     | StoredRuleset['statDefinitions'][number]
     | null;
+  /** World Bible place names suggested in the Location field. */
+  placeNames?: string[];
 }
 
 export function MutationForm({
@@ -74,8 +76,10 @@ export function MutationForm({
   mutationLocationName,
   setMutationLocationName,
   ruleset,
-  selectedMutationStatDefinition
+  selectedMutationStatDefinition,
+  placeNames
 }: MutationFormProps) {
+  const placeListId = useId();
   const textFields: Record<
     Extract<SheetFormField, {type: 'text'}>['value'],
     {value: string; onChange: (value: string) => void}
@@ -186,6 +190,7 @@ export function MutationForm({
         );
       case 'text': {
         const binding = textFields[field.value];
+        const suggestions = field.suggest === 'places' ? placeNames ?? [] : [];
         return (
           <div className={styles.inlineMarginBottom075rem}>
             <label>
@@ -197,8 +202,14 @@ export function MutationForm({
                 onChange={(e) => binding.onChange(e.target.value)}
                 placeholder={field.placeholder}
                 className={styles.inlineWidth100}
+                list={suggestions.length > 0 ? placeListId : undefined}
               />
             </label>
+            {suggestions.length > 0 && (
+              <datalist id={placeListId}>
+                {suggestions.map((name) => <option key={name} value={name} />)}
+              </datalist>
+            )}
           </div>
         );
       }

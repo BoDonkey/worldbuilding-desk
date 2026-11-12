@@ -126,7 +126,8 @@ describe('General Fiction descriptive state', () => {
       expect(accepted).to.have.length(1);
       expect(accepted[0]?.sceneId).to.equal('scene-alpha');
       expect(accepted[0]?.commands).to.deep.equal([
-        {type: 'location_set', actorId: 'entity-sera', locationName: 'Highmoor'}
+        // "Highmoor" names exactly one place record, so the move links to it (4.77).
+        {type: 'location_set', actorId: 'entity-sera', locationName: 'Highmoor', placeId: 'place-highmoor'}
       ]);
     });
 

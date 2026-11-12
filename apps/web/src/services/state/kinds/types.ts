@@ -59,6 +59,8 @@ export type SheetFormField =
       value: 'statusName' | 'itemName' | 'locationName' | 'textValue';
       label: string;
       placeholder: string;
+      /** Suggest World Bible place names while typing (slice 4.77). */
+      suggest?: 'places';
     }
   | {type: 'quantity'};
 
@@ -95,7 +97,14 @@ export type ComposerInputSpec =
       valueLabel: string;
       valuePlaceholder: string;
     }
-  | {type: 'name'; label: string; inventoryChoice: boolean; quantity: boolean}
+  | {
+      type: 'name';
+      label: string;
+      inventoryChoice: boolean;
+      quantity: boolean;
+      /** Suggest World Bible place names while typing (slice 4.77). */
+      suggest?: 'places';
+    }
   | {
       /** A number in `value` plus an optional note in `name`. */
       type: 'amount';

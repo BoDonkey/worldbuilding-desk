@@ -5,7 +5,13 @@ export const locationAppKinds = {
     sheetForm: {
       label: 'Set location',
       fields: [
-        {type: 'text', value: 'locationName', label: 'Location', placeholder: 'South Gate'}
+        {
+          type: 'text',
+          value: 'locationName',
+          label: 'Location',
+          placeholder: 'South Gate',
+          suggest: 'places'
+        }
       ],
       build: ({actorId, locationName}) =>
         locationName ? {type: 'location_set', actorId, locationName} : null,
@@ -13,7 +19,13 @@ export const locationAppKinds = {
     },
     composer: {
       label: 'Set location',
-      input: {type: 'name', label: 'Location', inventoryChoice: false, quantity: false},
+      input: {
+        type: 'name',
+        label: 'Location',
+        inventoryChoice: false,
+        quantity: false,
+        suggest: 'places'
+      },
       build: ({actorId, name}) =>
         name ? {type: 'location_set', actorId, locationName: name} : null,
       load: (command) => ({name: command.locationName})

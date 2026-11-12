@@ -199,6 +199,18 @@ change; the mutation ledger says when it changed.
   (stat points, unlocks) follows from them. The snapshot, stat cards, inserted
   stat blocks (as of the end of the scene being edited), and Character Sheets
   history show the replayed values.
+- Positions and places (4.77): `location_set` carries the written
+  `locationName` and an optional `placeId` naming a place record; replay keeps
+  both (`locationPlaceId`), and a later move written as text clears the id.
+  Saving links a name that matches exactly one place record by normalized name
+  or alias (case, punctuation, and a leading "the" ignored); anything else
+  stays text and appears in the World Bible queue **Positions not linked to a
+  place**, where the author links, creates a place, or keeps it as text
+  (`ProjectSettings.placeNamesKeptAsText`). The link is not part of a change's
+  identity, so re-derived moves still match accepted ones. Displays use the
+  linked place's current name, falling back to the written text. The location
+  continuity check compares ids when both sides resolve to a place and treats
+  a place and one inside it as agreeing.
 - `StateMutationEvent`s are scene-scoped, explicitly ordered
   (`sceneOrder` → `sceneSequence` → `sourceRevision` → `createdAt`),
   replayable, and invalidatable when source scenes change; invalidated events
@@ -411,7 +423,9 @@ connections, drops empty measures and links to missing or non-place records,
 and refuses cycles. Reads stop at missing parents and at cycles in stored data.
 AI may propose a parent or connection only as an observation the author
 accepts; nothing writes place data without an author save. Project storage
-schema 10 and backup snapshot schema 12 register the additive field.
+schema 10 and backup snapshot schema 12 register the additive field. Project
+storage schema 11 and backup snapshot schema 13 link existing positions to
+places once, where a name matches exactly one place record (4.77).
 
 ## 5. AI Proposal Boundary and Item Authoring
 

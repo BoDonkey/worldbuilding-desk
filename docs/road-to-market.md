@@ -332,7 +332,7 @@ messages).
 | 4.83 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
 | 4.84 | Workspace dialogs open above the context drawer | 4 | S | — (independent; found in 4.27b) |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
-| 4.77 | Places: positions refer to place records | 4 | M | — (after 4.76) |
+| 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | — (after 4.77) |
 | 4.79 | Maps and placements (data, distance) | 4 | L | — (after 4.76) |
 | 4.80 | Map surface: image import, pins, scene view, export | 4 | L | — (after 4.78, 4.79) |
@@ -762,6 +762,10 @@ Movement checks are review findings, never blocks.
   containment-aware and compare ids when both sides have one.
   - **Verify.** Full-coverage tier; replay tests for old free-text entries
     and new id entries side by side; migration test for the matching.
+  - **Done.** The "two places at once" check is the 1.2b/4.26 static
+    location check, now containment-aware. Unlinked names go to a World Bible
+    review queue (link, create, or keep as text); new moves auto-link only on
+    an exact single match. `WorldBibleRoute.tsx` is 608 lines.
 
 - **4.78 Places: where-is-everyone view + movement checks.** Brief § 7.
   Show each character's position at a chosen scene and a character's path

@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
+import type {PlaceNameIndex} from '../services/worldBible/placePositions';
 import type {Dispatch, SetStateAction} from 'react';
 import type {
   CanonicalFact,
@@ -74,6 +75,7 @@ export function useConsistencyReviewRuns({
   actorResolutions,
   ruleset,
   stateMutationEvents,
+  placeNameIndex,
   resolvedActionCues,
   worldEngine,
   setFeedback,
@@ -93,6 +95,7 @@ export function useConsistencyReviewRuns({
   actorResolutions: ActorResolution[];
   ruleset: StoredRuleset | null;
   stateMutationEvents: StateMutationEvent[];
+  placeNameIndex: PlaceNameIndex;
   resolvedActionCues: string[];
   worldEngine: WorldEngine;
   setFeedback: ConsistencyFeedback;
@@ -239,7 +242,8 @@ export function useConsistencyReviewRuns({
         stateSubjects,
         actorResolutions,
         ruleset,
-        stateMutationEvents
+        stateMutationEvents,
+        places: placeNameIndex
       });
       setGuardrailIssues(presentedIssues);
       setConsistencyReviewItems((prev) => [
@@ -272,6 +276,7 @@ export function useConsistencyReviewRuns({
       resolvedActionCues,
       ruleset,
       stateMutationEvents,
+      placeNameIndex,
       worldEngine
     ]
   );
@@ -311,7 +316,8 @@ export function useConsistencyReviewRuns({
           stateSubjects,
           actorResolutions,
           ruleset,
-          stateMutationEvents
+          stateMutationEvents,
+          places: placeNameIndex
         });
         setGuardrailIssues(presentedIssues);
         setConsistencyReviewItems((prev) => [
@@ -349,6 +355,7 @@ export function useConsistencyReviewRuns({
       resolvedActionCues,
       ruleset,
       stateMutationEvents,
+      placeNameIndex,
       worldEngine
     ]
   );
@@ -442,7 +449,8 @@ export function useConsistencyReviewRuns({
         stateSubjects,
         actorResolutions,
         ruleset,
-        stateMutationEvents
+        stateMutationEvents,
+        places: placeNameIndex
       });
       const continuityItems = [...contradictionItems, ...stateContinuityItems];
       const combinedItems = [...items, ...continuityItems];
@@ -518,6 +526,7 @@ export function useConsistencyReviewRuns({
     ruleset,
     setFeedback,
     stateMutationEvents,
+    placeNameIndex,
     worldEngine
   ]);
 

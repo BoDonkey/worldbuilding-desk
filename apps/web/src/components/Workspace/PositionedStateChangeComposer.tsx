@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react';
+import {useId, useMemo, useState} from 'react';
 import type {
   StateMutationCommand,
   StateMutationEvent,
@@ -75,6 +75,8 @@ interface PositionedStateChangeComposerProps {
   initialLabel?: string;
   initialCommands?: StateMutationCommand[];
   isSaving: boolean;
+  /** World Bible place names suggested in the Location field. */
+  placeNames?: string[];
   onCancel: () => void;
   onSave: (input: {label: string; commands: StateMutationCommand[]}) => void;
 }
@@ -91,9 +93,11 @@ export function PositionedStateChangeComposer({
   initialLabel,
   initialCommands,
   isSaving,
+  placeNames = [],
   onCancel,
   onSave
 }: PositionedStateChangeComposerProps) {
+  const placeListId = useId();
   const ruleset = descriptiveOnly ? null : rulesetProp;
   const createDraft = () => descriptiveOnly ? newDescriptiveDraft() : newDraft(ruleset);
   const [label, setLabel] = useState(existingEvent?.label ?? initialLabel ?? '');
@@ -317,6 +321,7 @@ export function PositionedStateChangeComposer({
                           onChange={(event) =>
                             updateDraft(draft.id, {name: event.target.value})
                           }
+                          list={input.suggest === 'places' && placeNames.length > 0 ? placeListId : undefined}
                         />
                       )}
                     </label>
@@ -382,6 +387,11 @@ export function PositionedStateChangeComposer({
           {isSaving ? 'Saving…' : existingEvent ? 'Save changes' : 'Confirm scene change'}
         </button>
       </div>
+      {placeNames.length > 0 && (
+        <datalist id={placeListId}>
+          {placeNames.map((name) => <option key={name} value={name} />)}
+        </datalist>
+      )}
     </div>
   );
 }
