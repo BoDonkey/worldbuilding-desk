@@ -313,6 +313,8 @@ export interface ProjectSettings {
   ignoredUnknownSurfaces?: string[];
   ignoredEntityMatchKeys?: string[];
   keptSeparateCharacterIdentityKeys?: string[];
+  /** Position names the author chose to keep as text instead of linking to a place (slice 4.77). */
+  placeNamesKeptAsText?: string[];
   activeSkills: string[];
   projectMode: ProjectMode;
   featureToggles: ProjectFeatureToggles;
