@@ -15,6 +15,7 @@ import {
 } from './manuscriptCustody';
 import {stateDeltaObservationToCommand} from './kinds';
 import {isPlaceWithin} from '../worldBible/places';
+import {findPlaceMovementReviewItems} from './placeMovementReview';
 import {
   matchPlaceId,
   positionLabel,
@@ -51,6 +52,8 @@ interface StateContinuityReviewInput {
   stateMutationEvents: StateMutationEvent[];
   /** Place records, so positions compare by record and containment (slice 4.77). */
   places?: PlaceNameIndex;
+  /** Position names the author kept as text; the unknown-place check skips them (4.78). */
+  placeNamesKeptAsText?: string[];
 }
 
 const normalize = (value: string): string =>
@@ -280,7 +283,8 @@ export function findStateContinuityReviewItems({
   actorResolutions,
   ruleset,
   stateMutationEvents,
-  places
+  places,
+  placeNamesKeptAsText
 }: StateContinuityReviewInput): StateContinuityReviewItem[] {
   // Sheets need their ruleset; characters without a sheet do not.
   const recordable = recordableStateSubjects(stateSubjects);
@@ -447,6 +451,19 @@ export function findStateContinuityReviewItems({
         }));
       });
   });
+
+  if (places) {
+    findPlaceMovementReviewItems({
+      documents: reviewedScenes,
+      sceneOrderDocuments: orderedScenes,
+      subjects,
+      knownEntities,
+      events: stateMutationEvents,
+      places,
+      placeNamesKeptAsText,
+      actorResolutions
+    }).forEach(push);
+  }
 
   return items;
 }

@@ -211,6 +211,19 @@ change; the mutation ledger says when it changed.
   linked place's current name, falling back to the written text. The location
   continuity check compares ids when both sides resolve to a place and treats
   a place and one inside it as agreeing.
+- Movement (4.78, `services/worldBible/placeMovement.ts`,
+  `services/state/placeMovementReview.ts`): positions at a scene and a
+  character's path come from replaying accepted `location_set` changes; a
+  position resolves to its live `placeId`, else to the one place its name
+  matches. A move is explained when one place contains the other or a chain
+  of connections links them; a connection serves the places inside its
+  endpoints, places both ends share do not count, and one-way connections are
+  followed forward only. Places with no connection anywhere in their chains
+  are not checked. Review warns on an unexplained move with no travel cue
+  between the two positions, and on a position whose name matches no place
+  or several, skipping `placeNamesKeptAsText`. Both are `STATE_CONFLICT`
+  findings marked with `placeCheck`; they run only when place records are
+  passed in.
 - `StateMutationEvent`s are scene-scoped, explicitly ordered
   (`sceneOrder` → `sceneSequence` → `sourceRevision` → `createdAt`),
   replayable, and invalidatable when source scenes change; invalidated events

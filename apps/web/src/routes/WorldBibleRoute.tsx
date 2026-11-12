@@ -18,6 +18,8 @@ import {
 import type {CharacterVoicePosition} from '../services/characterLab';
 import {CharacterIdentityResolutionQueue} from '../components/WorldBible/CharacterIdentityResolutionQueue';
 import {PlacePositionReviewQueue} from '../components/WorldBible/PlacePositionReviewQueue';
+import {WhereIsEveryonePanel} from '../components/WorldBible/WhereIsEveryonePanel';
+import {isLocationCategory} from '../services/worldBible/worldBibleEntityPlans';
 import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategoryRail';
 import {WorldBibleCategoryOverview} from '../components/WorldBible/WorldBibleCategoryOverview';
 import {WorldBibleParentCanonBanner} from '../components/WorldBible/WorldBibleParentCanonBanner';
@@ -474,6 +476,14 @@ function WorldBibleRoute() {
           onStartCharacterIntake={setCharacterIntake}
           onImportDocs={() => importInputRef.current?.click()}
           onPasteText={() => draft.setIsPasteImportOpen(true)}
+        />
+      )}
+      {isLocationCategory(activeCategory) && viewMode === 'category' && !isRecordEditorOpen && (
+        <WhereIsEveryonePanel
+          categories={categories} entities={entities} aliases={aliases}
+          characterSheets={characterSheets} documents={writingDocuments}
+          stateMutationEvents={stateMutationEvents}
+          onOpenScene={(sceneId) => navigate('/workspace', {state: {focusDocumentId: sceneId}})}
         />
       )}
 

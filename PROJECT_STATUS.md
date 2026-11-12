@@ -138,6 +138,18 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   check treats a tavern inside a city as agreeing with the city. Project
   storage schema 11 and backup snapshot schema 13 link existing positions
   once, unambiguous names only.
+- Where is everyone (slice 4.78). The World Bible Locations category shows
+  **Where is everyone**: each character's position at the end of a chosen
+  scene (or the latest), grouped by place with the places around it, and a
+  character's **Path** over a range of scenes with links to each scene. Both
+  are replayed from accepted scene changes. Project review adds two warnings:
+  **Move with no route** (a move between two place records that no
+  connection or route links, with no travel words such as "rode" or "days
+  later" naming the character in the prose between the two positions) and
+  **Unknown place** (a recorded position whose name matches no place record,
+  or several; **Link or create place** opens the World Bible review queue).
+  Moves inside a place, and places with no connections anywhere around them,
+  are not checked. No story time, so travel speed is not checked.
 - World Bible document import detects Markdown `#` headings and DOCX heading
   paragraphs (Word style ids, Pages-style named styles with outline levels,
   `basedOn` chains, paragraph outline levels), treats a leading title heading

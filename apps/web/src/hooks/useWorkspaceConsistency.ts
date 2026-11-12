@@ -291,6 +291,7 @@ export const useWorkspaceConsistency = ({
     ruleset,
     stateMutationEvents,
     placeNameIndex,
+    placeNamesKeptAsText: projectSettings?.placeNamesKeptAsText,
     resolvedActionCues,
     worldEngine,
     setFeedback,

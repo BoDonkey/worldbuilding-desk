@@ -51,6 +51,8 @@ export type GuardrailIssueCode =
 
 export interface GuardrailIssue {
   code: GuardrailIssueCode;
+  /** Set on movement findings from the places checks (slice 4.78). */
+  placeCheck?: 'teleport' | 'unknown-place';
   severity: 'blocking' | 'warning';
   message: string;
   span?: {

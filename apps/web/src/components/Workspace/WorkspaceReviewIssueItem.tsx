@@ -1,4 +1,5 @@
 import type {Dispatch, Ref, SetStateAction} from 'react';
+import {useNavigate} from 'react-router';
 import type {EntityCategory} from '../../entityTypes';
 import type {useWorkspaceConsistency} from '../../hooks/useWorkspaceConsistency';
 import {
@@ -52,7 +53,13 @@ const DETECTION_REASON_LABELS: Record<string, {label: string; title: string}> = 
   }
 };
 
-const getIssueLabel = (code: string): string => ISSUE_LABELS[code] ?? 'Review item';
+const PLACE_CHECK_LABELS: Record<string, string> = {
+  teleport: 'Move with no route',
+  'unknown-place': 'Unknown place'
+};
+
+const getIssueLabel = (code: string, placeCheck?: string): string =>
+  (placeCheck ? PLACE_CHECK_LABELS[placeCheck] : undefined) ?? ISSUE_LABELS[code] ?? 'Review item';
 
 const getDetectionReason = (
   reason: string
@@ -126,6 +133,7 @@ export function WorkspaceReviewIssueItem({
     linkingUnknown,
     dismissConsistencyReviewItem
   } = consistency;
+  const navigate = useNavigate();
   const surface = item.issue.surface?.trim() ?? '';
   const actionSurface = surface || item.issue.message;
   const isContinuityIssue =
@@ -149,7 +157,7 @@ export function WorkspaceReviewIssueItem({
     : [];
   const selectedLinkValue = unknownLinkSelection[actionSurface] ?? '';
   const linkOptions = unknownLinkOptions[actionSurface] ?? [];
-  const issueTitle = surface || getIssueLabel(item.issue.code);
+  const issueTitle = surface || getIssueLabel(item.issue.code, item.issue.placeCheck);
   const reviewAnnotation = item.reviewAnnotation;
   const reviewSummary = reviewAnnotation?.summary;
   const shouldShowReviewSummary =
@@ -194,6 +202,16 @@ export function WorkspaceReviewIssueItem({
           >
             Show context
           </button>
+          {item.issue.placeCheck === 'unknown-place' && (
+            <button
+              type='button'
+              onClick={() => navigate('/world-bible', {state: {openReview: true}})}
+              className={styles.consistencySceneButton}
+              title='Link this position to a place record, create one, or keep it as text'
+            >
+              Link or create place
+            </button>
+          )}
           {isContinuityIssue && (
             <button
               type='button'

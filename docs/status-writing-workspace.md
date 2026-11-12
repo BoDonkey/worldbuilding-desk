@@ -472,3 +472,11 @@
   updates the stored run. The stored run is deliberately not part of project
   backups: snapshots carry accepted canon, not review output, and a restored
   project simply runs review again.
+
+- Project review also checks movement (slice 4.78). **Move with no route**
+  flags an accepted move between two place records that no connection or
+  route links, when no sentence naming the character carries a travel word
+  between the two positions. **Unknown place** flags a recorded position whose
+  name matches no place record, or several, unless the author kept it as
+  text; its **Link or create place** button opens the World Bible review
+  queue. Both are dismissable continuity warnings and recompute on every run.
