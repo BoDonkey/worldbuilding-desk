@@ -3,6 +3,7 @@ import type {
   CharacterSheet,
   EntityCategory,
   Project,
+  StateMutationEvent,
   StoredRuleset,
   WorldEntity,
   ZoneAffinityProfile,
@@ -15,17 +16,24 @@ import {
   CHARACTER_IDENTITY_REPORT_STORE_NAME,
   CHARACTER_SHEET_STORE_NAME,
   CHARACTER_STORE_NAME,
+  CONSISTENCY_ALIAS_STORE_NAME,
   ENTITY_STORE_NAME,
   PROJECT_ID_INDEX,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   PROJECT_SCOPED_STORE_NAMES,
   PROJECT_STORE_NAME,
+  STATE_MUTATION_EVENT_STORE_NAME,
   ZONE_AFFINITY_PROFILE_STORE_NAME,
   ZONE_AFFINITY_PROGRESS_STORE_NAME
 } from './db';
 import {rekeyZoneProfiles, rekeyZoneProgress} from './zoneRecordIds';
 import {quarantineInvalidRules} from '@worldbuilding-desk/rules-engine';
 import {classifyCharacterIdentities} from '../characters/characterIdentity';
+import {
+  buildPlaceNameIndex,
+  linkUnlinkedPositions
+} from '../worldBible/placePositions';
+import type {ConsistencyAlias} from './repositories/aliasStorage';
 import {
   getRulesetByProjectId,
   replaceRulesetSnapshot
@@ -34,7 +42,7 @@ import {getAllByProject} from './projectIndex';
 import {requestToPromise, transactionToPromise} from './idbRequest';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SCHEMA_VERSION = 10;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 11;
 export const PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION = 1;
 
 export interface ProjectMigrationContext {
@@ -199,6 +207,25 @@ async function migrateCharacterIdentityLinks(
   await transactionToPromise(transaction);
 }
 
+/**
+ * Positions name a place record when their text means exactly one place, by
+ * name or alias (slice 4.77). Everything else stays text; the World Bible
+ * offers it for review. Nothing is guessed between candidates.
+ */
+async function migrateLinkPositionsToPlaces(context: ProjectMigrationContext): Promise<void> {
+  const [categories, entities, aliases, events] = await Promise.all([
+    readProjectRecords<EntityCategory>(context.db, CATEGORY_STORE_NAME, context.projectId),
+    readProjectRecords<WorldEntity>(context.db, ENTITY_STORE_NAME, context.projectId),
+    readProjectRecords<ConsistencyAlias>(context.db, CONSISTENCY_ALIAS_STORE_NAME, context.projectId),
+    readProjectRecords<StateMutationEvent>(context.db, STATE_MUTATION_EVENT_STORE_NAME, context.projectId)
+  ]);
+  const changed = linkUnlinkedPositions(events, buildPlaceNameIndex({categories, entities, aliases}));
+  if (changed.length === 0) return;
+  const transaction = context.db.transaction(STATE_MUTATION_EVENT_STORE_NAME, 'readwrite');
+  changed.forEach((event) => transaction.objectStore(STATE_MUTATION_EVENT_STORE_NAME).put(event));
+  await transactionToPromise(transaction);
+}
+
 const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
   {
     fromVersion: 1,
@@ -259,6 +286,11 @@ const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
     // connections (slice 4.76). Additive; existing records have none, so the
     // version checkpoint and automatic backup are the whole migration.
     migrate: async () => undefined
+  },
+  {
+    fromVersion: 10,
+    toVersion: 11,
+    migrate: migrateLinkPositionsToPlaces
   }
 ];
 

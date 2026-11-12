@@ -7,10 +7,12 @@ import {
   CHARACTER_IDENTITY_REPORT_STORE_NAME,
   CHARACTER_SHEET_STORE_NAME,
   CHARACTER_STORE_NAME,
+  CONSISTENCY_ALIAS_STORE_NAME,
   CORKBOARD_CHAPTER_CARD_STORE_NAME,
   ENTITY_STORE_NAME,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   PROJECT_STORE_NAME,
+  STATE_MUTATION_EVENT_STORE_NAME,
   upgradeDatabase
 } from './db';
 import {
@@ -339,6 +341,53 @@ describe('project migration backup', () => {
 
     expect(current.storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
     expect(storedCard).toEqual(linkedCard);
+  });
+
+  it('advances schema 10 by linking positions to the one place they name', async () => {
+    const db = await createMigrationTestDb();
+    const project: Project = {
+      id: 'project-places',
+      name: 'Places',
+      storageSchemaVersion: 10,
+      createdAt: 1,
+      updatedAt: 1
+    };
+    const record = (id: string, name: string) => ({
+      id, projectId: project.id, categoryId: 'cat-loc', name, fields: {}, links: [], createdAt: 1, updatedAt: 1
+    });
+    const move = (id: string, locationName: string) => ({
+      id, projectId: project.id, sceneId: `scene-${id}`, sourceRevision: 1, sourceHash: 'h',
+      status: 'accepted', createdAt: 1,
+      commands: [{type: 'location_set', actorId: 'entity-sera', locationName}]
+    });
+    await put(db, PROJECT_STORE_NAME, project);
+    await put(db, CATEGORY_STORE_NAME, {
+      id: 'cat-loc', projectId: project.id, kind: 'general', name: 'Locations', slug: 'locations',
+      fieldSchema: [], createdAt: 1
+    });
+    for (const entity of [record('archive', 'Ember Archive'), record('gate-1', 'North Gate'), record('gate-2', 'North Gate')]) {
+      await put(db, ENTITY_STORE_NAME, entity);
+    }
+    await put(db, CONSISTENCY_ALIAS_STORE_NAME, {
+      id: 'alias-1', projectId: project.id, targetId: 'archive', targetType: 'entity', entityId: 'archive',
+      alias: 'the Archive', createdAt: 1, updatedAt: 1
+    });
+    for (const event of [move('a', 'the Archive'), move('b', 'North Gate'), move('c', 'Old Mill')]) {
+      await put(db, STATE_MUTATION_EVENT_STORE_NAME, event);
+    }
+
+    const current = await ensureProjectStorageCurrent(db, project);
+    const stored = await requestToPromise(
+      db.transaction(STATE_MUTATION_EVENT_STORE_NAME, 'readonly')
+        .objectStore(STATE_MUTATION_EVENT_STORE_NAME)
+        .getAll()
+    ) as Array<{id: string; commands: Array<{placeId?: string}>}>;
+    const placeIdByEvent = Object.fromEntries(stored.map((event) => [event.id, event.commands[0].placeId]));
+
+    expect(current.storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
+    // Unambiguous by alias links; ambiguous and unknown names stay text.
+    expect(placeIdByEvent).toEqual({a: 'archive', b: undefined, c: undefined});
+    expect(await listProjectMigrationBackups(db, project.id)).toHaveLength(1);
   });
 
   it('advances schema 6 by quarantining invalid rules without dropping them', async () => {

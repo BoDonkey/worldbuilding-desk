@@ -3,14 +3,17 @@ import type {
   Character,
   CharacterSheet,
   EntityCategory,
+  StateMutationEvent,
   WorldEntity
 } from '../../entityTypes';
 import {classifyCharacterIdentities} from '../characters/characterIdentity';
+import {buildPlaceNameIndex, linkUnlinkedPositions} from '../worldBible/placePositions';
+import type {ConsistencyAlias} from './repositories/aliasStorage';
 import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
 import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
 
 export const MIN_SUPPORTED_PROJECT_SNAPSHOT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 12;
+export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 13;
 
 export interface ProjectSnapshotMigration {
   fromVersion: number;
@@ -233,6 +236,32 @@ export function migrateProjectSnapshotV11ToV12(
   };
 }
 
+/**
+ * 4.77: positions name a place record when their text means exactly one
+ * place. Older backups get the same one-time matching a stored project gets,
+ * because an imported backup is marked current and never migrates again.
+ */
+export function migrateProjectSnapshotV12ToV13(
+  snapshot: Record<string, unknown>
+): Record<string, unknown> {
+  const data = asRecord(snapshot.data);
+  const events = asArray<StateMutationEvent>(data.stateMutationEvents);
+  const changed = linkUnlinkedPositions(events, buildPlaceNameIndex({
+    categories: asArray<EntityCategory>(data.categories),
+    entities: asArray<WorldEntity>(data.entities),
+    aliases: asArray<ConsistencyAlias>(data.consistencyAliases)
+  }));
+  const changedById = new Map(changed.map((event) => [event.id, event]));
+  return {
+    ...snapshot,
+    schemaVersion: 13,
+    project: {...asRecord(snapshot.project), storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
+    data: changed.length === 0
+      ? snapshot.data
+      : {...data, stateMutationEvents: events.map((event) => changedById.get(event.id) ?? event)}
+  };
+}
+
 const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
   {
     fromVersion: 1,
@@ -288,6 +317,11 @@ const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
     fromVersion: 11,
     toVersion: 12,
     migrate: migrateProjectSnapshotV11ToV12
+  },
+  {
+    fromVersion: 12,
+    toVersion: 13,
+    migrate: migrateProjectSnapshotV12ToV13
   }
 ];
 
