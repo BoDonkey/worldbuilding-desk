@@ -421,6 +421,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   General Fiction. No stored-data change. Fixed alongside: prose had stopped
   proposing state for any World Bible character because the Workspace no
   longer marked them as characters for the scanner; it now does.
+- Workspace and World Bible surfaces for characters without a sheet (slice
+  4.27b). `Record item/state` on selected prose now works in General Fiction
+  and for any World Bible character without a sheet. The scene roster lists
+  those characters (even without a legacy character record), shows their
+  place and items at the chosen moment, and offers `Record change here`
+  limited to place and item changes; recording an item use for them records
+  only the item, never stat or resource effects. Scene timeline edits and
+  labels now find a character by World Bible id too. The World Bible
+  Continuity overview shows where each character is and what they hold after
+  the latest scene.
 
 - The project's daily AI consultation budget is now one explained model rather
   than a hidden counter. It stays one budget per project (not per feature) but

@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {buildRosterTimeline, planRosterConsumption, planRosterExpiration, planRosterTimelineEdit} from './sceneRosterTimelinePlans';
-import {anchor, character, definition, event, scene, sheet, snapshot, timelineContext} from './sceneRosterPlanFixtures.testSupport';
+import {anchor, character, definition, event, scene, sheet, snapshot, subjectsFor, timelineContext} from './sceneRosterPlanFixtures.testSupport';
 
 const item = {name: definition.name, quantity: 1, equipped: false, consumable: {definitionId: definition.id}};
 
@@ -19,7 +19,7 @@ describe('scene roster timeline plans', () => {
     expect(planRosterConsumption({...input, content: 'unsaved'})?.error).toContain('Save this scene');
     expect(planRosterConsumption({...input, sceneCursorAnchor: {before: '', after: ''}})?.error).toContain('Place the cursor');
     expect(planRosterConsumption({...input, compendiumEntries: []})).toBeNull();
-    expect(planRosterConsumption({...input, characterSheets: [{...sheet, characterEntityId: undefined}]})?.error).toContain('legacy sheet');
+    expect(planRosterConsumption({...input, stateSubjects: subjectsFor({...sheet, characterEntityId: undefined})})?.error).toContain('legacy sheet');
   });
 
   it('prepares inverse effects and retains the exact source event for expiration', () => {
@@ -46,26 +46,35 @@ describe('scene roster timeline plans', () => {
     expect(event.scenePosition).toBe(20);
   });
 
-  it('preserves existing sheet/legacy-ID lookup behavior for timeline edit and expiration', () => {
+  it('finds the roster character for canonical, sheet, and legacy ids in timeline edit and expiration', () => {
+    // 4.27b: new changes use the World Bible id, which characters without a sheet rely on.
     const canonicalEvent = {...event, commands: event.commands.map((command) => ({...command, actorId: 'sera'}))};
-    // This refactor must not silently widen the old timeline lookup to canonical IDs.
     const input = {...timelineContext, stateMutationEvents: [canonicalEvent], eventId: event.id};
-    expect(planRosterExpiration(input)?.error).toContain('affected character');
-    expect(planRosterTimelineEdit({...input, stateMutationAnchorResolutionById: new Map(), sceneCursorSnapshot: snapshot})?.error).toContain('before editing');
+    expect(planRosterExpiration(input)?.value?.character).toBe(character);
+    expect(planRosterTimelineEdit({...input, stateMutationAnchorResolutionById: new Map(), sceneCursorSnapshot: snapshot})?.value?.pending.character).toBe(character);
+    expect(planRosterExpiration({...input, characters: []})?.error).toContain('affected character');
+    expect(planRosterTimelineEdit({...input, characters: [], stateMutationAnchorResolutionById: new Map(), sceneCursorSnapshot: snapshot})?.error).toContain('before editing');
     const legacy = {...sheet, characterId: 'old-sera'};
     const legacyEvent = {...event, commands: event.commands.map((command) => ({...command, actorId: 'old-sera'}))};
-    expect(planRosterExpiration({...input, characterSheets: [legacy], stateMutationEvents: [legacyEvent]})?.value?.initialCommands?.[0].actorId).toBe('old-sera');
+    expect(planRosterExpiration({...input, stateSubjects: subjectsFor(legacy), stateMutationEvents: [legacyEvent]})?.value?.initialCommands?.[0].actorId).toBe('old-sera');
   });
 
   it('derives a sorted timeline, excludes proposals, and suppresses already-expired effects across scenes', () => {
     const expiration = {...event, id: 'expire', sceneId: 'later', consumableEffect: {...event.consumableEffect!, phase: 'expire' as const, sourceEventId: event.id}};
     const events = [expiration, {...event, id: 'later-change', sceneSequence: 6, label: ' Later '}, {...event, id: 'proposal', status: 'proposed' as const}, event];
     const original = structuredClone(events);
-    const result = buildRosterTimeline({selectedDocument: scene, characterSheets: [sheet], stateMutationEvents: events, stateMutationAnchorResolutionById: new Map([[event.id, {status: 'moved', position: 22, textOffset: 21}]]), resourceDefinitionNameById: new Map(), statDefinitionNameById: new Map()});
+    const result = buildRosterTimeline({selectedDocument: scene, stateSubjects: subjectsFor(sheet), stateMutationEvents: events, stateMutationAnchorResolutionById: new Map([[event.id, {status: 'moved', position: 22, textOffset: 21}]]), resourceDefinitionNameById: new Map(), statDefinitionNameById: new Map()});
     expect(result.map((entry) => entry.id)).toEqual([event.id, 'later-change']);
     expect(result[0]).toMatchObject({actorLabel: sheet.name, anchorStatus: 'moved', position: 22, canEdit: true, canExpire: false});
     expect(result[1]).toMatchObject({label: 'Later', anchorStatus: 'legacy'});
     expect(events).toEqual(original);
     expect(anchor.before).not.toBe('');
+  });
+
+  it('labels timeline changes for a character without a sheet by name (4.27b)', () => {
+    const wren = {actorId: 'entity-wren', name: 'Wren', sheet: null, legacy: false};
+    const moved = {...event, consumableEffect: undefined, commands: [{type: 'location_set' as const, actorId: 'entity-wren', locationName: 'South Harbor'}]};
+    const [entry] = buildRosterTimeline({selectedDocument: scene, stateSubjects: [wren], stateMutationEvents: [moved], stateMutationAnchorResolutionById: new Map(), resourceDefinitionNameById: new Map(), statDefinitionNameById: new Map()});
+    expect(entry).toMatchObject({actorLabel: 'Wren', summaries: [expect.stringContaining('South Harbor')]});
   });
 });

@@ -856,9 +856,7 @@ function WorkspaceRoute() {
                   selectionActions={selectionActionRun.menu}
                   onOpenLoreInspector={handleOpenLoreInspector}
                   onOpenWorldCapture={manualWorldCapture.open}
-                  onAddSelectionToInventory={capabilities.canCaptureSelectionAsInventory
-                    ? openSelectionInventoryCapture
-                    : undefined}
+                  onAddSelectionToInventory={openSelectionInventoryCapture}
                   suppressSelectionBubble={Boolean(manualWorldCapture.capture)}
                   aiContextPassage={activeAIContext?.id === selectedId ? activeAIContext : null}
                 />

@@ -20,7 +20,7 @@ import {
   compareStateMutationEvents,
   replayCharacterState
 } from '../state/stateReplay';
-import {buildCharacterSnapshot} from '../state/characterSnapshot';
+import {buildCharacterSnapshot, buildDescriptiveCharacterState} from '../state/characterSnapshot';
 import {
   describeStateMutationEventStaleness,
   getStateMutationEventStaleness
@@ -135,6 +135,9 @@ export function buildSceneRosterModel(params: {
   const candidates: SceneRosterCandidate[] = [];
   const characterSheetByKey = new Map<string, CharacterSheet | null>();
   const characterRecordByKey = new Map<string, Character | null>();
+  // World Bible character a card's state belongs to; new changes use this id.
+  const actorIdByKey = new Map<string, string>();
+  const coveredCharacterEntityIds = new Set<string>();
 
   params.characterSheets.forEach((sheet) => {
     const characterEntityId = characterResolver.resolveEntityId({
@@ -165,6 +168,8 @@ export function buildSceneRosterModel(params: {
     });
     characterSheetByKey.set(key, sheet);
     characterRecordByKey.set(key, character);
+    if (characterEntityId) coveredCharacterEntityIds.add(characterEntityId);
+    if (sheet.characterEntityId) actorIdByKey.set(key, sheet.characterEntityId);
   });
 
   params.characters.forEach((character) => {
@@ -196,7 +201,34 @@ export function buildSceneRosterModel(params: {
     });
     characterSheetByKey.set(key, null);
     characterRecordByKey.set(key, character);
+    if (characterEntity) {
+      coveredCharacterEntityIds.add(characterEntity.id);
+      actorIdByKey.set(key, characterEntity.id);
+    }
   });
+
+  // World Bible characters with neither a sheet nor a character record.
+  params.entities
+    .filter(
+      (entity) =>
+        characterCategoryIds.has(entity.categoryId) &&
+        !coveredCharacterEntityIds.has(entity.id)
+    )
+    .forEach((entity) => {
+      const key = `character-entity:${entity.id}`;
+      candidates.push({
+        key,
+        type: 'character',
+        id: entity.id,
+        name: entity.name,
+        aliases: params.aliases
+          .filter((alias) => alias.targetType === 'entity' && alias.targetId === entity.id)
+          .map((alias) => alias.alias)
+      });
+      characterSheetByKey.set(key, null);
+      characterRecordByKey.set(key, null);
+      actorIdByKey.set(key, entity.id);
+    });
 
   params.entities
     .filter((entity) => !characterCategoryIds.has(entity.categoryId))
@@ -230,20 +262,37 @@ export function buildSceneRosterModel(params: {
     .map((entry): SceneRosterCharacterCard => {
       const sheet = characterSheetByKey.get(entry.key) ?? null;
       const character = characterRecordByKey.get(entry.key) ?? null;
+      const actorId = actorIdByKey.get(entry.key);
       if (!sheet) {
+        const roleField = character?.fields.role ?? entityById.get(entry.id)?.fields.role;
+        const descriptive = actorId
+          ? buildDescriptiveCharacterState({
+              subject: {actorId, name: entry.name, sheet: null, legacy: false},
+              events: params.stateMutationEvents,
+              actorResolutions: params.actorResolutions,
+              position: {
+                kind: 'scene',
+                sceneOrder: selectedSceneOrder,
+                moment: params.stateMoment,
+                cursorPosition: params.cursorPosition
+              },
+              compendiumEntries: params.compendiumEntries,
+              entityById
+            })
+          : null;
         return {
           key: entry.key,
           id: character?.id ?? entry.id,
+          actorId,
           name: entry.name,
-          role:
-            (typeof character?.fields.role === 'string' && character.fields.role.trim()) ||
-            'Role not set',
+          role: (typeof roleField === 'string' && roleField.trim()) || 'Role not set',
           source: entry.source,
           matchedSurface: entry.matchedSurface,
           stats: [],
           resources: [],
-          inventory: [],
+          inventory: descriptive?.inventory ?? [],
           statuses: [],
+          location: descriptive?.location,
           hasSheet: false
         };
       }
@@ -267,6 +316,7 @@ export function buildSceneRosterModel(params: {
       return {
         key: entry.key,
         id: character?.id ?? sheet.id,
+        actorId,
         sheetId: sheet.id,
         name: entry.name,
         role:

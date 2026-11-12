@@ -107,6 +107,7 @@ export function WorldBibleCharacterRecord({
     selectedEntityFacts,
     selectedEntitySceneMentions,
     selectedEntityStateEvents,
+    selectedEntityCurrentState,
     selectedEntityAcceptedStateEventCount,
     selectedEntityProposedStateEventCount,
     characterHealthProbeResults,
@@ -235,6 +236,7 @@ export function WorldBibleCharacterRecord({
           linkedLoreDocumentsForSelectedEntity={linkedLoreDocumentsForSelectedEntity}
           selectedEntitySceneMentions={selectedEntitySceneMentions}
           selectedEntityStateEvents={selectedEntityStateEvents}
+          selectedEntityCurrentState={selectedEntityCurrentState}
           selectedEntityAcceptedStateEventCount={selectedEntityAcceptedStateEventCount}
           selectedEntityProposedStateEventCount={selectedEntityProposedStateEventCount}
           characterHealthProbeResults={characterHealthProbeResults}

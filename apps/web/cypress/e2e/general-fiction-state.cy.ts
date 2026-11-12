@@ -1,9 +1,17 @@
 import {DB_NAME, DB_VERSION} from '../../src/services/storage/db';
 
-// Slice 4.27a: a General Fiction character with no sheet carries location
-// state from prose suggestion through review findings.
+// Slices 4.27a–b: a General Fiction character with no sheet carries place
+// and item state from prose, the selection menu, and the scene drawer
+// through review findings and the World Bible Continuity overview.
 
-function seedGeneralFictionCharacter(): Cypress.Chainable<void> {
+const DEFAULT_SCENES: Array<[string, string, string]> = [
+  ['scene-alpha', 'Alpha Scene', 'Sera entered Highmoor.'],
+  ['scene-beta', 'Beta Scene', 'Sera waited at South Harbor.']
+];
+
+function seedGeneralFictionCharacter(
+  scenes: Array<[string, string, string]> = DEFAULT_SCENES
+): Cypress.Chainable<void> {
   return cy.window().then((win) => new Cypress.Promise<void>((resolve, reject) => {
     const now = Date.now();
     const request = win.indexedDB.open(DB_NAME, DB_VERSION);
@@ -27,10 +35,7 @@ function seedGeneralFictionCharacter(): Cypress.Chainable<void> {
         }
       });
       const documents = tx.objectStore('writingDocuments');
-      [
-        ['scene-alpha', 'Alpha Scene', 'Sera entered Highmoor.'],
-        ['scene-beta', 'Beta Scene', 'Sera waited at South Harbor.']
-      ].forEach(([id, title, content], index) => {
+      scenes.forEach(([id, title, content], index) => {
         documents.put({
           id,
           projectId: 'cypress-project-1',
@@ -94,11 +99,11 @@ describe('General Fiction descriptive state', () => {
   beforeEach(() => {
     cy.visit('/');
     cy.seedSmokeProjectData();
-    seedGeneralFictionCharacter();
-    cy.reload();
   });
 
   it('suggests a move from prose, records it on accept, and flags a later contradiction', () => {
+    seedGeneralFictionCharacter();
+    cy.reload();
     cy.visit('/workspace');
     cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
     // A manual save reviews the scene and derives suggested state changes;
@@ -129,5 +134,68 @@ describe('General Fiction descriptive state', () => {
     cy.contains('Project review found').should('be.visible');
     cy.contains('Sera is described at South Harbor').should('be.visible');
     cy.contains('places them at Highmoor').should('be.visible');
+  });
+
+  it('records a picked-up item and a move, then shows both in the Continuity overview', () => {
+    // Wide enough that the open context drawer leaves the change dialog clear.
+    cy.viewport(1440, 900);
+    seedGeneralFictionCharacter([
+      ['scene-alpha', 'Alpha Scene', 'Sera picked up the brass key.'],
+      ['scene-beta', 'Beta Scene', 'The tide turned.']
+    ]);
+    cy.reload();
+    cy.visit('/workspace');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    // The selection menu's item capture works for a character with no sheet.
+    cy.get('.ProseMirror').click().type('{selectall}');
+    cy.get('.ProseMirror').trigger('contextmenu');
+    cy.contains('button', 'Record item/state').click();
+    cy.get('[role="dialog"][aria-label="Add selected item to inventory"]').within(() => {
+      cy.get('input').filter('[value="brass key"]').should('exist');
+      cy.contains('label', 'Character').find('select').should('have.value', 'entity-sera');
+      cy.contains('button', 'Add at selection').click();
+    });
+    cy.contains("Added brass key to Sera's inventory.").should('be.visible');
+
+    // The scene drawer records a move for her; only place and item changes apply.
+    cy.get('.ProseMirror').click().type('{end}', {delay: 0});
+    cy.contains('button', 'Context').click();
+    cy.contains('button', /^Scene$/).click();
+    cy.contains('button', 'Ending').click();
+    cy.contains('article', 'Sera').within(() => {
+      cy.contains('summary', 'Place and items at this moment').click();
+      cy.contains('brass key').should('be.visible');
+      cy.contains('button', 'Record change here').click();
+    });
+    cy.get('[role="dialog"][aria-label="Record positioned state change"]').within(() => {
+      cy.contains('label', 'Type').find('select option').then((options) => {
+        const labels = [...options].map((option) => option.textContent ?? '');
+        expect(labels).to.include('Set location');
+        expect(labels.some((label) => /stat|resource/i.test(label))).to.eq(false);
+      });
+      cy.contains('label', 'Location').find('input').type('Highmoor');
+      cy.contains('button', 'Confirm scene change').click();
+    });
+    cy.contains(/Recorded .* at cursor position/).should('be.visible');
+
+    readStateEvents().then((events) => {
+      const commands = events
+        .filter((event) => event.status === 'accepted')
+        .flatMap((event) => event.commands);
+      expect(commands.map((command) => [command.type, command.actorId])).to.deep.equal([
+        ['inventory_add', 'entity-sera'],
+        ['location_set', 'entity-sera']
+      ]);
+    });
+
+    // Her World Bible record shows where she is now and what she holds.
+    cy.contains('article', 'Sera').contains('button', 'Sera').click();
+    cy.location('pathname').should('eq', '/world-bible');
+    cy.contains('[role="tab"]', 'Continuity').click();
+    cy.get('section[aria-label="Current place and items"]').within(() => {
+      cy.contains('Highmoor').should('be.visible');
+      cy.contains('brass key').should('be.visible');
+    });
   });
 });

@@ -3,16 +3,16 @@ import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface SceneInventoryCaptureProps {
   itemName: string;
-  characters: Array<{sheetId: string; name: string}>;
+  characters: Array<{actorId: string; name: string}>;
   evidenceText?: string;
-  suggestedSheetId?: string;
+  suggestedActorId?: string;
   exactReusableItem?: {id: string; name: string} | null;
   reusableItemMatches: Array<{id: string; name: string}>;
   canCreateReusableItem: boolean;
   isSaving: boolean;
   onCancel: () => void;
   onSave: (input: {
-    sheetId: string;
+    actorId: string;
     itemName: string;
     quantity: number;
     saveReusable: boolean;
@@ -25,7 +25,7 @@ export function SceneInventoryCapture({
   itemName: initialItemName,
   characters,
   evidenceText,
-  suggestedSheetId,
+  suggestedActorId,
   exactReusableItem,
   reusableItemMatches,
   canCreateReusableItem,
@@ -34,10 +34,10 @@ export function SceneInventoryCapture({
   onSave
 }: SceneInventoryCaptureProps) {
   const [itemName, setItemName] = useState(initialItemName);
-  const [sheetId, setSheetId] = useState(
-    suggestedSheetId && characters.some((entry) => entry.sheetId === suggestedSheetId)
-      ? suggestedSheetId
-      : characters[0]?.sheetId ?? ''
+  const [actorId, setActorId] = useState(
+    suggestedActorId && characters.some((entry) => entry.actorId === suggestedActorId)
+      ? suggestedActorId
+      : characters[0]?.actorId ?? ''
   );
   const [quantity, setQuantity] = useState(1);
   const [saveReusable, setSaveReusable] = useState(false);
@@ -47,7 +47,7 @@ export function SceneInventoryCapture({
   );
   const needsReusableChoice = saveReusable && !exactReusableItem;
   const canConfirm = Boolean(
-    sheetId && itemName.trim() &&
+    actorId && itemName.trim() &&
     (!needsReusableChoice || reusableEntityId || canCreateReusableItem)
   );
 
@@ -71,9 +71,9 @@ export function SceneInventoryCapture({
         </label>
         <label>
           Character
-          <select value={sheetId} onChange={(event) => setSheetId(event.target.value)}>
+          <select value={actorId} onChange={(event) => setActorId(event.target.value)}>
             {characters.map((character) => (
-              <option key={character.sheetId} value={character.sheetId}>
+              <option key={character.actorId} value={character.actorId}>
                 {character.name}
               </option>
             ))}
@@ -139,7 +139,7 @@ export function SceneInventoryCapture({
           type='button'
           disabled={isSaving || !canConfirm || (saveReusable && !reusableEntityId && !canonicalName.trim())}
           onClick={() => onSave({
-            sheetId,
+            actorId,
             itemName: itemName.trim(),
             quantity,
             saveReusable,

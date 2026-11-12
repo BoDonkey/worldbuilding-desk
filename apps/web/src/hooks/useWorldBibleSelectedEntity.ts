@@ -31,6 +31,7 @@ import {
 import {buildCanonicalAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {htmlToPlainText} from '../utils/textHelpers';
 import {describeError} from '../services/errors';
+import {buildDescriptiveCharacterState} from '../services/state/characterSnapshot';
 
 interface WorldBibleFeedback {
   tone: 'success' | 'error';
@@ -243,6 +244,22 @@ export function useWorldBibleSelectedEntity({
     selectedEntityCharacterSheet,
     stateMutationEvents
   ]);
+  // Where the character is and what they hold after every accepted change (4.27b).
+  const selectedEntityCurrentState = useMemo(() => {
+    if (!selectedEntity) return null;
+    return buildDescriptiveCharacterState({
+      subject: {
+        actorId: selectedEntity.id,
+        name: selectedEntity.name,
+        sheet: selectedEntityCharacterSheet,
+        legacy: false
+      },
+      events: stateMutationEvents,
+      position: {kind: 'latest'},
+      compendiumEntries: [],
+      entityById: new Map(entities.map((entity) => [entity.id, entity]))
+    });
+  }, [entities, selectedEntity, selectedEntityCharacterSheet, stateMutationEvents]);
   const selectedEntityAcceptedStateEventCount = useMemo(
     () =>
       selectedEntityStateEvents.filter((event) => event.status === 'accepted').length,
@@ -353,6 +370,7 @@ export function useWorldBibleSelectedEntity({
     selectedEntityFacts,
     selectedEntitySceneMentions,
     selectedEntityStateEvents,
+    selectedEntityCurrentState,
     selectedEntityAcceptedStateEventCount,
     selectedEntityProposedStateEventCount,
     characterHealthProbeResults,

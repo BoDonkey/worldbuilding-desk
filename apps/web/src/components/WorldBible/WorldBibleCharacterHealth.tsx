@@ -3,6 +3,7 @@ import type {MemoryEntry} from '../../services/shodh/ShodhMemoryService';
 import type {useWorldBibleSelectedEntity} from '../../hooks/useWorldBibleSelectedEntity';
 import {buildCanonicalFactSummary} from '../../services/lore/canonicalFactActions';
 import {formatCanonicalFactValidity} from '../../services/lore/canonicalFactValidity';
+import type {DescriptiveCharacterState} from '../../services/state/characterSnapshot';
 import styles from './WorldBibleCharacterHealth.module.css';
 
 const formatFactValue = (fact: CanonicalFact): string =>
@@ -15,6 +16,8 @@ interface WorldBibleCharacterHealthProps {
   linkedLoreDocumentsForSelectedEntity: ReturnType<typeof useWorldBibleSelectedEntity>['linkedLoreDocumentsForSelectedEntity'];
   selectedEntitySceneMentions: ReturnType<typeof useWorldBibleSelectedEntity>['selectedEntitySceneMentions'];
   selectedEntityStateEvents: ReturnType<typeof useWorldBibleSelectedEntity>['selectedEntityStateEvents'];
+  /** Place and items after every accepted change. */
+  selectedEntityCurrentState: DescriptiveCharacterState | null;
   selectedEntityAcceptedStateEventCount: number;
   selectedEntityProposedStateEventCount: number;
   characterHealthProbeResults: ReturnType<typeof useWorldBibleSelectedEntity>['characterHealthProbeResults'];
@@ -30,7 +33,7 @@ export const WorldBibleCharacterHealth = (props: WorldBibleCharacterHealthProps)
   const {
     selectedEntity, selectedEntityAliases, selectedEntityFacts,
     linkedLoreDocumentsForSelectedEntity, selectedEntitySceneMentions,
-    selectedEntityStateEvents, selectedEntityAcceptedStateEventCount,
+    selectedEntityStateEvents, selectedEntityCurrentState, selectedEntityAcceptedStateEventCount,
     selectedEntityProposedStateEventCount, characterHealthProbeResults,
     characterHealthProbeRunning, currentEntityMemories, documents, canProbe,
     handleCharacterHealthProbe, onOpenScene
@@ -84,6 +87,30 @@ export const WorldBibleCharacterHealth = (props: WorldBibleCharacterHealthProps)
                       </div>
 
                       <div className={styles.characterHealthColumns}>
+                        <section className={styles.characterHealthCard} aria-label='Current place and items'>
+                          <strong>After the latest scene</strong>
+                          {selectedEntityCurrentState?.location ? (
+                            <p>At <strong>{selectedEntityCurrentState.location}</strong></p>
+                          ) : (
+                            <p>No place recorded yet.</p>
+                          )}
+                          {selectedEntityCurrentState && selectedEntityCurrentState.inventory.length > 0 ? (
+                            <ul className={styles.characterHealthList}>
+                              {selectedEntityCurrentState.inventory.map((item) => (
+                                <li key={item.name}>
+                                  <span>{item.name}</span>
+                                  <small>
+                                    {item.quantity > 1 ? `×${item.quantity}` : 'held'}
+                                    {item.equipped ? ' · equipped' : ''}
+                                  </small>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p>Holding nothing recorded.</p>
+                          )}
+                        </section>
+
                         <div className={styles.characterHealthCard}>
                           <strong>Aliases</strong>
                           {selectedEntityAliases.length > 0 ? (

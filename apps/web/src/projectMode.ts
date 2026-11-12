@@ -83,8 +83,6 @@ export interface ModeCapabilities {
   usesPlainReviewLanguage: boolean;
   /** World Canvas leaves out system and negative-space categories. */
   hidesSystemCategories: boolean;
-  /** Selected scene text can be captured as an inventory item. */
-  canCaptureSelectionAsInventory: boolean;
 }
 
 const MODE_CAPABILITIES: Record<ProjectMode, ModeCapabilities> = {
@@ -92,22 +90,19 @@ const MODE_CAPABILITIES: Record<ProjectMode, ModeCapabilities> = {
     insertsLiveStatBlocks: true,
     tracksStoryMechanics: true,
     usesPlainReviewLanguage: false,
-    hidesSystemCategories: false,
-    canCaptureSelectionAsInventory: true
+    hidesSystemCategories: false
   },
   game: {
     insertsLiveStatBlocks: false,
     tracksStoryMechanics: true,
     usesPlainReviewLanguage: false,
-    hidesSystemCategories: false,
-    canCaptureSelectionAsInventory: true
+    hidesSystemCategories: false
   },
   general: {
     insertsLiveStatBlocks: false,
     tracksStoryMechanics: false,
     usesPlainReviewLanguage: true,
-    hidesSystemCategories: true,
-    canCaptureSelectionAsInventory: false
+    hidesSystemCategories: true
   }
 };
 

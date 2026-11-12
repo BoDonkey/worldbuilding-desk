@@ -1,5 +1,4 @@
 import type {
-  CharacterSheet,
   CompendiumEntry,
   EntityCategory,
   Project,
@@ -10,13 +9,14 @@ import type {
 import {resolveReusableItem, type ItemStateAuthoringWritePlan} from '../state/itemStateAuthoringService';
 import {sortWritingDocuments} from '../storage';
 import {isItemCategory} from '../worldBible/worldBibleSummary';
+import {findStateSubject, stateSubjectAccepts, type StateSubject} from '../state/stateSubjects';
 import {hashSceneContent, type PendingInventoryCapture, type RosterPlanResult} from './sceneRosterMutationTypes';
 interface CaptureContext {
   activeProject: Project | null;
   selectedDocument: WritingDocument | null;
   pendingInventoryCapture: PendingInventoryCapture | null;
   content: string;
-  characterSheets: CharacterSheet[];
+  stateSubjects: StateSubject[];
   documents: WritingDocument[];
   categories: EntityCategory[];
   entities: WorldEntity[];
@@ -36,7 +36,7 @@ export function planSelectionInventoryCapture({
   selectedDocument,
   pendingInventoryCapture,
   content,
-  characterSheets,
+  stateSubjects,
   documents,
   categories,
   entities,
@@ -46,7 +46,7 @@ export function planSelectionInventoryCapture({
   ids
 }: CaptureContext & {
   input: {
-    sheetId: string;
+    actorId: string;
     itemName: string;
     quantity: number;
     saveReusable: boolean;
@@ -54,7 +54,7 @@ export function planSelectionInventoryCapture({
     canonicalName: string;
   };
 }): RosterPlanResult<{
-  sheet: CharacterSheet;
+  subject: StateSubject;
   plan: ItemStateAuthoringWritePlan;
 }> | null {
   if (!activeProject || !selectedDocument || !pendingInventoryCapture)
@@ -66,10 +66,10 @@ export function planSelectionInventoryCapture({
     pendingInventoryCapture.sourceHash !== hashSceneContent(content)) {
     return {error: 'The source prose changed. Close this proposal and reopen it from the current text.'};
   }
-  const sheet = characterSheets.find((candidate) => candidate.id === input.sheetId);
-  if (!sheet)
+  const subject = findStateSubject(input.actorId, stateSubjects);
+  if (!subject)
     return null;
-  if (!sheet.characterEntityId) {
+  if (subject.legacy) {
     return {error: 'Resolve this legacy sheet to a World Bible character before recording state.'};
   }
   const sceneOrder = sortWritingDocuments(documents).findIndex((document) => document.id === selectedDocument.id) + 1;
@@ -134,7 +134,7 @@ export function planSelectionInventoryCapture({
     commands: [
       {
         type: 'inventory_add',
-        actorId: sheet.characterEntityId,
+        actorId: subject.actorId,
         itemName: input.itemName,
         quantity: input.quantity,
         sourceEntityId,
@@ -148,7 +148,7 @@ export function planSelectionInventoryCapture({
     : undefined;
   return {
     value: {
-      sheet, plan: {
+      subject, plan: {
         projectId: activeProject.id, event, entityToSave, compendiumEntryToSave,
         eventToInvalidate: proposalEvent ? {
           ...proposalEvent, status: 'invalidated' as const, invalidatedAt: now,
@@ -165,7 +165,7 @@ export function planSelectionConsumptionCapture({
   selectedDocument,
   pendingInventoryCapture,
   content,
-  characterSheets,
+  stateSubjects,
   documents,
   categories,
   entities,
@@ -175,7 +175,7 @@ export function planSelectionConsumptionCapture({
   ids
 }: CaptureContext & {
   input: {
-    sheetId: string;
+    actorId: string;
     itemName: string;
     commands: StateMutationEvent['commands'];
     rememberedConsumable?: CompendiumEntry['consumable'];
@@ -184,7 +184,7 @@ export function planSelectionConsumptionCapture({
     canonicalName: string;
   };
 }): RosterPlanResult<{
-  sheet: CharacterSheet;
+  subject: StateSubject;
   plan: ItemStateAuthoringWritePlan;
 }> | null {
   if (!activeProject ||
@@ -196,9 +196,12 @@ export function planSelectionConsumptionCapture({
     pendingInventoryCapture.sourceHash !== hashSceneContent(content)) {
     return {error: 'The source prose changed. Close this proposal and reopen it from the current text.'};
   }
-  const sheet = characterSheets.find((candidate) => candidate.id === input.sheetId);
-  if (!sheet?.characterEntityId) {
+  const subject = findStateSubject(input.actorId, stateSubjects);
+  if (!subject || subject.legacy) {
     return {error: 'Resolve this character sheet to World Bible canon before recording state.'};
+  }
+  if (!input.commands.every((command) => stateSubjectAccepts(subject, command))) {
+    return {error: `${subject.name} has no character sheet, so only item and place changes can be recorded.`};
   }
   const sceneOrder = sortWritingDocuments(documents).findIndex((document) => document.id === selectedDocument.id) + 1;
   if (sceneOrder <= 0)
@@ -261,11 +264,11 @@ export function planSelectionConsumptionCapture({
   const commands = input.commands.map((command) => command.type.startsWith('inventory_')
     ? {
       ...command,
-      actorId: sheet.characterEntityId as string,
+      actorId: subject.actorId,
       sourceEntityId,
       definitionId
     }
-    : {...command, actorId: sheet.characterEntityId as string});
+    : {...command, actorId: subject.actorId});
   const event: StateMutationEvent = {
     id: ids.event,
     projectId: activeProject.id,
@@ -297,7 +300,7 @@ export function planSelectionConsumptionCapture({
     : undefined;
   return {
     value: {
-      sheet, plan: {
+      subject, plan: {
         projectId: activeProject.id, event, entityToSave, compendiumEntryToSave,
         eventToInvalidate: proposalEvent ? {
           ...proposalEvent, status: 'invalidated' as const, invalidatedAt: now,

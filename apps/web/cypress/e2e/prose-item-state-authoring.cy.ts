@@ -146,7 +146,7 @@ describe('Prose-proximate item and state authoring', () => {
     cy.get('[role="dialog"][aria-label="Add selected item to inventory"]').within(() => {
       cy.contains('“Bill found a health potion.”').should('be.visible');
       cy.get('input').filter('[value="health potion"]').should('exist');
-      cy.contains('label', 'Character').find('select').should('have.value', 'sheet-bill');
+      cy.contains('label', 'Character').find('select').should('have.value', 'entity-bill');
       cy.contains('label', 'Save as a reusable world item')
         .find('input[type="checkbox"]')
         .should('not.be.checked');
@@ -199,7 +199,9 @@ describe('Prose-proximate item and state authoring', () => {
     cy.contains('Recorded Bill using health potion.').should('be.visible');
   });
 
-  it('does not add mechanics pressure to general-fiction selection tools', () => {
+  it('offers item capture beside AI in the general-fiction selection menu', () => {
+    // 4.27b: General Fiction records items too (general-fiction-state.cy.ts
+    // covers a character without a sheet); its selection menu still offers AI.
     seedItemAuthoringFixture('Bill found a health potion.');
     setGeneralFictionMode();
     cy.reload();
@@ -207,6 +209,6 @@ describe('Prose-proximate item and state authoring', () => {
     cy.get('.ProseMirror').click().type('{selectall}');
     cy.get('.ProseMirror').trigger('contextmenu');
     cy.contains('button', 'Ask AI about this').should('be.visible');
-    cy.contains('button', 'Record item/state').should('not.exist');
+    cy.contains('button', 'Record item/state').should('be.visible');
   });
 });

@@ -32,8 +32,8 @@ const approvedEntry: CompendiumEntry = {
 const props = (withPotion: boolean) => ({
   itemName: 'Health Potion',
   evidenceText: 'Bill drank a Health Potion.',
-  contexts: [{sheetId: 'sheet-bill', actorId: 'bill', name: 'Bill', before: state(withPotion)}],
-  suggestedSheetId: 'sheet-bill',
+  contexts: [{actorId: 'bill', hasSheet: true, name: 'Bill', before: state(withPotion)}],
+  suggestedActorId: 'bill',
   ruleset,
   itemReference: {definitionId: 'potion'},
   exactReusableItem: null,
@@ -98,5 +98,26 @@ describe('SceneConsumptionCapture', () => {
     expect(onSave.mock.calls[0][0].commands).toEqual([
       expect.objectContaining({type: 'resource_change', delta: 10})
     ]);
+  });
+
+  it('records only the item use for a character without a sheet (4.27b)', () => {
+    const onSave = vi.fn();
+    render(<SceneConsumptionCapture
+      {...props(true)}
+      contexts={[{actorId: 'entity-wren', hasSheet: false, name: 'Wren', before: state(true)}]}
+      suggestedActorId='entity-wren'
+      approvedEntry={approvedEntry}
+      onSave={onSave}
+    />);
+
+    expect(screen.getByText(/Wren has no character sheet/)).toBeInTheDocument();
+    expect(screen.queryByText('Remembered effect: Health Potion')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Attribute type')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Confirm item use'}));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 'entity-wren',
+      commands: [expect.objectContaining({type: 'inventory_consume', actorId: 'entity-wren'})],
+      rememberedConsumable: undefined
+    }));
   });
 });
