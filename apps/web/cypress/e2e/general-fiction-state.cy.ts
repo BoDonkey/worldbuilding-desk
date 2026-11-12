@@ -183,7 +183,11 @@ describe('General Fiction descriptive state', () => {
       const commands = events
         .filter((event) => event.status === 'accepted')
         .flatMap((event) => event.commands);
-      expect(commands.map((command) => [command.type, command.actorId])).to.deep.equal([
+      // IndexedDB returns events in random-id order, so compare as a set.
+      const recorded = commands
+        .map((command) => [command.type, command.actorId])
+        .sort(([a], [b]) => a.localeCompare(b));
+      expect(recorded).to.deep.equal([
         ['inventory_add', 'entity-sera'],
         ['location_set', 'entity-sera']
       ]);
