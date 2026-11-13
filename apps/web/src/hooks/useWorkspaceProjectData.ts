@@ -38,9 +38,9 @@ import {
   getAliasesByProject,
   migrateCharacterAliasesToEntities,
   type ConsistencyAlias,
-  getStateMutationEventsByProject,
   getCanonicalFactsByProject
 } from '../services/storage';
+import {loadStateMutationEventsInSceneOrder} from '../services/state/stateSceneOrder';
 import type {ActorResolution} from '../services/characters/characterIdentity';
 import {
   getSeriesBibleConfig,
@@ -233,7 +233,7 @@ export function useWorkspaceProjectData({
         getRulesetByProjectId(activeProject.id),
         getOrCreateSettlementState(activeProject.id),
         getSettlementModulesByProject(activeProject.id),
-        getStateMutationEventsByProject(activeProject.id),
+        loadStateMutationEventsInSceneOrder(activeProject.id),
         getCanonicalFactsByProject(activeProject.id),
         getActorResolutionsByProject(activeProject.id)
       ]);
@@ -424,7 +424,7 @@ export function useWorkspaceProjectData({
   useEffect(() => {
     if (!activeProject) return;
     const refresh = () => {
-      void getStateMutationEventsByProject(activeProject.id).then((events) => {
+      void loadStateMutationEventsInSceneOrder(activeProject.id).then((events) => {
         setStateMutationEvents(events);
       });
     };

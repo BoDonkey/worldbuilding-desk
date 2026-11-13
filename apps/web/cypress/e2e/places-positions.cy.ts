@@ -68,6 +68,17 @@ const seed = (moves: (projectId: string) => unknown[]) => {
       record(projectId, 'place-gull', 'locations', 'Gilded Gull', 'place-varn'),
       record(projectId, 'entity-sera', 'cast', 'Sera')
     ]);
+    // Each move belongs to a real scene; a change whose scene is gone is
+    // invalidated when the project loads (slice 3.38).
+    cy.putIndexedDbRecords('writingDocuments', [1, 2, 3].map((order) => ({
+      id: `scene-move-${order}`,
+      projectId,
+      title: `Scene ${order}`,
+      content: '<p></p>',
+      order: 100 + order,
+      createdAt: 100 + order,
+      updatedAt: 100 + order
+    })));
     cy.putIndexedDbRecords('state_mutation_events', moves(projectId));
   });
   cy.reload();

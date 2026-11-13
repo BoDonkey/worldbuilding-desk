@@ -1,4 +1,5 @@
 import type {StateMutationEvent} from '../../../entityTypes';
+import {compareStateMutationEvents} from '@worldbuilding-desk/rules-engine';
 import {openDb, STATE_MUTATION_EVENT_STORE_NAME} from '../db';
 import {getAllByProject, readProjectRecords} from '../projectIndex';
 import {requestToPromise} from '../idbRequest';
@@ -151,23 +152,7 @@ export async function getStateMutationEventsByProject(
   projectId: string
 ): Promise<StateMutationEvent[]> {
   const all = await readProjectRecords<StateMutationEvent>(STATE_MUTATION_EVENT_STORE_NAME, projectId);
-  return all
-    .sort((a, b) => {
-      const orderDelta = (a.sceneOrder ?? Number.MAX_SAFE_INTEGER) - (b.sceneOrder ?? Number.MAX_SAFE_INTEGER);
-      if (orderDelta !== 0) return orderDelta;
-      if (a.sceneId === b.sceneId) {
-        const positionDelta =
-          (a.scenePosition ?? Number.MAX_SAFE_INTEGER) -
-          (b.scenePosition ?? Number.MAX_SAFE_INTEGER);
-        if (positionDelta !== 0) return positionDelta;
-        const sequenceDelta =
-          (a.sceneSequence ?? Number.MAX_SAFE_INTEGER) -
-          (b.sceneSequence ?? Number.MAX_SAFE_INTEGER);
-        if (sequenceDelta !== 0) return sequenceDelta;
-      }
-      if (a.sourceRevision !== b.sourceRevision) return a.sourceRevision - b.sourceRevision;
-      return a.createdAt - b.createdAt;
-    });
+  return all.sort(compareStateMutationEvents);
 }
 
 export async function getStateMutationEventsByScene(

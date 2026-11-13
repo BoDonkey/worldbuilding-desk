@@ -228,6 +228,12 @@ change; the mutation ledger says when it changed.
   (`sceneOrder` → `sceneSequence` → `sourceRevision` → `createdAt`),
   replayable, and invalidatable when source scenes change; invalidated events
   stay in the ledger for audit but are ignored in replay.
+- `sceneOrder` is a cache of the scene's 1-based place in the manuscript; the
+  scene list is the truth (3.38). Read events through
+  `loadStateMutationEventsInSceneOrder` (`services/state/stateSceneOrder.ts`),
+  which renumbers them from the scene list and invalidates events whose scene
+  is gone. Moving a scene renumbers its events; deleting a scene invalidates
+  them.
 - Replay: accepted events only, applied over a `CharacterSheet`-derived
   baseline; last accepted set-style command wins, additive commands
   accumulate, invalid commands are rejected before persistence.

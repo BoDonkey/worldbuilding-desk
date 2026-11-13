@@ -35,9 +35,9 @@ import {
   getAliasesByProject,
   type ConsistencyAlias,
   getCanonicalFactsByProject,
-  getStateMutationEventsByProject,
   getRulesetByProjectId
 } from '../services/storage';
+import {loadStateMutationEventsInSceneOrder} from '../services/state/stateSceneOrder';
 import type {CharacterIdentityMigrationReport} from '../services/characters/characterIdentity';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -226,7 +226,7 @@ export function useWorldBibleProjectData({
         getCharactersByProject(projectId),
         getDocumentsByProject(projectId),
         getCanonicalFactsByProject(projectId),
-        getStateMutationEventsByProject(projectId),
+        loadStateMutationEventsInSceneOrder(projectId),
         getCharacterSheetsByProject(projectId),
         getRulesetByProjectId(projectId),
         getCharacterIdentityMigrationReport(projectId)
@@ -258,7 +258,7 @@ export function useWorldBibleProjectData({
       void Promise.all([
         getDocumentsByProject(activeProject.id),
         getCanonicalFactsByProject(activeProject.id),
-        getStateMutationEventsByProject(activeProject.id)
+        loadStateMutationEventsInSceneOrder(activeProject.id)
       ]).then(
         ([loadedWritingDocuments, loadedCanonicalFacts, loadedStateMutationEvents]) => {
           if (cancelled) return;

@@ -130,6 +130,41 @@ describe('Places: where is everyone and movement checks', () => {
     cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
   });
 
+  it('follows the scene list when scenes move and are deleted (slice 3.38)', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('button', 'Scenes').click();
+
+    // Gamma (Sera to the Isle) moves ahead of Beta (Sera to Kell).
+    cy.get('button[aria-label="Move Gamma Scene earlier"]').click();
+    cy.contains('[role="status"]', 'Scene order updated.').should('exist');
+
+    // Alpha holds two accepted moves; deleting it invalidates them.
+    cy.contains('li', 'Alpha Scene').contains('button', 'Delete').click();
+    cy.contains('[role="dialog"]', 'Delete "Alpha Scene"?')
+      .should('contain', 'It holds 2 accepted state changes')
+      .within(() => cy.contains('button', 'Delete').click());
+    cy.contains('[role="status"]', 'Scene deleted.').should('exist');
+
+    cy.contains('a', 'World Bible').click();
+    cy.contains('h1', 'World Bible').should('be.visible');
+    cy.contains('button', 'Places').click();
+    panel().within(() => {
+      cy.contains('label', 'At the end of').find('select').select('1. Gamma Scene');
+      byPlace().contains('li', 'Isle').should('contain', 'Sera');
+      byPlace().contains('li', 'Gilded Gull').should('not.exist');
+      byPlace().contains('li', 'Old Barn').should('not.exist');
+
+      cy.contains('label', 'At the end of').find('select').select('2. Beta Scene');
+      byPlace().contains('li', 'Kell').should('contain', 'Sera');
+
+      cy.get('ol[aria-label="Sera\'s path"] li').then((stops) => {
+        expect([...stops].map((stop) => stop.querySelector('strong')?.textContent))
+          .to.deep.eq(['Isle', 'Kell']);
+      });
+    });
+  });
+
   it('flags a move with no route and a position with no place record', () => {
     cy.visit('/workspace');
     cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');

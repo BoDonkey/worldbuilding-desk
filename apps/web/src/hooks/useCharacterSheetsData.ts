@@ -13,9 +13,10 @@ import {
   getCharacterSheetsByProject, deriveCharacterSheetNames, findCharacterSheetCollisions,
   getCharactersByProject, getEntitiesByProject, getActorResolutionsByProject,
   getRulesetByProjectId, getOrCreateSettlementState, getSettlementModulesByProject,
-  getCompendiumEntriesByProject, getDocumentsByProject, getStateMutationEventsByProject,
+  getCompendiumEntriesByProject, getDocumentsByProject,
   getCategoriesByProject
 } from '../services/storage';
+import {loadStateMutationEventsInSceneOrder} from '../services/state/stateSceneOrder';
 import {placeNameSuggestions} from '../services/worldBible/placePositions';
 import type {ActorResolution} from '../services/characters/characterIdentity';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
@@ -109,7 +110,7 @@ export const useCharacterSheetsData = (params: {
           getSettlementModulesByProject(activeProject.id),
           getCompendiumEntriesByProject(activeProject.id),
           getDocumentsByProject(activeProject.id),
-          getStateMutationEventsByProject(activeProject.id),
+          loadStateMutationEventsInSceneOrder(activeProject.id),
           getEntitiesByProject(activeProject.id),
           getActorResolutionsByProject(activeProject.id),
           getCategoriesByProject(activeProject.id)

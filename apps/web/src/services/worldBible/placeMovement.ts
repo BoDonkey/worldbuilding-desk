@@ -2,6 +2,7 @@ import type {StateMutationEvent, WritingDocument} from '../../entityTypes';
 import type {ActorResolution} from '../characters/characterIdentity';
 import {sortWritingDocuments} from '../storage';
 import {getAcceptedStateMutationEvents} from '../state/stateReplay';
+import {alignStateMutationEventsToScenes} from '../state/stateSceneOrder';
 import {
   buildStateSubjectLookup,
   replayStateSubject,
@@ -135,7 +136,10 @@ export const characterPath = (params: {
   const orderById = new Map(ordered.map((scene, i) => [scene.id, i + 1]));
   const titleById = new Map(ordered.map((scene) => [scene.id, scene.title]));
   const stops: PathStop[] = [];
-  getAcceptedStateMutationEvents(params.events).forEach((event) => {
+  // Walk moves in the current scene order, not the order stored on each change.
+  getAcceptedStateMutationEvents(
+    alignStateMutationEventsToScenes(params.events, params.documents)
+  ).forEach((event) => {
     event.commands.forEach((command) => {
       if (command.type !== 'location_set' || lookup.get(command.actorId) !== params.subject) return;
       const position = {locationName: command.locationName, locationPlaceId: command.placeId};

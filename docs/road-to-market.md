@@ -365,7 +365,7 @@ messages).
 | 3.35 | Route every project-mode decision through project capabilities | 3 | S | Done `00647c0` — 5 named mode capabilities in `projectMode.ts`; `isGeneralFiction` removed |
 | 3.36 | Game Simulation brief (design only) | 3 | S | Done `20cd067` |
 | 3.37 | Places and maps brief (design only) | 3 | S | Done `05f1ed6` |
-| 3.38 | State changes follow the scene list (review D1, D8, P4) | 3 | M | — (before 4.79) |
+| 3.38 | State changes follow the scene list (review D1, D8, P4) | 3 | M | WIP |
 | 3.39 | Assistant fact answers: remove story-specific wording (T1) | 3 | XS | Done `0b77c67` |
 | 3.40 | One validated path for saving a state change (T2, B5) | 3 | S | — (easier after 3.38) |
 | 3.41 | Local AI review through the request gate (T3) | 3 | S | — (author chose: keep, route through `LLMService`, 2026-11-13) |

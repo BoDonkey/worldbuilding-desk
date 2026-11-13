@@ -120,6 +120,17 @@ describe('a character path', () => {
     const path = characterPath({subject: sera, subjects, events, documents: scenes, index, fromOrder: 2, toOrder: 3});
     expect(path.map((stop) => stop.label)).toEqual(['Kell']);
   });
+
+  it('follows the current scene order, not the order stored on each change', () => {
+    // Scene 4 moved to the front after its changes were saved.
+    const reordered = scenes.map((scene) => ({...scene, order: scene.id === 'scene-4' ? 0 : scene.order}));
+    const path = characterPath({subject: sera, subjects, events, documents: reordered, index});
+    expect(path.map((stop) => [stop.sceneOrder, stop.label])).toEqual([
+      [1, 'Kell Gate'],
+      [2, 'Gilded Gull'],
+      [4, 'Kell']
+    ]);
+  });
 });
 
 describe('how a move is explained by place data', () => {
