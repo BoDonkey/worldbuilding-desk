@@ -366,9 +366,9 @@ messages).
 | 3.36 | Game Simulation brief (design only) | 3 | S | Done `20cd067` |
 | 3.37 | Places and maps brief (design only) | 3 | S | Done `05f1ed6` |
 | 3.38 | State changes follow the scene list (review D1, D8, P4) | 3 | M | — (before 4.79) |
-| 3.39 | Assistant fact answers: remove story-specific wording (T1) | 3 | XS | WIP |
+| 3.39 | Assistant fact answers: remove story-specific wording (T1) | 3 | XS | Done `0b77c67` |
 | 3.40 | One validated path for saving a state change (T2, B5) | 3 | S | — (easier after 3.38) |
-| 3.41 | Local AI review through the request gate, or retired (T3) | 3 | S | — (author decision first) |
+| 3.41 | Local AI review through the request gate (T3) | 3 | S | — (author chose: keep, route through `LLMService`, 2026-11-13) |
 | 3.42 | AI-written Source Notes are labelled (T4) | 3 | S | — |
 | 3.43 | Canon Decisions: actions out of the route (B1, D4, T5) | 3 | M | — |
 | 3.44 | Assistant turn planning out of the component (B2) | 3 | M | — (after 3.39) |
@@ -745,8 +745,10 @@ Workspace data store; see Backlog) and P5 (no finding).
   whose scene is gone). The stored number becomes a cache or goes away.
   Remove the ledger repository's copy of the comparator (D8) and make the
   movement path (P4) use replay order.
-  - **Author decision.** What deleting a scene does to its accepted changes
-    (review suggests: invalidate them, with a confirm that says so).
+  - **Decided (author, 2026-11-13).** Deleting a scene invalidates its
+    accepted changes. The delete confirm says how many accepted changes the
+    scene holds; the changes stay in the ledger, invalidated with a reason,
+    and replay ignores them.
   - **Verify.** Full-coverage tier; replay tests that move and delete a
     scene; e2e for the snapshot or **Where is everyone** after a move.
 - **3.39 Assistant fact answers: remove story-specific wording.** T1.
@@ -760,11 +762,11 @@ Workspace data store; see Backlog) and P5 (no finding).
   composer, and the Character Sheets form share one prepare-and-save
   function; reconcile and place linking move from the repository to
   `services/state/`. Verify: full-coverage tier.
-- **3.41 Local AI review through the request gate, or retired.** T3, X4.
-  Author decides first. Keep: route it through `LLMService` with its own
-  feature tag under the coaching switch and the shared model lookup.
-  Retire: remove `'local-ai-preview'` with a migration to the
-  deterministic mode. Verify: full-coverage tier.
+- **3.41 Local AI review through the request gate.** T3, X4. Decided
+  (author, 2026-11-13): keep the mode. Route its request through
+  `LLMService` with its own feature tag under the coaching switch, and use
+  the shared model lookup (no first-listed or cloud model). Verify:
+  full-coverage tier.
 - **3.42 AI-written Source Notes are labelled.** T4. First prove or
   dismiss whether extraction proposes facts from the "Suggested details
   (not canon)" block. Then label `ai-session` notes in the UI and in prompt
