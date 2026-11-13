@@ -96,7 +96,7 @@ describe('assistant grounding helpers', () => {
       ]
     );
 
-    expect(result?.content).toBe('Sera was a cartographer before becoming a delver.');
+    expect(result?.content).toBe("Sera's accepted occupation is cartographer.");
     expect(result?.results.map((entry) => entry.chunk.metadata.type)).toEqual([
       'canon_fact'
     ]);
@@ -195,6 +195,55 @@ describe('assistant grounding helpers', () => {
     expect(result?.results).toHaveLength(2);
   });
 
+  describe('with wording from no particular story', () => {
+    const fact = (target: string, content: string) => ({
+      score: 2,
+      chunk: {
+        id: `${target}-fact`,
+        documentId: `canon-fact:${target}`,
+        documentTitle: target,
+        content,
+        metadata: {type: 'canon_fact' as const}
+      }
+    });
+
+    it('never claims an order of occupations it was not given', () => {
+      const answer = getDirectSavedFactAnswer(
+        'What did Mara do before she became queen?',
+        [fact('Mara', 'Mara occupation: queen')]
+      )?.content;
+      expect(answer).toBe("Mara's accepted occupation is queen.");
+      expect(answer).not.toMatch(/before becoming/i);
+    });
+
+    it('answers the remaining direct questions from the fact value alone', () => {
+      expect(
+        getDirectSavedFactAnswer("What is Ilya's job?", [
+          fact('Ilya', 'Ilya occupation: lighthouse keeper')
+        ])?.content
+      ).toBe("Ilya's accepted occupation is lighthouse keeper.");
+      expect(
+        getDirectSavedFactAnswer('How long has Ilya served?', [
+          fact('Ilya', 'Ilya background: Harbor Guild service: six winters')
+        ])?.content
+      ).toBe('Ilya has served the Harbor Guild for six winters.');
+      expect(
+        getDirectSavedFactAnswer('Is Ilya a member of the Harbor Guild?', [
+          fact('Ilya', 'Ilya membership: Harbor Guild')
+        ])?.content
+      ).toBe("Ilya's accepted canon membership is Harbor Guild.");
+      expect(
+        getDirectSavedFactAnswer('What cures marsh fever?', [
+          fact('Saltmarsh', 'Saltmarsh background: Marsh fever treatment: willow bark')
+        ])?.content
+      ).toBe('marsh fever is treated with willow bark.');
+      expect(
+        getDirectSavedFactAnswer("What color are Ilya's eyes?", [
+          fact('Ilya', 'Ilya appearance: green eyes')
+        ])?.content
+      ).toBe("Ilya's eyes are green.");
+    });
+  });
 });
 
 describe('stripAssistantThinking', () => {

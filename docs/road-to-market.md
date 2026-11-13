@@ -366,7 +366,7 @@ messages).
 | 3.36 | Game Simulation brief (design only) | 3 | S | Done `20cd067` |
 | 3.37 | Places and maps brief (design only) | 3 | S | Done `05f1ed6` |
 | 3.38 | State changes follow the scene list (review D1, D8, P4) | 3 | M | — (before 4.79) |
-| 3.39 | Assistant fact answers: remove story-specific wording (T1) | 3 | XS | — |
+| 3.39 | Assistant fact answers: remove story-specific wording (T1) | 3 | XS | WIP |
 | 3.40 | One validated path for saving a state change (T2, B5) | 3 | S | — (easier after 3.38) |
 | 3.41 | Local AI review through the request gate, or retired (T3) | 3 | S | — (author decision first) |
 | 3.42 | AI-written Source Notes are labelled (T4) | 3 | S | — |
