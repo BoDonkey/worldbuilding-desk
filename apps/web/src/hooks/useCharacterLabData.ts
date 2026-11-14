@@ -35,9 +35,9 @@ import {
   type ConsistencyAlias,
   getCanonicalFactsByProject,
   getLoreFactProposalsByProject,
-  getStateMutationEventsByProject,
   appendToScratchpad
 } from '../services/storage';
+import {loadStateMutationEventsInSceneOrder} from '../services/state/stateSceneOrder';
 import {getProjectCapabilities} from '../projectMode';
 import {isCharacterCategory, type ActorResolution} from '../services/characters/characterIdentity';
 import {DEFAULT_PARTY_SYNERGY_RULES, deriveCharacterRuntimeModifiers, getPartySynergySuggestions} from '../services/compendium';
@@ -138,7 +138,7 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
           getCanonicalFactsByProject(projectId),
           getLoreFactProposalsByProject(projectId),
           getRulesetByProjectId(projectId),
-          getStateMutationEventsByProject(projectId),
+          loadStateMutationEventsInSceneOrder(projectId),
           getCompendiumEntriesByProject(projectId),
           getSettlementState(projectId),
           getSettlementModulesByProject(projectId),

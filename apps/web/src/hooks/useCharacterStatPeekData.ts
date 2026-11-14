@@ -26,8 +26,8 @@ import {
   getSettlementState,
   getAliasesByProject,
   type ConsistencyAlias,
-  getStateMutationEventsByProject
 } from '../services/storage';
+import {loadStateMutationEventsInSceneOrder} from '../services/state/stateSceneOrder';
 import type {ActorResolution} from '../services/characters/characterIdentity';
 import {DEFAULT_PARTY_SYNERGY_RULES, deriveCharacterRuntimeModifiers, getPartySynergySuggestions} from '../services/compendium';
 import {
@@ -101,7 +101,7 @@ export function useCharacterStatPeekData(
         getAliasesByProject(projectId),
         getCharactersByProject(projectId),
         getRulesetByProjectId(projectId),
-        getStateMutationEventsByProject(projectId),
+        loadStateMutationEventsInSceneOrder(projectId),
         getActorResolutionsByProject(projectId),
         getCompendiumEntriesByProject(projectId),
         getSettlementState(projectId),

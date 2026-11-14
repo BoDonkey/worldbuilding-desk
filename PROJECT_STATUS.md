@@ -150,6 +150,15 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   or several; **Link or create place** opens the World Bible review queue).
   Moves inside a place, and places with no connections anywhere around them,
   are not checked. No story time, so travel speed is not checked.
+- State changes follow the scene list (slice 3.38). Replay orders state
+  changes by their scene's current place in the manuscript. Moving a scene
+  renumbers its changes. Deleting a scene invalidates its changes (they stay
+  in the ledger for audit); the delete confirm says how many accepted
+  changes the scene holds. Every surface that reads state changes (Workspace,
+  World Bible, Character Sheets, Character Lab, stat peek, dashboard) loads
+  them through one service that repairs stale scene numbers, and invalidates
+  changes left behind by scenes deleted before this fix, the first time the
+  project is opened.
 - World Bible document import detects Markdown `#` headings and DOCX heading
   paragraphs (Word style ids, Pages-style named styles with outline levels,
   `basedOn` chains, paragraph outline levels), treats a leading title heading

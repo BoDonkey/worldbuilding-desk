@@ -10,9 +10,15 @@ import type {Project, WritingDocument, WorkspaceImportMode} from '../entityTypes
 import {
   deleteWritingDocument,
   getNextWritingDocumentOrder,
+  getStateMutationEventsByProject,
   sortWritingDocuments,
   saveWritingDocument
 } from '../services/storage';
+import {
+  countAcceptedSceneStateChanges,
+  loadStateMutationEventsInSceneOrder,
+  removeDeletedSceneStateChanges
+} from '../services/state/stateSceneOrder';
 import {countWords} from '../utils/textHelpers';
 import {
   exportScenesAsDocx,
@@ -69,6 +75,18 @@ interface UseWorkspaceDocumentsParams {
     sceneId?: string;
   }) => void;
 }
+
+/** The delete confirm's message; says what happens to the scene's state changes. */
+export const describeSceneDeletion = (acceptedStateChangeCount: number): string => {
+  const base = 'This scene will be permanently removed from the project.';
+  if (acceptedStateChangeCount === 0) return base;
+  const changes =
+    acceptedStateChangeCount === 1
+      ? '1 accepted state change'
+      : `${acceptedStateChangeCount} accepted state changes`;
+  return `${base} It holds ${changes} (positions, items, or stats). ` +
+    'They will be invalidated, so later scenes no longer include them.';
+};
 
 type WorkspaceDocumentInitialization =
   | {type: 'clear'}
@@ -543,6 +561,10 @@ export const useWorkspaceDocuments = ({
       setFeedback(null);
       try {
         await Promise.all(changedDocuments.map((entry) => saveWritingDocument(entry)));
+        if (activeProject) {
+          // State changes carry their scene's place; renumber them to match.
+          await loadStateMutationEventsInSceneOrder(activeProject.id, nextDocuments);
+        }
         setFeedback({tone: 'success', message: 'Scene order updated.'});
       } catch (error) {
         setDocuments(documents);
@@ -551,7 +573,7 @@ export const useWorkspaceDocuments = ({
         setFeedback({tone: 'error', message});
       }
     },
-    [documents, setDocuments, setFeedback]
+    [activeProject, documents, setDocuments, setFeedback]
   );
 
   const openExportModal = useCallback(
@@ -662,10 +684,16 @@ export const useWorkspaceDocuments = ({
   ]);
 
   const handleDelete = useCallback(
-    (doc: WritingDocument) => {
+    async (doc: WritingDocument) => {
+      const stateChangeCount = activeProject
+        ? countAcceptedSceneStateChanges(
+            await getStateMutationEventsByProject(activeProject.id).catch(() => []),
+            doc.id
+          )
+        : 0;
       requestConfirm({
         title: `Delete "${doc.title || 'Untitled scene'}"?`,
-        message: 'This scene will be permanently removed from the project.',
+        message: describeSceneDeletion(stateChangeCount),
         confirmLabel: 'Delete',
         variant: 'danger',
         onConfirm: async () => {
@@ -674,6 +702,13 @@ export const useWorkspaceDocuments = ({
           try {
             await deleteWritingDocument(doc.id);
             await deleteDocumentSideEffectsRef.current?.(doc.id);
+            if (activeProject) {
+              await removeDeletedSceneStateChanges({
+                projectId: activeProject.id,
+                sceneId: doc.id,
+                remainingDocuments: documents.filter((entry) => entry.id !== doc.id)
+              });
+            }
             setDocuments((prev) => prev.filter((entry) => entry.id !== doc.id));
 
             if (selectedId === doc.id) {
@@ -691,7 +726,9 @@ export const useWorkspaceDocuments = ({
       });
     },
     [
+      activeProject,
       deleteDocumentSideEffectsRef,
+      documents,
       requestConfirm,
       resetEditor,
       selectedId,

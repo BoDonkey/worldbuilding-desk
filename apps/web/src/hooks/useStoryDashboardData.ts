@@ -3,8 +3,8 @@ import type {ChapterCard, StateMutationEvent, StoredRuleset, WritingDocument} fr
 import {
   getDocumentsByProject,
   getRulesetByProjectId,
-  getStateMutationEventsByProject
 } from '../services/storage';
+import {loadStateMutationEventsInSceneOrder} from '../services/state/stateSceneOrder';
 import {buildStoryDashboard} from '../services/dashboard/storyDashboard';
 
 export function useStoryDashboardData(params: {
@@ -32,7 +32,7 @@ export function useStoryDashboardData(params: {
     try {
       const [nextDocuments, nextEvents, nextRuleset] = await Promise.all([
         getDocumentsByProject(projectId),
-        getStateMutationEventsByProject(projectId),
+        loadStateMutationEventsInSceneOrder(projectId),
         getRulesetByProjectId(projectId)
       ]);
       if (requestId !== requestIdRef.current) return;
