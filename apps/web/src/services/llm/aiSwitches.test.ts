@@ -38,6 +38,9 @@ describe('AI switches (5.18)', () => {
     expect(aiSwitchRefusal({aiProse: true}, 'scene-revision')).toBeNull();
     // The connection test sends no story text, so it works with both switches off.
     expect(aiSwitchRefusal({}, 'connection-test')).toBeNull();
+    // Local AI review annotations are coaching, though they spend no consultation (3.41).
+    expect(aiSwitchRefusal({aiProse: true}, 'local-review')).toMatch(/AI coaching is off/);
+    expect(aiSwitchRefusal({aiCoaching: true}, 'local-review')).toBeNull();
   });
 
   it('refuses in the shared call path before any request leaves the app', async () => {
