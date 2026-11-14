@@ -3,10 +3,8 @@ import type {Dispatch, SetStateAction} from 'react';
 import type {StateMutationEvent, StoredRuleset, WritingDocument} from '../entityTypes';
 import type {StateSubject} from '../services/state/stateSubjects';
 import type {ActorResolution} from '../services/characters/characterIdentity';
-import {
-  invalidateStateMutationEventById,
-  saveStateMutationEvent
-} from '../services/storage';
+import {invalidateStateMutationEventById} from '../services/storage';
+import {acceptStateChangeProposal} from '../services/state/stateChangeSave';
 import {
   buildStateMutationReviewItems,
   countHiddenStateMutationReviewsByScene,
@@ -81,19 +79,20 @@ export function useStateMutationReview({
   );
 
   const acceptStateMutationReviewItem = useCallback(
-    async (eventId: string, applyingId?: string) => {
+    async (eventId: string, applyingId?: string): Promise<boolean> => {
       const event = stateMutationEvents.find((entry) => entry.id === eventId);
       if (!event || event.status !== 'proposed') {
-        return;
+        return false;
       }
       setApplyingStateMutationReviewId(applyingId ?? eventId);
       setFeedback(null);
       try {
-        await saveStateMutationEvent({
-          ...event,
-          status: 'accepted',
-          invalidatedAt: undefined,
-          invalidationReason: undefined
+        await acceptStateChangeProposal({
+          eventId,
+          projectId: event.projectId,
+          stateSubjects,
+          actorResolutions,
+          ruleset
         });
         setFeedback({
           tone: 'success',
@@ -104,17 +103,19 @@ export function useStateMutationReview({
           message: `Accepted suggested state change from "${event.sceneTitle || 'scene'}".`,
           sceneId: event.sceneId
         });
+        return true;
       } catch (error) {
         setFeedback({
           tone: 'error',
           message:
             describeError(error, 'Unable to accept suggested state change.')
         });
+        return false;
       } finally {
         setApplyingStateMutationReviewId(null);
       }
     },
-    [addSystemHistory, setFeedback, stateMutationEvents]
+    [actorResolutions, addSystemHistory, ruleset, setFeedback, stateMutationEvents, stateSubjects]
   );
 
   const rejectStateMutationReviewItem = useCallback(
@@ -234,12 +235,17 @@ export function useStateMutationReview({
         });
         return;
       }
+      let acceptedCount = 0;
       for (const item of batchAcceptableItems) {
-        await acceptStateMutationReviewItem(item.id, applyingId);
+        // A failed check stops the batch: later steps may depend on this one,
+        // and its message is already on screen.
+        if (!(await acceptStateMutationReviewItem(item.id, applyingId))) break;
+        acceptedCount += 1;
       }
+      if (acceptedCount < batchAcceptableItems.length) return;
       setFeedback({
         tone: 'success',
-        message: `Accepted ${batchAcceptableItems.length} suggested state change${batchAcceptableItems.length === 1 ? '' : 's'} from "${batchAcceptableItems[0]?.sceneTitle || 'scene'}".`
+        message: `Accepted ${acceptedCount} suggested state change${acceptedCount === 1 ? '' : 's'} from "${batchAcceptableItems[0]?.sceneTitle || 'scene'}".`
       });
     },
     [acceptStateMutationReviewItem, setFeedback, stateMutationReviewItems]

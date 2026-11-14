@@ -114,4 +114,41 @@ describe('mutation review grouping', () => {
       })
     ]);
   });
+
+  it('blocks a suggestion whose character is gone', () => {
+    const items = buildStateMutationReviewItems({
+      stateSubjects: [],
+      documents: [document],
+      hiddenReviewKeys: [],
+      ruleset,
+      stateMutationEvents: [proposedEvent]
+    });
+    expect(items).toEqual([
+      expect.objectContaining({
+        actorLabel: 'Unknown actor',
+        canAccept: false,
+        canAcceptInBatch: false,
+        validationIssues: ['The character for this change is no longer in the project.'],
+        acceptanceHint: 'This change cannot be accepted. Reject it to clear it.'
+      })
+    ]);
+  });
+
+  it('checks every command of a suggestion, not only the first', () => {
+    const items = buildStateMutationReviewItems({
+      stateSubjects: buildStateSubjects({characterSheets: [sheet], characterEntities: []}),
+      documents: [document],
+      hiddenReviewKeys: [],
+      ruleset,
+      stateMutationEvents: [{
+        ...proposedEvent,
+        commands: [
+          ...proposedEvent.commands,
+          {type: 'inventory_equip', actorId: 'character', itemName: 'Lantern'}
+        ]
+      }]
+    });
+    expect(items[0]).toMatchObject({canAccept: false, canAcceptInBatch: false});
+    expect(items[0].validationIssues).toHaveLength(1);
+  });
 });

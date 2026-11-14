@@ -177,6 +177,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   them through one service that repairs stale scene numbers, and invalidates
   changes left behind by scenes deleted before this fix, the first time the
   project is opened.
+- One checked path for saving a state change (slice 3.40). Accepting a
+  suggested state change, alone or with **Accept all** for a scene, loads the
+  suggestion and the ledger again and checks its shape, its ruleset ids and
+  values, and every command against the character's replayed state before
+  saving. A suggestion that fails stays **Blocked** with the reason; one whose
+  character was deleted can only be rejected. The Workspace change composer
+  and the Character Sheets form save through the same service
+  (`services/state/stateChangeSave.ts`). The ledger repository stores events
+  as given; reconciling a re-reviewed scene and linking positions to places
+  live in `services/state/`.
 - World Bible document import detects Markdown `#` headings and DOCX heading
   paragraphs (Word style ids, Pages-style named styles with outline levels,
   `basedOn` chains, paragraph outline levels), treats a leading title heading

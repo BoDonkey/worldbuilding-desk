@@ -13,10 +13,10 @@ import {
   type ReplayableCharacterTarget
 } from './stateReplay';
 import {
-  buildStateSubjectLookup,
-  stateSubjectPreviewInputs,
-  type StateSubject
-} from './stateSubjects';
+  findStateChangeAcceptanceIssues,
+  MISSING_SUBJECT_ISSUE
+} from './stateChangeValidation';
+import type {StateSubject} from './stateSubjects';
 import {
   summarizeStateMutationCommand,
   summarizeStateMutationEffects,
@@ -47,6 +47,9 @@ export function describeStateMutationAcceptance(params: {
   }
   if (params.canAcceptInBatch) {
     return 'Becomes valid if you accept earlier suggested changes in this scene first.';
+  }
+  if (params.validationIssues.includes(MISSING_SUBJECT_ISSUE)) {
+    return 'This change cannot be accepted. Reject it to clear it.';
   }
   if (params.validationIssues.length > 0) {
     return 'Still blocked after earlier scene steps. Review the issue below before accepting.';
@@ -103,7 +106,6 @@ export function computeBatchAcceptableStateMutationEventIds(params: {
   actorResolutions?: ActorResolution[];
 }): Set<string> {
   const batchAcceptableIds = new Set<string>();
-  const subjectByActorId = buildStateSubjectLookup(params.stateSubjects);
   const proposedEventsBySceneId = new Map(
     params.proposedEvents
       .reduce<Array<[string, StateMutationEvent[]]>>((entries, event) => {
@@ -128,20 +130,14 @@ export function computeBatchAcceptableStateMutationEventIds(params: {
   proposedEventsBySceneId.forEach((sceneEvents) => {
     const workingAccepted = [...params.acceptedEvents];
     sceneEvents.forEach((event) => {
-      const primaryCommand = event.commands[0];
-      const subject = primaryCommand ? subjectByActorId.get(primaryCommand.actorId) ?? null : null;
-      if (!subject || !primaryCommand) {
-        return;
-      }
-      const preview = buildStateMutationPreview({
-        ...stateSubjectPreviewInputs(subject, params.ruleset, primaryCommand.actorId),
+      const issues = findStateChangeAcceptanceIssues({
+        event,
         events: workingAccepted,
+        stateSubjects: params.stateSubjects,
         actorResolutions: params.actorResolutions,
-        command: primaryCommand,
-        upToSceneOrder: event.sceneOrder ?? Number.MAX_SAFE_INTEGER,
-        labels: params.labels
+        ruleset: params.ruleset
       });
-      if (preview.validationIssues.length > 0) {
+      if (issues.length > 0) {
         return;
       }
       batchAcceptableIds.add(event.id);

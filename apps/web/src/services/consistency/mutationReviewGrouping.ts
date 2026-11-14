@@ -10,6 +10,7 @@ import {
   describeStateMutationAcceptance,
   summarizeStateMutationCommand
 } from '../state/stateMutationPresentation';
+import {findStateChangeAcceptanceIssues} from '../state/stateChangeValidation';
 import {
   describeStateMutationEventStaleness,
   getStateMutationEventStaleness
@@ -131,7 +132,15 @@ export function buildStateMutationReviewItems(params: {
               labels: {resourceDefinitionNameById, statDefinitionNameById}
             })
           : null;
-      const canAccept = (preview?.validationIssues.length ?? 0) === 0;
+      // The same check accepting runs, over every command (slice 3.40).
+      const validationIssues = findStateChangeAcceptanceIssues({
+        event,
+        events: acceptedEvents,
+        stateSubjects: params.stateSubjects,
+        actorResolutions: params.actorResolutions,
+        ruleset: params.ruleset
+      });
+      const canAccept = validationIssues.length === 0;
       const canAcceptInBatch = batchAcceptableIds.has(event.id);
       return {
         id: event.id,
@@ -147,13 +156,13 @@ export function buildStateMutationReviewItems(params: {
           })
         ),
         effectLines: preview?.effectLines ?? [],
-        validationIssues: preview?.validationIssues ?? [],
+        validationIssues,
         canAccept,
         canAcceptInBatch,
         acceptanceHint: describeStateMutationAcceptance({
           canAccept,
           canAcceptInBatch,
-          validationIssues: preview?.validationIssues ?? []
+          validationIssues
         }),
         isStale: staleness.isStale,
         staleLabel: describeStateMutationEventStaleness(staleness),

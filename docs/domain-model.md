@@ -234,6 +234,12 @@ change; the mutation ledger says when it changed.
   which renumbers them from the scene list and invalidates events whose scene
   is gone. Moving a scene renumbers its events; deleting a scene invalidates
   them.
+- Write events through `services/state/stateChangeSave.ts` (3.40), not the
+  ledger repository. `saveStateChange` checks shape, ruleset, and every
+  command against replayed state, then saves; `acceptStateChangeProposal`
+  reloads the suggestion and the ledger and runs the same checks. The checks
+  are in `stateChangeValidation.ts`. `saveStateChangeRecord` is for an event
+  whose commands did not change (re-anchor, reorder).
 - Replay: accepted events only, applied over a `CharacterSheet`-derived
   baseline; last accepted set-style command wins, additive commands
   accumulate, invalid commands are rejected before persistence.

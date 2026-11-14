@@ -7,18 +7,11 @@ import type {
   StoredRuleset,
   WritingDocument
 } from '../entityTypes';
-import {
-  invalidateStateMutationEventById,
-  saveStateMutationEvent
-} from '../services/storage';
+import {invalidateStateMutationEventById} from '../services/storage';
 import type {ActorResolution} from '../services/characters/characterIdentity';
 import {hashString} from '../services/characters/characterSheetDefaults';
-import {
-  replayCharacterState,
-  validateStateMutationCommandAgainstState,
-  validateStateMutationEventForRuleset
-} from '../services/state/stateReplay';
-import {validateStateMutationEvent} from '../services/state/stateMutationSchemas';
+import {replayCharacterState} from '../services/state/stateReplay';
+import {saveStateChange, saveStateChangeRecord} from '../services/state/stateChangeSave';
 import {getAppStateKind} from '../services/state/kinds';
 import {describeError} from '../services/errors';
 import type {MutationFormType} from '../components/CharacterSheets/MutationForm';
@@ -223,13 +216,10 @@ export const useCharacterSheetSceneChanges = (params: {
     setIsSavingMutation(true);
     setFeedback(null);
     try {
-      validateStateMutationEvent(event);
-      const validationErrors = validateStateMutationEventForRuleset({
+      const saved = await saveStateChange({
         event,
-        ruleset
-      });
-      const stateValidationErrors = validateStateMutationCommandAgainstState({
-        state: mutationPreview?.before ?? replayCharacterState({
+        ruleset,
+        before: mutationPreview?.before ?? replayCharacterState({
           sheet: selectedMutationSheet,
           ruleset,
           events: stateMutationEvents,
@@ -242,16 +232,8 @@ export const useCharacterSheetSceneChanges = (params: {
           actorResolutions,
           upToSceneOrder:
             sceneOrderById.get(selectedMutationScene.id) ?? Number.MAX_SAFE_INTEGER
-        }),
-        command
+        })
       });
-      if (validationErrors.length > 0) {
-        throw new Error(validationErrors.join(' '));
-      }
-      if (stateValidationErrors.length > 0) {
-        throw new Error(stateValidationErrors.join(' '));
-      }
-      const saved = await saveStateMutationEvent(event);
       setStateMutationEvents((prev) => {
         const existingIndex = prev.findIndex((entry) => entry.id === saved.id);
         if (existingIndex === -1) {
@@ -370,8 +352,8 @@ export const useCharacterSheetSceneChanges = (params: {
           ...adjacent,
           sceneSequence: currentSequence
         };
-        await saveStateMutationEvent(updatedCurrent);
-        await saveStateMutationEvent(updatedAdjacent);
+        await saveStateChangeRecord(updatedCurrent);
+        await saveStateChangeRecord(updatedAdjacent);
         setStateMutationEvents((prev) =>
           prev.map((entry) => {
             if (entry.id === updatedCurrent.id) return updatedCurrent;

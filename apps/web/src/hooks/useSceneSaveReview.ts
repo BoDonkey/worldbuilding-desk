@@ -8,9 +8,9 @@ import type {
 import type {StateSubject} from '../services/state/stateSubjects';
 import {
   saveWritingDocument,
-  sortWritingDocuments,
-  replaceSceneStateMutationEventsBySourceType
+  sortWritingDocuments
 } from '../services/storage';
+import {replaceSceneStateChangesBySource} from '../services/state/stateChangeSave';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {GuardrailIssue, KnownEntityRef} from '../services/consistency';
 import type {WorldEngine} from '../services/worldEngine';
@@ -161,7 +161,7 @@ export function useSceneSaveReview({
                   ruleset,
                   existingEvents: stateMutationEvents
                 });
-                await replaceSceneStateMutationEventsBySourceType({
+                await replaceSceneStateChangesBySource({
                   projectId: doc.projectId,
                   sceneId: doc.id,
                   sourceType: 'deterministic-review',
