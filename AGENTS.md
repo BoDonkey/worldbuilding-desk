@@ -52,3 +52,20 @@ commit hash. Refactor slices are strictly behavior-preserving.
 - **Manual smoke:** procedures in `docs/smoke-tests.md`; run the relevant one
   after changing a covered workflow (backup, review completion, character
   canon).
+- **Periodic architecture review:** a second model reviews the whole codebase
+  at milestones, not on a calendar: before a phase boundary (for example
+  Phase 6), before a feature that builds on shared code (as maps 4.79 did on
+  the name matcher), or when `scripts/file-size-baseline.json` keeps growing.
+  Model: `docs/archive/architecture-review-2026-11-13.md`.
+  - Write the review to `docs/archive/architecture-review-<date>.md`. Each
+    finding gets an ID, a status (CONFIRMED or not), severity, size, file and
+    line evidence, and a suggested fix.
+  - The author triages findings into numbered slices on the status board,
+    with dependencies and decisions recorded there. Defer low-value findings
+    rather than growing the backlog; there is no separate review backlog.
+  - The agent implementing a slice re-checks its finding against the code
+    (grep for further copies and callers) and reports what the review missed.
+    The review is a map, not a complete list.
+  - Each new review first scores the previous one: how many of its slices
+    shipped, and which findings were wrong or incomplete. If accuracy drops,
+    change the reviewer model or prompt.
