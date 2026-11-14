@@ -15,6 +15,7 @@ import type {
   LoreEntityProposal,
   LoreFactProposal,
   MechanicsDraft,
+  WorldMap,
   Project,
   ProjectSettings,
   StateMutationEvent,
@@ -51,6 +52,7 @@ import {
   LORE_ENTITY_PROPOSAL_STORE_NAME,
   LORE_FACT_PROPOSAL_STORE_NAME,
   MECHANICS_DRAFT_STORE_NAME,
+  MAP_STORE_NAME,
   SETTINGS_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
@@ -108,6 +110,7 @@ export interface ProjectSnapshot {
     settlementStateRecords: SettlementState[];
     stateMutationEvents: StateMutationEvent[];
     mechanicsDrafts: MechanicsDraft[];
+    maps: WorldMap[];
   };
   counts: {
     categories: number;
@@ -139,6 +142,7 @@ export interface ProjectSnapshot {
     settlementStateRecords: number;
     stateMutationEvents: number;
     mechanicsDrafts: number;
+    maps: number;
     hasSettings: boolean;
     hasRuleset: boolean;
   };
@@ -193,7 +197,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     settlementModules,
     settlementStateRecords,
     stateMutationEvents,
-    mechanicsDrafts
+    mechanicsDrafts,
+    maps
   ] = await Promise.all([
     getProjectScopedRecords<ProjectSettings>(SETTINGS_STORE_NAME, projectId),
     getRulesetByProjectId(projectId),
@@ -246,7 +251,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     getProjectScopedRecords<SettlementModule>(SETTLEMENT_MODULE_STORE_NAME, projectId),
     getProjectScopedRecords<SettlementState>(SETTLEMENT_STATE_STORE_NAME, projectId),
     getProjectScopedRecords<StateMutationEvent>(STATE_MUTATION_EVENT_STORE_NAME, projectId),
-    getProjectScopedRecords<MechanicsDraft>(MECHANICS_DRAFT_STORE_NAME, projectId)
+    getProjectScopedRecords<MechanicsDraft>(MECHANICS_DRAFT_STORE_NAME, projectId),
+    getProjectScopedRecords<WorldMap>(MAP_STORE_NAME, projectId)
   ]);
 
   const settings = settingsRecords[0] ?? null;
@@ -287,7 +293,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       settlementModules,
       settlementStateRecords,
       stateMutationEvents,
-      mechanicsDrafts
+      mechanicsDrafts,
+      maps
     },
     counts: {
       categories: categories.length,
@@ -319,6 +326,7 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       settlementStateRecords: settlementStateRecords.length,
       stateMutationEvents: stateMutationEvents.length,
       mechanicsDrafts: mechanicsDrafts.length,
+      maps: maps.length,
       hasSettings: Boolean(settings),
       hasRuleset: Boolean(ruleset)
     }
@@ -362,6 +370,7 @@ export function validateSnapshotCounts(snapshot: ProjectSnapshot): SnapshotCount
     settlementStateRecords: snapshot.data.settlementStateRecords.length,
     stateMutationEvents: snapshot.data.stateMutationEvents.length,
     mechanicsDrafts: snapshot.data.mechanicsDrafts.length,
+    maps: snapshot.data.maps.length,
     hasSettings: Boolean(snapshot.data.settings),
     hasRuleset: Boolean(snapshot.data.ruleset)
   };

@@ -39,7 +39,8 @@ export {
   ACTOR_RESOLUTION_STORE_NAME,
   CHARACTER_IDENTITY_REPORT_STORE_NAME,
   PROJECT_REVIEW_RUN_STORE_NAME,
-  MECHANICS_DRAFT_STORE_NAME
+  MECHANICS_DRAFT_STORE_NAME,
+  MAP_STORE_NAME
 } from './db';
 export * from './jsonTransfer';
 export * from './derivedRecordStore';
@@ -77,6 +78,7 @@ export * from './projectSnapshotService';
 export * from './projectSchemaMigrations';
 export * from './projectSnapshotMigrations';
 export * from './repositories/aliasStorage';
+export * from './repositories/mapStorage';
 export * from './repositories/canonDecisionStorage';
 export * from './repositories/canonDecisionSuppressionStorage';
 export * from './repositories/categoryStorage';

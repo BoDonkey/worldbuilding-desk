@@ -18,6 +18,7 @@ import shared from '../worldBibleShared.module.css';
 import styles from './RecordPlaceSection.module.css';
 import type {WorldBibleRecordDraft} from './useWorldBibleRecordDraft';
 import type {OpenRecord} from './recordTypes';
+import {RecordPlaceMaps} from './RecordPlaceMaps';
 
 interface RecordPlaceSectionProps {
   categories: EntityCategory[];
@@ -288,6 +289,8 @@ export function RecordPlaceSection({categories, entities, draft, onEdit}: Record
           </div>
         )}
       </fieldset>
+
+      <RecordPlaceMaps categories={categories} entities={entities} draft={draft} />
     </section>
   );
 }

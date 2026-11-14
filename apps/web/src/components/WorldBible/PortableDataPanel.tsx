@@ -33,6 +33,7 @@ import type {ShodhMemoryProvider} from '../../services/shodh/ShodhMemoryService'
 import shared from './worldBibleShared.module.css';
 import styles from './WorldBibleImportDrafts.module.css';
 import {normalizeNameExact} from '../../services/names/nameMatching';
+import {useProjectMaps} from '../../hooks/useProjectMaps';
 
 type WikiLinkAction = 'ignore' | 'link' | 'alias';
 
@@ -104,6 +105,7 @@ export function PortableDataPanel(props: PortableDataPanelProps) {
   const [isReading, setIsReading] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const {maps, conversions} = useProjectMaps();
 
   useEffect(() => {
     categoriesRef.current = props.categories;
@@ -170,7 +172,9 @@ export function PortableDataPanel(props: PortableDataPanelProps) {
         aliases: props.aliases,
         canonicalFacts: props.canonicalFacts,
         loreDocuments: props.loreDocuments,
-        loreDocumentLinks: props.loreDocumentLinks
+        loreDocumentLinks: props.loreDocumentLinks,
+        maps,
+        unitConversions: conversions
       });
       props.onFeedback({
         tone: 'success',

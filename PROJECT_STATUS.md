@@ -138,6 +138,18 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   check treats a tavern inside a city as agreeing with the city. Project
   storage schema 11 and backup snapshot schema 13 link existing positions
   once, unambiguous names only.
+- Maps and distance (slice 4.79). **Maps and distances** on the Locations
+  page creates maps with a distance unit, a scale, and an optional point on a
+  larger map (nesting checked for cycles), plus project unit conversions
+  ("1 league = 3 miles"). Location records put the place on maps by number
+  (**On maps**; the map surface is 4.80) and show **Distance to** another
+  place with its source: authored on a connection, a route over connections,
+  or a straight line on the most detailed shared map; a place with no map
+  point uses the point of the nearest place it is inside, and says so. Figures in unlinked
+  units are shown side by side. Maps travel in backups (copy remaps their
+  ids) and portable export (`maps/maps.csv`, `maps/unit-conversions.csv`,
+  `placements` in place frontmatter and CSV). Project storage schema 12,
+  backup snapshot schema 14, IndexedDB version 31.
 - Names are compared by one module, `services/names/nameMatching.ts`
   (slice 3.46): an exact form (case and spacing) for records, aliases, and
   duplicate checks, and a loose form (letters and digits only) for names

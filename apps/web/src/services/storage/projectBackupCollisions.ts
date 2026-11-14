@@ -17,6 +17,7 @@ import {
   LORE_DOCUMENT_STORE_NAME,
   LORE_ENTITY_PROPOSAL_STORE_NAME,
   LORE_FACT_PROPOSAL_STORE_NAME,
+  MAP_STORE_NAME,
   openDb,
   SETTINGS_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
@@ -67,7 +68,8 @@ export const ID_PRESERVING_IMPORT_STORES = [
   [ZONE_AFFINITY_PROGRESS_STORE_NAME, 'zoneAffinityProgressRecords'],
   [SETTLEMENT_MODULE_STORE_NAME, 'settlementModules'],
   [SETTLEMENT_STATE_STORE_NAME, 'settlementStateRecords'],
-  [STATE_MUTATION_EVENT_STORE_NAME, 'stateMutationEvents']
+  [STATE_MUTATION_EVENT_STORE_NAME, 'stateMutationEvents'],
+  [MAP_STORE_NAME, 'maps']
 ] as const satisfies ReadonlyArray<readonly [string, keyof ProjectSnapshot['data']]>;
 
 export interface ProjectBackupCollisionOwner {

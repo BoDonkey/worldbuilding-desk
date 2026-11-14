@@ -3,6 +3,7 @@ import type {
   EntityCategory,
   PlaceConnection,
   PlaceData,
+  PlacePlacement,
   PlaceTravelTime,
   WorldEntity
 } from '../../entityTypes';
@@ -189,7 +190,27 @@ export const normalizePlaceData = (
     return [next];
   });
   if (connections.length > 0) result.connections = connections;
-  return result.parentId || result.connections ? result : undefined;
+  const placements = normalizePlacements(value.placements);
+  if (placements.length > 0) result.placements = placements;
+  return result.parentId || result.connections || result.placements ? result : undefined;
+};
+
+const isCoordinate = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+/**
+ * Placements as they should save: one per map (the last one written wins),
+ * with numeric coordinates. A placement on a map that no longer exists is
+ * kept and ignored when read, as links to deleted records are.
+ */
+export const normalizePlacements = (value: PlacePlacement[] | undefined): PlacePlacement[] => {
+  const byMap = new Map<string, PlacePlacement>();
+  for (const placement of value ?? []) {
+    const mapId = cleanText(placement?.mapId);
+    if (!mapId || !isCoordinate(placement.x) || !isCoordinate(placement.y)) continue;
+    byMap.set(mapId, {mapId, x: placement.x, y: placement.y});
+  }
+  return [...byMap.values()];
 };
 
 /** "3 days" from a measure: the author's words first, else number and unit. */

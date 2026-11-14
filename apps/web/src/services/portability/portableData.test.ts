@@ -4,7 +4,8 @@ import type {
   EntityCategory,
   LoreDocument,
   LoreDocumentLink,
-  WorldEntity
+  WorldEntity,
+  WorldMap
 } from '../../entityTypes';
 import type {ConsistencyAlias} from '../storage';
 import {
@@ -153,9 +154,41 @@ describe('portable data export', () => {
     expect(readable).toContain('- road to [[Ford]] — three days; by horse: 1 day');
     expect(readable).toContain('- chute from [[Ford]] (one-way, arriving here)');
     expect(readable).not.toContain('portal');
-    expect(readable).toContain('name,aliases,links,description,climate,inside,connections,accepted_facts');
+    expect(readable).toContain('name,aliases,links,description,climate,inside,connections,placements,accepted_facts');
     expect(readable).toContain('Ember Archive,The Archive,,A library beneath the city.,Dry,Varn › The Reach,"road to Ford — three days; by horse: 1 day | chute from Ford (one-way, arriving here)",');
     expect(readable).toContain('Ford,,,,,,road to Ember Archive — three days; by horse: 1 day | chute to Ember Archive (one-way),');
+  });
+
+  it('carries map placements, maps, and unit conversions (4.79)', () => {
+    const maps: WorldMap[] = [
+      {id: 'region', projectId: 'project-1', name: 'Region', distanceUnit: 'leagues', scale: 0.5, createdAt: 1, updatedAt: 1},
+      {
+        id: 'city', projectId: 'project-1', name: 'Varn, city', distanceUnit: 'feet', scale: 10,
+        parentPlacement: {mapId: 'region', x: 6, y: 8}, createdAt: 1, updatedAt: 1
+      }
+    ];
+    const archive: WorldEntity = {
+      ...entity,
+      links: [],
+      place: {placements: [{mapId: 'region', x: 3, y: 4}, {mapId: 'gone', x: 0, y: 0}]}
+    };
+    const zip = buildPortableDataZip({
+      categories: [category],
+      entities: [archive],
+      aliases: [],
+      canonicalFacts: [],
+      loreDocuments: [],
+      loreDocumentLinks: [],
+      maps,
+      unitConversions: [{from: 'league', to: 'miles', factor: 3}, {from: '', to: 'miles', factor: 2}]
+    });
+    const readable = new TextDecoder().decode(zip);
+
+    expect(readable).toContain('place: {"placements":[{"map":"Region","x":3,"y":4}]}');
+    expect(readable).toContain('## On maps\n\n- Region (3, 4)');
+    expect(readable).not.toContain('gone');
+    expect(readable).toContain('name,distance_unit,scale,sits_on,x,y\r\nRegion,leagues,0.5,,,\r\n"Varn, city",feet,10,Region,6,8\r\n');
+    expect(readable).toContain('from,factor,to\r\nleague,3,miles\r\n');
   });
 });
 

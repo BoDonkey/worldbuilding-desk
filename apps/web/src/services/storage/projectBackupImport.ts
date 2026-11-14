@@ -52,6 +52,7 @@ import {
   SETTINGS_STORE_NAME,
   STATE_MUTATION_EVENT_STORE_NAME,
   MECHANICS_DRAFT_STORE_NAME,
+  MAP_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
   WRITING_STORE_NAME,
@@ -148,6 +149,8 @@ export function normalizeProjectSnapshot(value: unknown): ProjectSnapshot {
   snapshot.data.stateMutationEvents ??= [];
   snapshot.data.mechanicsDrafts ??= [];
   snapshot.counts.mechanicsDrafts ??= snapshot.data.mechanicsDrafts.length;
+  snapshot.data.maps ??= [];
+  snapshot.counts.maps ??= snapshot.data.maps.length;
   snapshot.counts.stateMutationEvents ??= snapshot.data.stateMutationEvents.length;
   snapshot.data.consistencyAliases ??= [];
   snapshot.counts.consistencyAliases ??= snapshot.data.consistencyAliases.length;
@@ -318,7 +321,8 @@ async function saveProjectScopedRecords(params: {
       SETTLEMENT_MODULE_STORE_NAME,
       SETTLEMENT_STATE_STORE_NAME,
       STATE_MUTATION_EVENT_STORE_NAME,
-      MECHANICS_DRAFT_STORE_NAME
+      MECHANICS_DRAFT_STORE_NAME,
+      MAP_STORE_NAME
     ],
     'readwrite'
   );
@@ -476,6 +480,7 @@ async function saveProjectScopedRecords(params: {
     MECHANICS_DRAFT_STORE_NAME,
     rewriteMechanicsDrafts(params.data.mechanicsDrafts ?? [], params.projectId)
   );
+  await putMany(MAP_STORE_NAME, rewriteProjectScoped(params.data.maps ?? [], params.projectId));
 
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();

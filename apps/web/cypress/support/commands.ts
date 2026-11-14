@@ -39,6 +39,7 @@ const STORE_NAMES = [
   'consistency_aliases',
   'state_mutation_events',
   'mechanics_drafts',
+  'maps',
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   ACTOR_RESOLUTION_STORE_NAME,
   CHARACTER_IDENTITY_REPORT_STORE_NAME
@@ -49,7 +50,7 @@ const STORE_NAMES = [
 // src/test/cypressSeedSchema.test.ts). Seeding at the current version means
 // the app runs no load-time migrations, whose project writes otherwise race
 // any IndexedDB mutation a spec performs right after reload.
-const SEED_PROJECT_STORAGE_SCHEMA_VERSION = 11;
+const SEED_PROJECT_STORAGE_SCHEMA_VERSION = 12;
 
 interface SeedProject {
   id: string;

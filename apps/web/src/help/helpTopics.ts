@@ -57,7 +57,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     id: 'canon-model',
     title: 'World Bible, Source Notes, and canon',
     summary: 'Where your story facts live, and what counts as canon.',
-    keywords: ['world bible', 'source notes', 'lore', 'canon', 'facts', 'records', 'categories', 'alias', 'corkboard', 'world canvas', 'places', 'locations', 'connections', 'inside', 'distance', 'where is everyone', 'path', 'movement'],
+    keywords: ['world bible', 'source notes', 'lore', 'canon', 'facts', 'records', 'categories', 'alias', 'corkboard', 'world canvas', 'places', 'locations', 'connections', 'inside', 'distance', 'where is everyone', 'path', 'movement', 'maps', 'scale', 'units', 'conversion'],
     blocks: [
       {
         kind: 'paragraph',
@@ -68,6 +68,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         items: [
           '**World Bible** is the home of canon: characters, places, items, factions, and any categories you add. Each record has fields, aliases (other names it goes by), and accepted facts. Use **Manage Categories** to add categories or fields.',
           '**Places** (Location records) have a **Place** section: choose the place it is **Inside** (a tavern inside a district inside a city, to any depth), and add **Connections** to other places with a kind such as road or river, one-way if needed, and an optional distance and travel times. A connection shows on both places.',
+          '**Maps and distances** on the **Locations** page holds your maps. Each map has its own distance unit (miles, leagues, squares) and a scale, and can sit at a point on a larger map (a city map on the region map). Put a place on a map with numbers in the **On maps** part of its record; a place with no point uses the point of the place it is inside. **Distance to** in a place record shows how far another place is and where the figure comes from: a distance you wrote on a connection, a route adding up connections, or a straight line on a shared map. Add **Unit conversions** (1 league = 3 miles) so routes can add up legs in different units; without one, figures in different units are shown side by side.',
           'The **Locations** category also shows **Where is everyone**: who is at which place at the end of a chosen scene, and a character\'s **Path** over a range of scenes. Project review warns when a character moves between places that no connection or route links with no travel in the prose, and when a recorded position names no place record.',
           '**Source Notes** hold reference material: research, outlines, old drafts, imported documents. A Source Note is never canon by itself. **Extract Candidates** pulls possible records and facts out of a saved note for you to review.',
           '**Corkboard** and **World Canvas** are for planning and brainstorming. Nothing there becomes canon unless you add it to the World Bible.'
