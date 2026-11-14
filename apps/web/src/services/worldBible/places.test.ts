@@ -149,6 +149,18 @@ describe('connections', () => {
 describe('normalizePlaceData', () => {
   const places = world(place('a', 'A'), place('b', 'B'), place('c', 'C'));
 
+  it('keeps one placement per map with numeric coordinates (4.79)', () => {
+    expect(normalizePlaceData('a', {
+      placements: [
+        {mapId: 'region', x: 1, y: 2},
+        {mapId: ' region ', x: 5, y: 6},
+        {mapId: 'city', x: Number.NaN, y: 1},
+        {mapId: '', x: 0, y: 0}
+      ]
+    }, places)).toEqual({placements: [{mapId: 'region', x: 5, y: 6}]});
+    expect(normalizePlaceData('a', {placements: [{mapId: 'city', x: Number.NaN, y: 1}]}, places)).toBeUndefined();
+  });
+
   it('trims, drops empty measures, and drops links to itself, non-places, and repeats', () => {
     const result = normalizePlaceData('a', {
       parentId: '  b ',

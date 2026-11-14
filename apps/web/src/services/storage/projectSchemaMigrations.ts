@@ -42,7 +42,7 @@ import {getAllByProject} from './projectIndex';
 import {requestToPromise, transactionToPromise} from './idbRequest';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SCHEMA_VERSION = 11;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 12;
 export const PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION = 1;
 
 export interface ProjectMigrationContext {
@@ -291,6 +291,14 @@ const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
     fromVersion: 10,
     toVersion: 11,
     migrate: migrateLinkPositionsToPlaces
+  },
+  {
+    fromVersion: 11,
+    toVersion: 12,
+    // Maps arrive in their own store, and location records may gain
+    // placements (slice 4.79). Additive; existing projects have neither, so
+    // the version checkpoint and automatic backup are the whole migration.
+    migrate: async () => undefined
   }
 ];
 

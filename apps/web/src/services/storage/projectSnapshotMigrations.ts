@@ -13,7 +13,7 @@ import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
 import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
 
 export const MIN_SUPPORTED_PROJECT_SNAPSHOT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 13;
+export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 14;
 
 export interface ProjectSnapshotMigration {
   fromVersion: number;
@@ -262,6 +262,25 @@ export function migrateProjectSnapshotV12ToV13(
   };
 }
 
+/**
+ * 4.79: backups carry maps, and location records may carry placements and
+ * the settings unit conversions. Older backups have no maps; the new version
+ * makes older apps refuse backups whose maps they would drop.
+ */
+export function migrateProjectSnapshotV13ToV14(
+  snapshot: Record<string, unknown>
+): Record<string, unknown> {
+  const data = asRecord(snapshot.data);
+  const maps = asArray(data.maps);
+  return {
+    ...snapshot,
+    schemaVersion: 14,
+    project: {...asRecord(snapshot.project), storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
+    data: {...data, maps},
+    counts: {...asRecord(snapshot.counts), maps: maps.length}
+  };
+}
+
 const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
   {
     fromVersion: 1,
@@ -322,6 +341,11 @@ const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
     fromVersion: 12,
     toVersion: 13,
     migrate: migrateProjectSnapshotV12ToV13
+  },
+  {
+    fromVersion: 13,
+    toVersion: 14,
+    migrate: migrateProjectSnapshotV13ToV14
   }
 ];
 

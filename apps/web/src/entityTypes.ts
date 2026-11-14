@@ -315,6 +315,8 @@ export interface ProjectSettings {
   keptSeparateCharacterIdentityKeys?: string[];
   /** Position names the author chose to keep as text instead of linking to a place (slice 4.77). */
   placeNamesKeptAsText?: string[];
+  /** Author-set conversions between distance units, used to add up routes (slice 4.79). */
+  unitConversions?: UnitConversion[];
   activeSkills: string[];
   projectMode: ProjectMode;
   featureToggles: ProjectFeatureToggles;
@@ -499,6 +501,43 @@ export interface PlaceData {
   /** The one place this place is inside. Parents nest to any depth; cycles are refused. */
   parentId?: string;
   connections?: PlaceConnection[];
+  /** Where this place is on each map: at most one point per map (slice 4.79). */
+  placements?: PlacePlacement[];
+}
+
+/** "This place is at (x, y) on that map", in the map's own units. */
+export interface PlacePlacement {
+  mapId: string;
+  x: number;
+  y: number;
+}
+
+/**
+ * A map of part of the world (slice 4.79). Coordinates belong to a map, never
+ * to the world: there is no global grid. Distances measured on a map are in
+ * its `distanceUnit`.
+ */
+export interface WorldMap {
+  id: string;
+  projectId: string;
+  name: string;
+  /** The map image. Set by the map surface (4.80); unused before that. */
+  imageRef?: string;
+  /** What distances on this map are measured in: miles, leagues, feet. */
+  distanceUnit: string;
+  /** How many distance units one map unit covers: 0.5 means one map unit is half a mile. */
+  scale: number;
+  /** Where this whole map sits, as one point, on a larger map. */
+  parentPlacement?: PlacePlacement;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** "1 league = 3 miles": one `from` is `factor` of `to`. Set by the author. */
+export interface UnitConversion {
+  from: string;
+  to: string;
+  factor: number;
 }
 
 export type LoreDocumentKind =

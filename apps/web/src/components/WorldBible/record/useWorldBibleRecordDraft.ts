@@ -3,6 +3,7 @@ import type {
   EntityCategory,
   PlaceConnection,
   PlaceData,
+  PlacePlacement,
   WorldCanvasLensKind,
   WorldEntity,
   WritingDocument
@@ -63,6 +64,7 @@ export function useWorldBibleRecordDraft({
   const [negativeSpaceSceneIds, setNegativeSpaceSceneIds] = useState<string[]>([]);
   const [placeParentId, setPlaceParentId] = useState('');
   const [placeConnections, setPlaceConnections] = useState<PlaceConnection[]>([]);
+  const [placePlacements, setPlacePlacements] = useState<PlacePlacement[]>([]);
   const [characterDetailSection, setCharacterDetailSection] =
     useState<CharacterDetailSection>('canon');
   const [areItemDetailsExpanded, setAreItemDetailsExpanded] = useState(false);
@@ -95,10 +97,12 @@ export function useWorldBibleRecordDraft({
   );
 
   const isLocation = isLocationCategory(activeCategory);
-  /** The parent and connections as edited; saving normalizes them. Undefined for other categories. */
+  /** The parent, connections, and map placements as edited; saving normalizes them. Undefined for other categories. */
   const place = useMemo<PlaceData | undefined>(
-    () => isLocation ? {parentId: placeParentId || undefined, connections: placeConnections} : undefined,
-    [isLocation, placeConnections, placeParentId]
+    () => isLocation
+      ? {parentId: placeParentId || undefined, connections: placeConnections, placements: placePlacements}
+      : undefined,
+    [isLocation, placeConnections, placeParentId, placePlacements]
   );
 
   const reset = useCallback(() => {
@@ -116,6 +120,7 @@ export function useWorldBibleRecordDraft({
     setNegativeSpaceSceneIds([]);
     setPlaceParentId('');
     setPlaceConnections([]);
+    setPlacePlacements([]);
     setAreItemDetailsExpanded(false);
     setIsPasteImportOpen(false);
     setPastedImportText('');
@@ -128,6 +133,7 @@ export function useWorldBibleRecordDraft({
     setFieldValues({});
     setPlaceParentId('');
     setPlaceConnections([]);
+    setPlacePlacements([]);
     setCharacterAuthoringMode('manual');
     setCharacterDetailSection('canon');
     setRecordAuthoringMode('idle');
@@ -149,6 +155,7 @@ export function useWorldBibleRecordDraft({
     setNegativeSpaceSceneIds([]);
     setPlaceParentId('');
     setPlaceConnections([]);
+    setPlacePlacements([]);
     setAreItemDetailsExpanded(false);
     setIsPasteImportOpen(false);
     setPastedImportText('');
@@ -163,6 +170,8 @@ export function useWorldBibleRecordDraft({
       setFieldValues({});
       setPlaceParentId('');
       setPlaceConnections([]);
+      setPlacePlacements([]);
+    setPlacePlacements([]);
       setCharacterAuthoringMode(isCharacter ? 'manual' : 'idle');
       setRecordAuthoringMode(isCharacter ? 'idle' : 'manual');
       setCharacterDetailSection('canon');
@@ -190,6 +199,7 @@ export function useWorldBibleRecordDraft({
     setNegativeSpaceSceneIds(entity.systemNegativeSpace?.sceneIds ?? []);
     setPlaceParentId(entity.place?.parentId ?? '');
     setPlaceConnections(entity.place?.connections ?? []);
+    setPlacePlacements(entity.place?.placements ?? []);
     setMoveCategoryTargetId(entity.categoryId);
     const persistedAlternativeNames =
       typeof entity.fields[ALTERNATIVE_NAMES_KEY] === 'string'
@@ -239,6 +249,8 @@ export function useWorldBibleRecordDraft({
     setPlaceParentId,
     placeConnections,
     setPlaceConnections,
+    placePlacements,
+    setPlacePlacements,
     place,
     characterDetailSection,
     setCharacterDetailSection,

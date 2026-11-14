@@ -19,6 +19,7 @@ import type {CharacterVoicePosition} from '../services/characterLab';
 import {CharacterIdentityResolutionQueue} from '../components/WorldBible/CharacterIdentityResolutionQueue';
 import {PlacePositionReviewQueue} from '../components/WorldBible/PlacePositionReviewQueue';
 import {WhereIsEveryonePanel} from '../components/WorldBible/WhereIsEveryonePanel';
+import {MapsPanel} from '../components/WorldBible/MapsPanel';
 import {isLocationCategory} from '../services/worldBible/worldBibleEntityPlans';
 import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategoryRail';
 import {WorldBibleCategoryOverview} from '../components/WorldBible/WorldBibleCategoryOverview';
@@ -485,6 +486,9 @@ function WorldBibleRoute() {
           stateMutationEvents={stateMutationEvents}
           onOpenScene={(sceneId) => navigate('/workspace', {state: {focusDocumentId: sceneId}})}
         />
+      )}
+      {isLocationCategory(activeCategory) && viewMode === 'category' && !isRecordEditorOpen && (
+        <MapsPanel categories={categories} entities={entities} />
       )}
 
       <WorldBibleImportWorkspace

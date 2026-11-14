@@ -8,6 +8,7 @@ import {
   DB_VERSION,
   ENTITY_STORE_NAME,
   MECHANICS_DRAFT_STORE_NAME,
+  MAP_STORE_NAME,
   openDb,
   PROJECT_ID_INDEX,
   PROJECT_INDEXED_STORE_NAMES,
@@ -39,9 +40,9 @@ import {
  */
 
 const V28 = 28;
-// mechanics_drafts arrived in version 30, so a v28 database does not have it.
+// mechanics_drafts arrived in version 30 and maps in 31, so a v28 database has neither.
 const ALL_STORES = [PROJECT_STORE_NAME, ...PROJECT_INDEXED_STORE_NAMES].filter(
-  (storeName) => storeName !== MECHANICS_DRAFT_STORE_NAME
+  (storeName) => storeName !== MECHANICS_DRAFT_STORE_NAME && storeName !== MAP_STORE_NAME
 );
 
 const SEED: Record<string, Array<Record<string, unknown>>> = {
@@ -138,6 +139,7 @@ describe('DB_VERSION 29+ projectId indexes', () => {
 
   it('upgrades a populated v28 database in place and indexes every project store', () => {
     expect(db.objectStoreNames.contains(MECHANICS_DRAFT_STORE_NAME)).toBe(true);
+    expect(db.objectStoreNames.contains(MAP_STORE_NAME)).toBe(true);
     expect(DB_VERSION).toBeGreaterThanOrEqual(29);
     expect(db.version).toBe(DB_VERSION);
     const tx = db.transaction([...PROJECT_INDEXED_STORE_NAMES], 'readonly');

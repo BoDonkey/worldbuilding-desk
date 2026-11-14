@@ -71,6 +71,12 @@ Procedure:
    at the passphrase reads nothing; import again with the passphrase, apply
    as `Create New Project`, and repeat the step 5 spot-checks on the copy.
    Repeat on a second computer if one is available.
+8. Maps (slice 4.79). On the Locations page, create a region map and a city
+   map that sits on it, add a unit conversion, and put two places on the
+   maps from their records. Export, import as `Create New Project`, and in
+   the copy confirm both maps, the city map's point on the region map, the
+   conversion, and each place's **On maps** values are intact, and that
+   **Distance to** gives the same figure and source as in the original.
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated

@@ -125,3 +125,61 @@
     grid-template-columns: 1fr;
   }
 }
+
+.distanceField {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.distanceField select {
+  min-width: 12rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--color-text-primary);
+}
+
+.distanceField select:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 30%, transparent);
+}
+
+.placementRow {
+  display: grid;
+  grid-template-columns: minmax(10rem, 2fr) minmax(5rem, 1fr) minmax(5rem, 1fr) auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+
+.placementRow label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.placementRow input,
+.placementRow select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem;
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+}
+
+.placementRow input:focus,
+.placementRow select:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 30%, transparent);
+}
+
+@media (max-width: 640px) {
+  .placementRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

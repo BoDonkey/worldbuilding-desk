@@ -447,6 +447,36 @@ schema 10 and backup snapshot schema 12 register the additive field. Project
 storage schema 11 and backup snapshot schema 13 link existing positions to
 places once, where a name matches exactly one place record (4.77).
 
+## 4.3 Maps, Placements, and Distance
+
+Design: `docs/places-and-maps-brief.md` §§ 4–5 (slice 4.79). Coordinates
+belong to a map, never to the world; there is no global grid.
+
+- **Map** (`WorldMap`, store `maps`): `name`, `distanceUnit` (the author's
+  word: miles, leagues, squares), `scale` (distance units per map unit),
+  optional `imageRef` (used from 4.80), and optional `parentPlacement` (the
+  point where the whole map sits on a larger map). Parent maps nest; a map
+  that would sit on itself or on a map inside it is refused.
+- **Placement** (`place.placements` on a location record): `{mapId, x, y}` in
+  that map's units, at most one per map.
+- **Unit conversions** (`ProjectSettings.unitConversions`): "1 `from` =
+  `factor` `to`", set by the author. Units compare by name ignoring case and
+  a plural "s"; no other conversion is assumed.
+
+Distance (`services/worldBible/placeDistance.ts`) uses the most trusted source
+and always returns it: (1) authored distance or travel time on a direct
+connection; (2) the shortest route over connections, adding up legs whose
+units the conversions link; (3) a straight line on the most detailed map both
+places share, lifting a placement through parent placements, times that map's
+scale. A straight line never replaces an authored or route figure. Figures in
+units no conversion links are returned side by side and never compared.
+
+Placements and child maps that point at a deleted map are ignored when read.
+Validation lives in `services/worldBible/maps.ts`. AI never places pins, sets
+scales, or writes distances. Project storage schema 12 and backup snapshot
+schema 14 register the maps store and placements (additive); backups and
+import-as-copy carry and remap map ids.
+
 ## 5. AI Proposal Boundary and Item Authoring
 
 _Status: item authoring is a product proposal (2026-07-26); the shared

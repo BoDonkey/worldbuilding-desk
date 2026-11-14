@@ -335,7 +335,7 @@ messages).
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
-| 4.79 | Maps and placements (data, distance) | 4 | L | — (after 4.76) |
+| 4.79 | Maps and placements (data, distance) | 4 | L | WIP — author chose (2026-11-14): Maps panel on the Locations overview; "Distance to…" readout in the location record |
 | 4.80 | Map surface: image import, pins, scene view, export | 4 | L | — (after 4.78, 4.79) |
 | 4.81 | Grid and hex maps | 4 | M | — (after 4.80) |
 | 5.1 | Auto-update decision + implementation | 5 | M | Done `c1c4f33` + `7357671` + `4efa1d1` + `a56e5dd` |

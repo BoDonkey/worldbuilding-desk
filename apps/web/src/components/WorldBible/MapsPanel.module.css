@@ -1,0 +1,145 @@
+.panel {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.header h2,
+.conversions h3 {
+  margin: 0;
+}
+
+.header p,
+.empty {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-secondary);
+}
+
+.actionButton,
+.mapActions button {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background-color: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+}
+
+.actionButton:hover,
+.mapActions button:hover {
+  background-color: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.actionButton {
+  justify-self: start;
+}
+
+.form {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--color-bg-primary);
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.field input,
+.field select,
+.conversionRow input {
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--color-text-primary);
+}
+
+.field input:focus,
+.field select:focus,
+.conversionRow input:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 30%, transparent);
+}
+
+.pointRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 8rem));
+  gap: 0.75rem;
+}
+
+.mapList,
+.conversionList {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mapCard {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--color-bg-primary);
+}
+
+.mapCard > div:first-child {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.mapCard small {
+  color: var(--color-text-secondary);
+}
+
+.mapActions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.conversions {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.conversionRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 6rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+@media (max-width: 640px) {
+  .conversionRow {
+    grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+}

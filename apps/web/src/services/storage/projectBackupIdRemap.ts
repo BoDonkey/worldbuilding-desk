@@ -22,7 +22,7 @@ type Data = ProjectSnapshot['data'];
 const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const isUuid = (value: string) => value.length === 36 && new RegExp(`^${UUID_PATTERN.source}$`, 'i').test(value);
 
-/** Every record id an import could keep: the 23 collections plus settings and ruleset. */
+/** Every record id an import could keep: the 24 collections plus settings and ruleset. */
 export function collectImportRecordIds(data: Data): string[] {
   const ids: string[] = [];
   for (const [, dataKey] of ID_PRESERVING_IMPORT_STORES) {
