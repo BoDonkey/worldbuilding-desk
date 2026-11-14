@@ -152,7 +152,7 @@ describe('AIAssistant factual lookup integration', () => {
     });
     fireEvent.click(screen.getByRole('button', {name: 'Send'}));
 
-    await screen.findByText('Sera was a cartographer before becoming a delver.');
+    await screen.findByText("Sera's accepted occupation is cartographer.");
     expect(mocks.search).toHaveBeenCalledWith(
       'What did Sera do before she became a delver?',
       20

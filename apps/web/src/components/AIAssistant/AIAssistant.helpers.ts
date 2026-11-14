@@ -20,7 +20,7 @@ const normalizeFactName = (value: string): string =>
 
 type SavedFactIntent =
   | {kind: 'eye-color'; subject: string}
-  | {kind: 'occupation'; subject: string; prior: boolean}
+  | {kind: 'occupation'; subject: string}
   | {kind: 'service-length'; subject: string}
   | {kind: 'membership'; subject: string; organization?: string}
   | {kind: 'treatment'; subject: string};
@@ -40,18 +40,21 @@ const getSavedFactIntent = (promptText: string): SavedFactIntent | null => {
   );
   if (eyeQuestion?.[1]) return {kind: 'eye-color', subject: eyeQuestion[1].trim()};
 
+  // A question about an earlier job is still answered from the accepted
+  // occupation fact, so working notes cannot supply a guess. Canon does not
+  // record when that occupation held, so the answer never claims an order.
   const priorOccupation = prompt.match(
     /^what did (.+?) do before (?:he|she|they) became? (?:an? )?[^?]+\??$/i
   );
   if (priorOccupation?.[1]) {
-    return {kind: 'occupation', subject: priorOccupation[1].trim(), prior: true};
+    return {kind: 'occupation', subject: priorOccupation[1].trim()};
   }
 
   const occupation = prompt.match(
     /^(?:what|which) (?:was|is) (.+?)(?:['’]s) (?:job|occupation|profession)\??$/i
   );
   if (occupation?.[1]) {
-    return {kind: 'occupation', subject: occupation[1].trim(), prior: false};
+    return {kind: 'occupation', subject: occupation[1].trim()};
   }
 
   const service = prompt.match(/^how long has (.+?) served\b/i);
@@ -161,9 +164,10 @@ export const getDirectSavedFactAnswer = (
     switch (intent.kind) {
       case 'occupation':
         return {
-          content: stateValidity(intent.prior
-            ? `${subject} was a ${acceptedFact.value} before becoming a delver.`
-            : `${subject}'s accepted occupation is ${acceptedFact.value}.`, acceptedFact),
+          content: stateValidity(
+            `${subject}'s accepted occupation is ${acceptedFact.value}.`,
+            acceptedFact
+          ),
           results: [acceptedFact.result]
         };
       case 'service-length': {

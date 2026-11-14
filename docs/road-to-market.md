@@ -150,7 +150,8 @@ run when a result was reused or coverage was focused.
    starting. Respect the open dependencies: 1.1's
    fresh-build trust run before 6.1; 5.2's macOS signing and 5.7 before the
    paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; 3.32
-   after 5.19; Phase 6 strictly ordered. Finished
+   after 5.19; 3.38 and 3.46 before 4.79; the 3.38–3.42 trust group
+   before 6.1; Phase 6 strictly ordered. Finished
    slices' ordering is in the archived snapshot.
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -364,6 +365,24 @@ messages).
 | 3.35 | Route every project-mode decision through project capabilities | 3 | S | Done `00647c0` — 5 named mode capabilities in `projectMode.ts`; `isGeneralFiction` removed |
 | 3.36 | Game Simulation brief (design only) | 3 | S | Done `20cd067` |
 | 3.37 | Places and maps brief (design only) | 3 | S | Done `05f1ed6` |
+| 3.38 | State changes follow the scene list (review D1, D8, P4) | 3 | M | — (before 4.79) |
+| 3.39 | Assistant fact answers: remove story-specific wording (T1) | 3 | XS | Done `0b77c67` |
+| 3.40 | One validated path for saving a state change (T2, B5) | 3 | S | — (easier after 3.38) |
+| 3.41 | Local AI review through the request gate (T3) | 3 | S | — (author chose: keep, route through `LLMService`, 2026-11-13) |
+| 3.42 | AI-written Source Notes are labelled (T4) | 3 | S | — |
+| 3.43 | Canon Decisions: actions out of the route (B1, D4, T5) | 3 | M | — |
+| 3.44 | Assistant turn planning out of the component (B2) | 3 | M | — (after 3.39) |
+| 3.45 | One way to create a World Bible record (D3, B4, P1, P2) | 3 | M | — |
+| 3.46 | One name matcher (D5) | 3 | S | — (before 4.79) |
+| 3.47 | Shared model-run hook for AI features (B3) | 3 | M | — (after 3.43; relates to 4.82) |
+| 3.48 | Projects: backup import as its own hook and panel (S2) | 3 | M | — |
+| 3.49 | World Bible imports: split the two pipelines (S2) | 3 | M | — (after 3.45) |
+| 3.50 | Seam maps for the four baseline files (S1, plan only) | 3 | S | — |
+| 3.51 | Dead code sweep (X1–X4) | 3 | S | — (T5 goes with 3.43 if that lands first) |
+| 3.52 | One ZIP and DOCX reader; shared text helpers (D6, D7) | 3 | S | — (after 3.51) |
+| 3.53 | Scene review in one function (D2) | 3 | S | — |
+| 3.54 | Rules wizard on theme tokens (Y1, Y2) | 3 | M | — |
+| 3.55 | Architecture doc catch-up (B6, P3) | 3 | XS | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -705,6 +724,109 @@ adding implementation scope.
     `docs/README.md`.
   - **Rules.** No code. Not a commitment to build.
   - **Verify.** Documentation tier; the author signs off on the brief.
+
+### Phase 3 — From the 2026-11 architecture review
+
+Source: `docs/archive/architecture-review-2026-11-13.md` (audited
+`c74523d`; line numbers drift). Each slice names the review findings it
+closes; the finding is the full prompt, including files and the suggested
+fix. Re-check each finding against current code before building. Refactor
+slices are behavior-preserving; the trust slices (3.38–3.42) change
+behavior on purpose and say how. Not scheduled from the review: S3 (a
+Workspace data store; see Backlog) and P5 (no finding).
+
+**Trust and correctness (before beta).**
+
+- **3.38 State changes follow the scene list.** D1, D8, P4. Replay orders
+  and cuts off state changes by a `sceneOrder` stored when each was saved;
+  moving or deleting a scene leaves it stale, and a deleted scene's accepted
+  changes still apply. Give replay the current scene order from the scene
+  list (one function: events plus ordered scene ids, drops or flags events
+  whose scene is gone). The stored number becomes a cache or goes away.
+  Remove the ledger repository's copy of the comparator (D8) and make the
+  movement path (P4) use replay order.
+  - **Decided (author, 2026-11-13).** Deleting a scene invalidates its
+    accepted changes. The delete confirm says how many accepted changes the
+    scene holds; the changes stay in the ledger, invalidated with a reason,
+    and replay ignores them.
+  - **Verify.** Full-coverage tier; replay tests that move and delete a
+    scene; e2e for the snapshot or **Where is everyone** after a move.
+- **3.39 Assistant fact answers: remove story-specific wording.** T1.
+  Drop the "before becoming a delver" answer; answer only with the accepted
+  occupation. Tests for every direct answer use wording not taken from the
+  fixture. Verify: fast battery plus the assistant specs.
+- **3.40 One validated path for saving a state change.** T2, B5.
+  `acceptStateChangeProposal` reloads the event and validates schema,
+  ruleset, and replayed state for every command before saving; `canAccept`
+  is false with no subject. Review accept, batch accept, the Workspace
+  composer, and the Character Sheets form share one prepare-and-save
+  function; reconcile and place linking move from the repository to
+  `services/state/`. Verify: full-coverage tier.
+- **3.41 Local AI review through the request gate.** T3, X4. Decided
+  (author, 2026-11-13): keep the mode. Route its request through
+  `LLMService` with its own feature tag under the coaching switch, and use
+  the shared model lookup (no first-listed or cloud model). Verify:
+  full-coverage tier.
+- **3.42 AI-written Source Notes are labelled.** T4. First prove or
+  dismiss whether extraction proposes facts from the "Suggested details
+  (not canon)" block. Then label `ai-session` notes in the UI and in prompt
+  context, and have extraction skip or mark that block. Verify:
+  full-coverage tier.
+
+**Boundaries (code fitness).**
+
+- **3.43 Canon Decisions: actions out of the route.** B1, D4, T5.
+  `services/lore/canonDecisionActions.ts` (one tested function per
+  resolution), `useCanonDecisionActions`, `useCanonDecisionConsultation`;
+  shared `buildCanonicalFactFromProposal` and `indexCanonicalFact`; delete
+  the three non-transactional canon writers. Behavior-preserving.
+- **3.44 Assistant turn planning out of the component.** B2. A plain
+  function in `services/assistant/` returns clarify, direct answer,
+  unverified answer, or provider request; the helpers move beside it.
+  Behavior-preserving.
+- **3.45 One way to create a World Bible record.** D3, B4, P1, P2. One
+  service normalizes (including place rules), saves, writes aliases, and
+  indexes; every creation path in the D3 table calls it. Portable import
+  moves to a service and hook. Merge repoints `parentId`, `toId`, and
+  `placeId` from source to target (behavior change, with tests). The small
+  direct saves in B4 move into their neighbouring hooks.
+- **3.46 One name matcher.** D5. An exact form and a Unicode-aware loose
+  form in one module replace the copies; test a non-Latin place name.
+- **3.47 Shared model-run hook for AI features.** B3. Feature tag in;
+  `run`, budget, disclosure, and provider issue out. Each feature keeps its
+  prompt and parser. Behavior-preserving.
+
+**Size headroom (before the next feature that touches these files).**
+
+- **3.48 Projects: backup import as its own hook and panel.** S2.
+  `useProjectBackupImport` and `ProjectBackupImportPanel`; optionally
+  `useProjectSeriesLinks`. Behavior-preserving.
+- **3.49 World Bible imports: split the two pipelines.** S2.
+  `useWorldBibleDocumentImport` and `useWorldBibleJsonImport`, saving
+  through 3.45's service. Behavior-preserving.
+- **3.50 Seam maps for the four baseline files.** S1. Plan only, as 3.32
+  did: `ConsistencyEngineService.ts`, `EditorWithAI.tsx`, `AISettings.tsx`,
+  `WorkspaceRoute.module.css`. Each map becomes its own slice.
+
+**Tidy-up (any time).**
+
+- **3.51 Dead code sweep.** X1–X3. Delete the seven unimported files and
+  the listed unused exports and the always-empty `permanentEffects` field;
+  author decides on the rules-engine factory helpers.
+- **3.52 One ZIP and DOCX reader; shared text helpers.** D6, D7. One
+  `readZipEntry`; scene import uses `parseDocxFile`; one `hashString`, one
+  HTML-to-text, one runtime-modifier builder, one location-category hint
+  list, and typed `wbd:*` event names.
+- **3.53 Scene review in one function.** D2. `reviewScene` in
+  `services/consistency/` used by all four callers; settles whether the
+  save path drops contradiction and state items.
+- **3.54 Rules wizard on theme tokens.** Y1, Y2. Replace the wizard's 108
+  hardcoded colours; extend the token test to `packages/rules-ui/src`; move
+  the inline styles in the three named files to modules. Screenshots in
+  both themes.
+- **3.55 Architecture doc catch-up.** B6, P3. IPC channel list, the CSP
+  paragraph and risk 7, and the ledger invariant reworded to say which
+  fields of an accepted change are fixed and which may be updated.
 
 ### Phase 4 — Places, positions, and maps (before beta)
 
@@ -1066,6 +1188,12 @@ ecosystems; Zod 4; internal character compatibility retirement after 4.13 —
 `'character'` fact/alias/link targets, remaining name joins, and the extension
 store (CX-10b, after reader coverage proves removal safe; per
 `docs/character-experience-design-review.md`).
+
+From the 2026-11 architecture review (S3): **Workspace data store** — most
+Workspace hook parameters are the same project data passed by hand
+(`WorkspaceContextDrawer` takes 67 props; documents and review hooks call
+each other through a ref bridge). A store the hooks read from would remove
+most of that. A design change, not a split; needs its own plan; post-beta.
 
 From the 2026-09-12 review of `docs/tactical-actions.md`, deferred with
 reasons: **character knowledge attribution** ("what does Elara know before
