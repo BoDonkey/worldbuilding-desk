@@ -1,7 +1,7 @@
 import type {AuthoredMeasure, PlaceConnection, UnitConversion} from '../../entityTypes';
 import {normalizeNameExact} from '../names/nameMatching';
 import {mapAncestors, unitFactor, unitKey, type MapsById} from './maps';
-import {connectionsForPlace, formatMeasure, type PlacesById} from './places';
+import {connectionsForPlace, formatMeasure, placeAncestors, type PlacesById} from './places';
 
 /*
  * Distance between two places (slice 4.79, places brief § 5). The most
@@ -19,7 +19,13 @@ import {connectionsForPlace, formatMeasure, type PlacesById} from './places';
 export type DistanceSource =
   | {kind: 'authored'; connectionId: string; ownerId: string; connectionKind: string}
   | {kind: 'route'; placeIds: string[]}
-  | {kind: 'straight-line'; mapId: string};
+  | {
+      kind: 'straight-line';
+      mapId: string;
+      /** Set when a place had no map point and used the point of a place it is inside. */
+      fromPointOf?: string;
+      toPointOf?: string;
+    };
 
 export interface DistanceFigure {
   measure: AuthoredMeasure;
@@ -152,12 +158,25 @@ const routeFigures = (
     }];
   });
 
+const placementsOnMaps = (placeId: string, places: PlacesById, maps: MapsById) =>
+  (places.get(placeId)?.place?.placements ?? []).filter((placement) => maps.has(placement.mapId));
+
+/**
+ * The place whose map points stand for `placeId`: itself when it has a point
+ * on any map, else the nearest place it is inside that has one (a tavern with
+ * no point is measured from its city's). Null when none has a point.
+ */
+export const mapPointSource = (placeId: string, places: PlacesById, maps: MapsById): string | null => {
+  if (placementsOnMaps(placeId, places, maps).length > 0) return placeId;
+  return placeAncestors(placeId, places).find((ancestor) => placementsOnMaps(ancestor.id, places, maps).length > 0)?.id
+    ?? null;
+};
+
 /** Every point `placeId` has on any map, lifted onto the maps those maps sit on. */
 const liftedPositions = (placeId: string, places: PlacesById, maps: MapsById) => {
   const positions = new Map<string, {x: number; y: number; depth: number}>();
-  for (const placement of places.get(placeId)?.place?.placements ?? []) {
-    const map = maps.get(placement.mapId);
-    if (!map) continue;
+  for (const placement of placementsOnMaps(placeId, places, maps)) {
+    const map = maps.get(placement.mapId)!;
     const chain = [{mapId: map.id, x: placement.x, y: placement.y}];
     let child = map;
     for (const parent of mapAncestors(map.id, maps)) {
@@ -184,8 +203,13 @@ const straightLineFigures = (
   places: PlacesById,
   maps: MapsById
 ): DistanceFigure[] => {
-  const from = liftedPositions(fromId, places, maps);
-  const to = liftedPositions(toId, places, maps);
+  const fromSource = mapPointSource(fromId, places, maps);
+  const toSource = mapPointSource(toId, places, maps);
+  // Both measured from the same record's point (two taverns in one city, or a
+  // tavern and its city): a straight line would only say "0".
+  if (!fromSource || !toSource || fromSource === toSource) return [];
+  const from = liftedPositions(fromSource, places, maps);
+  const to = liftedPositions(toSource, places, maps);
   const shared = [...from.keys()]
     .filter((mapId) => to.has(mapId))
     .map((mapId) => ({mapId, a: from.get(mapId)!, b: to.get(mapId)!}))
@@ -200,7 +224,12 @@ const straightLineFigures = (
       const amount = Math.hypot(entry.a.x - entry.b.x, entry.a.y - entry.b.y) * map.scale;
       return {
         measure: {amount, unit: map.distanceUnit},
-        source: {kind: 'straight-line' as const, mapId: map.id}
+        source: {
+          kind: 'straight-line' as const,
+          mapId: map.id,
+          ...(fromSource !== fromId ? {fromPointOf: fromSource} : {}),
+          ...(toSource !== toId ? {toPointOf: toSource} : {})
+        }
       };
     });
 };
@@ -292,5 +321,9 @@ export const describeDistanceFigure = (
     const via = source.placeIds.slice(1, -1).map((id) => places.get(id)?.name ?? 'a missing place');
     return `${value} — route via ${via.join(', ')}`;
   }
-  return `about ${value} — straight line on ${maps.get(source.mapId)?.name ?? 'a missing map'}`;
+  const borrowed = [source.fromPointOf, source.toPointOf]
+    .filter((id): id is string => Boolean(id))
+    .map((id) => `${places.get(id)?.name ?? 'a missing place'}'s point`);
+  const using = borrowed.length > 0 ? ` (using ${borrowed.join(' and ')})` : '';
+  return `about ${value} — straight line on ${maps.get(source.mapId)?.name ?? 'a missing map'}${using}`;
 };

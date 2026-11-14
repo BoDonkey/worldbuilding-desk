@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import type {EntityCategory, PlacePlacement, WorldEntity} from '../../../entityTypes';
 import {useProjectMaps} from '../../../hooks/useProjectMaps';
-import {describeDistanceFigure, placeDistance} from '../../../services/worldBible/placeDistance';
+import {describeDistanceFigure, mapPointSource, placeDistance} from '../../../services/worldBible/placeDistance';
 import {normalizePlacements, placesById} from '../../../services/worldBible/places';
 import shared from '../worldBibleShared.module.css';
 import styles from './RecordPlaceSection.module.css';
@@ -44,6 +44,8 @@ export function RecordPlaceMaps({categories, entities, draft}: RecordPlaceMapsPr
   const usedMapIds = new Set(placePlacements.map((placement) => placement.mapId));
   const freeMaps = maps.filter((map) => !usedMapIds.has(map.id));
   const target = others.find((entry) => entry.id === otherId) ?? null;
+  const borrowedPointId = editingId ? mapPointSource(editingId, places, mapsById) : null;
+  const borrowedPoint = borrowedPointId && borrowedPointId !== editingId ? places.get(borrowedPointId) : undefined;
   const result = useMemo(
     () => editingId && target
       ? placeDistance({fromId: editingId, toId: target.id, places, maps: mapsById, conversions})
@@ -66,6 +68,11 @@ export function RecordPlaceMaps({categories, entities, draft}: RecordPlaceMapsPr
           </p>
         ) : (
           <p className={styles.placeHint}>A point in each map's own units. Leave a map out if this place is not on it.</p>
+        )}
+        {borrowedPoint && (
+          <p className={styles.placeHint}>
+            No point of its own yet: distances use the point of {borrowedPoint.name}, the place it is inside.
+          </p>
         )}
         {placePlacements.map((placement, index) => {
           const map = mapsById.get(placement.mapId);

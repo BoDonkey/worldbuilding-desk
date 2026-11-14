@@ -141,6 +141,31 @@ describe('Maps, placements, and distance', () => {
     });
   });
 
+  it('measures a place with no map point from the place it is inside', () => {
+    cy.window().its('localStorage').invoke('getItem', 'activeProject').then((value) => {
+      const projectId = JSON.parse(String(value)).id as string;
+      cy.putIndexedDbRecords('maps', [{
+        id: 'map-region', projectId, name: 'Region', distanceUnit: 'miles', scale: 1, createdAt: 1, updatedAt: 1
+      }]);
+      cy.putIndexedDbRecords('entities', [
+        {...place('place-varn', 'Varn', 10), projectId, place: {placements: [{mapId: 'map-region', x: 0, y: 0}]}},
+        {...place('place-ford', 'Ford', 11), projectId, place: {placements: [{mapId: 'map-region', x: 6, y: 8}]}},
+        {...place('place-mill', 'Mill', 12), projectId, place: {parentId: 'place-varn'}}
+      ]);
+    });
+    cy.reload();
+    cy.contains('h1', 'World Bible').should('be.visible');
+    cy.contains('button', 'Locations').click();
+
+    openLocation('Mill');
+    cy.get('section[aria-label="Place"]').within(() => {
+      cy.contains('No point of its own yet: distances use the point of Varn').should('be.visible');
+      cy.contains('label', 'Distance to').find('select').select('Ford');
+      cy.get('ul[aria-label="Distance to Ford"]')
+        .should('contain.text', "about 10 miles — straight line on Region (using Varn's point)");
+    });
+  });
+
   it('prefers an authored connection and keeps unit conversions', () => {
     mapsPanel().contains('button', 'Edit conversions').click();
     mapsPanel().within(() => {

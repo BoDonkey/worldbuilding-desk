@@ -471,6 +471,11 @@ places share, lifting a placement through parent placements, times that map's
 scale. A straight line never replaces an authored or route figure. Figures in
 units no conversion links are returned side by side and never compared.
 
+A place with no point on any map is measured from the point of the nearest
+place it is inside that has one, and the figure says whose point it used
+(author decision, 2026-11-14). When both places would use the same record's
+point, there is no straight-line figure.
+
 Placements and child maps that point at a deleted map are ignored when read.
 Validation lives in `services/worldBible/maps.ts`. AI never places pins, sets
 scales, or writes distances. Project storage schema 12 and backup snapshot

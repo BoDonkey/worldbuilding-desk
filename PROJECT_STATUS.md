@@ -144,7 +144,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   ("1 league = 3 miles"). Location records put the place on maps by number
   (**On maps**; the map surface is 4.80) and show **Distance to** another
   place with its source: authored on a connection, a route over connections,
-  or a straight line on the most detailed shared map. Figures in unlinked
+  or a straight line on the most detailed shared map; a place with no map
+  point uses the point of the nearest place it is inside, and says so. Figures in unlinked
   units are shown side by side. Maps travel in backups (copy remaps their
   ids) and portable export (`maps/maps.csv`, `maps/unit-conversions.csv`,
   `placements` in place frontmatter and CSV). Project storage schema 12,

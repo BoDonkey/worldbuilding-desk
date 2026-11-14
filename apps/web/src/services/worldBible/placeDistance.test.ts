@@ -176,6 +176,59 @@ describe('straight-line distance', () => {
   });
 });
 
+describe('places with no map point', () => {
+  const maps = [map('region', 'miles', 1)];
+
+  it('use the point of the nearest place they are inside, and say so', () => {
+    const entities = [
+      place('varn', {placements: [{mapId: 'region', x: 0, y: 0}]}),
+      place('district', {parentId: 'varn'}),
+      place('tavern', {parentId: 'district'}),
+      place('ford', {placements: [{mapId: 'region', x: 3, y: 4}]})
+    ];
+    const places = placesById(categories, entities);
+    const result = placeDistance({fromId: 'tavern', toId: 'ford', places, maps: mapsById(maps)});
+    expect(result.distances).toEqual([{
+      measure: {amount: 5, unit: 'miles'},
+      source: {kind: 'straight-line', mapId: 'region', fromPointOf: 'varn'}
+    }]);
+    expect(describeDistanceFigure(result.distances[0], places, mapsById(maps)))
+      .toBe("about 5 miles — straight line on Region (using Varn's point)");
+  });
+
+  it('keep their own point when they have one', () => {
+    const entities = [
+      place('varn', {placements: [{mapId: 'region', x: 0, y: 0}]}),
+      place('tavern', {parentId: 'varn', placements: [{mapId: 'region', x: 0, y: 1}]}),
+      place('ford', {placements: [{mapId: 'region', x: 0, y: 4}]})
+    ];
+    const [figure] = distance(entities, 'tavern', 'ford', maps).distances;
+    expect(figure.measure.amount).toBe(3);
+    expect(figure.source).toEqual({kind: 'straight-line', mapId: 'region'});
+  });
+
+  it('give no straight line when both would use the same point', () => {
+    const entities = [
+      place('varn', {placements: [{mapId: 'region', x: 0, y: 0}]}),
+      place('tavern', {parentId: 'varn'}),
+      place('forge', {parentId: 'varn'})
+    ];
+    expect(distance(entities, 'tavern', 'forge', maps).distances).toEqual([]);
+    expect(distance(entities, 'tavern', 'varn', maps).distances).toEqual([]);
+  });
+
+  it('skip a parent whose only point is on a deleted map', () => {
+    const entities = [
+      place('region-place', {placements: [{mapId: 'region', x: 0, y: 0}]}),
+      place('varn', {parentId: 'region-place', placements: [{mapId: 'gone', x: 9, y: 9}]}),
+      place('tavern', {parentId: 'varn'}),
+      place('ford', {placements: [{mapId: 'region', x: 0, y: 2}]})
+    ];
+    const [figure] = distance(entities, 'tavern', 'ford', maps).distances;
+    expect(figure.source).toMatchObject({fromPointOf: 'region-place'});
+  });
+});
+
 describe('describeDistanceFigure', () => {
   it('names the source of each figure', () => {
     const entities = [
