@@ -6,12 +6,8 @@ import type {
   WorldEntity
 } from '../../entityTypes';
 import {isItemCategory} from '../worldBible/worldBibleSummary';
-import {buildCompoundChangePreview} from './positionedStateChange';
-import {
-  validateStateMutationEventForRuleset,
-  type CharacterReplayState
-} from './stateReplay';
-import {validateStateMutationEvent} from './stateMutationSchemas';
+import type {CharacterReplayState} from './stateReplay';
+import {assertStateChangeValid} from './stateChangeValidation';
 import {saveItemStateAuthoringPlan} from '../storage';
 import {normalizeNameExact} from '../names/nameMatching';
 
@@ -114,19 +110,7 @@ export function validateItemStateAuthoringPlan(params: {
     throw new Error('Item mechanics link to a different World Bible item.');
   }
 
-  validateStateMutationEvent(plan.event);
-  const rulesetIssues = validateStateMutationEventForRuleset({
-    event: plan.event,
-    ruleset: params.ruleset
-  });
-  if (rulesetIssues.length > 0) throw new Error(rulesetIssues.join(' '));
-  if (params.before) {
-    const preview = buildCompoundChangePreview({
-      before: params.before,
-      commands: plan.event.commands
-    });
-    if (preview.issues.length > 0) throw new Error(preview.issues.join(' '));
-  }
+  assertStateChangeValid({event: plan.event, ruleset: params.ruleset, before: params.before});
 }
 
 export async function applyItemStateAuthoringPlan(params: {

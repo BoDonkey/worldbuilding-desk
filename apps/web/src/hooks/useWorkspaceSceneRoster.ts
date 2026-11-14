@@ -31,11 +31,9 @@ import {
 } from '../services/state/stateMutationAnchor';
 import {
   invalidateStateMutationEventById,
-  saveStateMutationEvent,
   sortWritingDocuments
 } from '../services/storage';
-import {validateStateMutationEventForRuleset} from '../services/state/stateReplay';
-import {validateStateMutationEvent} from '../services/state/stateMutationSchemas';
+import {saveStateChange, saveStateChangeRecord} from '../services/state/stateChangeSave';
 import {
   buildCharacterSnapshot,
   getSceneOrder,
@@ -572,7 +570,7 @@ export function useWorkspaceSceneRoster({
         return;
       }
       try {
-        await saveStateMutationEvent(result.value);
+        await saveStateChangeRecord(result.value);
         setFeedback({
           tone: 'success',
           message: `Re-anchored “${event.label || 'scene change'
@@ -636,19 +634,16 @@ export function useWorkspaceSceneRoster({
         setFeedback({tone: 'error', message: result.error});
         return;
       }
+      if (!positionedChangeBefore) return;
       const event = result.value;
       const existingEvent = pendingPositionedChange.event;
       setSavingPositionedChange(true);
       try {
-        validateStateMutationEvent(event);
-        const rulesetIssues = validateStateMutationEventForRuleset({
+        await saveStateChange({
           event,
-          ruleset: pendingPositionedSubject.sheet ? ruleset : null
+          ruleset: pendingPositionedSubject.sheet ? ruleset : null,
+          before: positionedChangeBefore
         });
-        if (rulesetIssues.length > 0) {
-          throw new Error(rulesetIssues.join(' '));
-        }
-        await saveStateMutationEvent(event);
         setPendingPositionedChange(null);
         setFeedback({
           tone: 'success',
@@ -672,6 +667,7 @@ export function useWorkspaceSceneRoster({
       documents,
       pendingPositionedChange,
       pendingPositionedSubject,
+      positionedChangeBefore,
       ruleset,
       sceneCursorAnchor,
       sceneCursorPosition,

@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
-import type {StateMutationEvent} from '../../../entityTypes';
-import {reconcileSceneStateMutationEvents} from './stateMutationLedger';
+import type {StateMutationEvent} from '../../entityTypes';
+import {reconcileSceneStateMutationEvents} from './stateChangeReconcile';
 
 function makeEvent(
   overrides: Partial<StateMutationEvent> & Pick<StateMutationEvent, 'id' | 'commands'>
@@ -24,7 +24,7 @@ function makeEvent(
   };
 }
 
-describe('stateMutationLedger reconciliation', () => {
+describe('state change reconciliation', () => {
   it('preserves accepted deterministic-review events when regenerated commands are equivalent', () => {
     const existingAccepted = makeEvent({
       id: 'accepted-existing',
