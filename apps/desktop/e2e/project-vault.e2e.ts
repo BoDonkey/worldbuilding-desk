@@ -69,7 +69,8 @@ test('a packaged project vault removes planted text from live stores and measure
   // Tests may reach raw IndexedDB; application code must use the storage seam.
   const projectId = await page.evaluate(async (planted) => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('worldbuilding-db', 30);
+      // No version: open at whatever version the app created, so schema bumps do not break this seed.
+      const request = indexedDB.open('worldbuilding-db');
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
