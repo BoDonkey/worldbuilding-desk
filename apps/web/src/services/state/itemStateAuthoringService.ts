@@ -13,9 +13,7 @@ import {
 } from './stateReplay';
 import {validateStateMutationEvent} from './stateMutationSchemas';
 import {saveItemStateAuthoringPlan} from '../storage';
-
-const normalizeItemName = (value: string): string =>
-  value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+import {normalizeNameExact} from '../names/nameMatching';
 
 export interface ReusableItemResolution {
   normalizedName: string;
@@ -32,7 +30,7 @@ export function resolveReusableItem(params: {
   entities: WorldEntity[];
   compendiumEntries: CompendiumEntry[];
 }): ReusableItemResolution {
-  const normalizedName = normalizeItemName(params.itemName);
+  const normalizedName = normalizeNameExact(params.itemName);
   const itemCategoryIds = new Set(
     params.categories.filter(isItemCategory).map((category) => category.id)
   );
@@ -40,12 +38,12 @@ export function resolveReusableItem(params: {
     ? params.entities.filter(
         (entity) =>
           itemCategoryIds.has(entity.categoryId) &&
-          normalizeItemName(entity.name) === normalizedName
+          normalizeNameExact(entity.name) === normalizedName
       )
     : [];
   const compendiumMatches = normalizedName
     ? params.compendiumEntries.filter(
-        (entry) => normalizeItemName(entry.name) === normalizedName
+        (entry) => normalizeNameExact(entry.name) === normalizedName
       )
     : [];
 

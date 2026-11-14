@@ -6,6 +6,7 @@ import type {
 } from '../../entityTypes';
 import type {ConsistencyAlias} from '../storage';
 import {placesById, type PlacesById} from './places';
+import {normalizeNameLoose} from '../names/nameMatching';
 
 /*
  * Positions refer to place records (slice 4.77, places brief § 3).
@@ -19,11 +20,7 @@ import {placesById, type PlacesById} from './places';
 
 /** "The Ember Archive", "ember archive", and "Ember-Archive" compare equal. */
 export const normalizePlaceName = (value: string): string =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-    .replace(/^the /, '');
+  normalizeNameLoose(value, {dropLeadingArticle: true});
 
 export interface PlaceNameIndex {
   places: PlacesById;

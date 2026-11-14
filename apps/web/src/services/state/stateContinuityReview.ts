@@ -10,8 +10,7 @@ import type {GuardrailIssue, KnownEntityRef} from '../consistency';
 import {extractStateDeltaObservations} from '../worldEngine/stateDeltaObservations';
 import {
   analyzeManuscriptCustody,
-  manuscriptPlainText,
-  normalizeCustodyText
+  manuscriptPlainText
 } from './manuscriptCustody';
 import {stateDeltaObservationToCommand} from './kinds';
 import {isPlaceWithin} from '../worldBible/places';
@@ -34,6 +33,7 @@ import {
   stateSubjectIds,
   type StateSubject
 } from './stateSubjects';
+import {normalizeNameLoose} from '../names/nameMatching';
 
 export interface StateContinuityReviewItem {
   id: string;
@@ -55,9 +55,6 @@ interface StateContinuityReviewInput {
   /** Position names the author kept as text; the unknown-place check skips them (4.78). */
   placeNamesKeptAsText?: string[];
 }
-
-const normalize = (value: string): string =>
-  value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -96,14 +93,14 @@ const inventoryContains = (
   state: CharacterReplayState,
   itemName: string
 ): boolean => state.inventory.items.some(
-  (item) => normalize(item.name) === normalize(itemName) && item.quantity > 0
+  (item) => normalizeNameLoose(item.name) === normalizeNameLoose(itemName) && item.quantity > 0
 );
 
 const inventoryEquipped = (
   state: CharacterReplayState,
   itemName: string
 ): boolean => state.inventory.equipped.some(
-  (name) => normalize(name) === normalize(itemName)
+  (name) => normalizeNameLoose(name) === normalizeNameLoose(itemName)
 );
 
 const eventOrder = (
@@ -160,7 +157,7 @@ const makeItem = (params: {
   subject: StateSubject;
 }): StateContinuityReviewItem => ({
   // Sheeted characters keep their sheet id here so earlier dismissals still match.
-  id: `state:${params.code}:${params.scene.id}:${params.subject.sheet?.id ?? params.subject.actorId}:${normalize(params.focusText)}`,
+  id: `state:${params.code}:${params.scene.id}:${params.subject.sheet?.id ?? params.subject.actorId}:${normalizeNameLoose(params.focusText)}`,
   sceneId: params.scene.id,
   sceneTitle: params.scene.title || 'Untitled scene',
   issue: {
@@ -185,7 +182,7 @@ const inventorySubjects = (
   ...events.flatMap((event) => event.commands.map(commandItemName).filter(
     (name): name is string => Boolean(name)
   ))
-].filter(Boolean).map((name) => [normalize(name), name])).values());
+].filter(Boolean).map((name) => [normalizeNameLoose(name), name])).values());
 
 const namesForSubject = (
   subject: StateSubject,
@@ -243,7 +240,7 @@ const positionsAgree = (
         isPlaceWithin(claimPlaceId, statePlaceId, places.places);
     }
   }
-  return normalize(state.locationName ?? '') === normalize(claimedLocation);
+  return normalizeNameLoose(state.locationName ?? '') === normalizeNameLoose(claimedLocation);
 };
 
 const hasMovementCueBetween = (params: {
@@ -336,7 +333,7 @@ export function findStateContinuityReviewItems({
         commandMatches: (candidate) => {
           const itemName = commandItemName(candidate);
           return Boolean(itemName && commandItemName(command) &&
-            normalize(itemName) === normalize(commandItemName(command) ?? ''));
+            normalizeNameLoose(itemName) === normalizeNameLoose(commandItemName(command) ?? ''));
         }
       });
       if (!prior) return;
@@ -401,12 +398,12 @@ export function findStateContinuityReviewItems({
     analysis.events
       .filter((event) => reviewedIds.has(event.scene.id))
       .filter((event) => event.kind === 'held-by' || event.kind === 'used-by')
-      .filter((event) => normalize(event.evidence).includes(normalize(itemName)))
+      .filter((event) => normalizeNameLoose(event.evidence).includes(normalizeNameLoose(itemName)))
       .forEach((event) => {
-        const holder = normalizeCustodyText(event.holder ?? '');
+        const holder = normalizeNameLoose(event.holder ?? '');
         const subject = subjects.find((candidate) =>
           namesForSubject(candidate, knownEntities).some(
-            (name) => normalizeCustodyText(name) === holder
+            (name) => normalizeNameLoose(name) === holder
           )
         );
         if (!subject) return;
@@ -432,7 +429,7 @@ export function findStateContinuityReviewItems({
           actorResolutions,
           commandMatches: (command) => {
             const name = commandItemName(command);
-            return Boolean(name && normalize(name) === normalize(itemName) && (
+            return Boolean(name && normalizeNameLoose(name) === normalizeNameLoose(itemName) && (
               command.type === 'inventory_remove' ||
               command.type === 'inventory_consume' ||
               command.type === 'inventory_unequip'

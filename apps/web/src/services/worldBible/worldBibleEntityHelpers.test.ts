@@ -5,13 +5,13 @@ import {
   extractStructuredSummaryFromRichText,
   isRichTextEffectivelyEmpty,
   normalizeRichTextValue,
-  normalizeName,
   parseAlternativeNames
 } from './worldBibleEntityHelpers';
+import {normalizeNameExact} from '../names/nameMatching';
 
 describe('worldBibleEntityHelpers', () => {
   it('normalizes and deduplicates alternative names case-insensitively', () => {
-    expect(normalizeName('  Ember   Archive  ')).toBe('ember archive');
+    expect(normalizeNameExact('  Ember   Archive  ')).toBe('ember archive');
     expect(parseAlternativeNames('Kael, kael,  Ember Archive , ember archive')).toEqual([
       'kael',
       'ember archive'

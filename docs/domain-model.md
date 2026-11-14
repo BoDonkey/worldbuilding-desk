@@ -361,7 +361,8 @@ author-facing identities.
 One tested character link resolver owns entity ↔ extension ↔ sheet ↔
 legacy-ID resolution for roster, capture, review linking, health, inspector,
 grounding, and other consumers. Surfaces must not recreate normalized-name
-joins. Legacy records are classified exactly once as `already-linked`,
+joins; names are compared only through `normalizeNameExact` and
+`normalizeNameLoose` in `apps/web/src/services/names/nameMatching.ts`. Legacy records are classified exactly once as `already-linked`,
 `unambiguous-same-identity`, `tools-only-orphan`, `world-bible-only`,
 `ambiguous-collision`, or `sheet-only`. Unresolved records remain usable where
 safe but are never presented as canon or assistant grounding.

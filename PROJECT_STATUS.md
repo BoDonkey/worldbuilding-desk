@@ -138,6 +138,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   check treats a tavern inside a city as agreeing with the city. Project
   storage schema 11 and backup snapshot schema 13 link existing positions
   once, unambiguous names only.
+- Names are compared by one module, `services/names/nameMatching.ts`
+  (slice 3.46): an exact form (case and spacing) for records, aliases, and
+  duplicate checks, and a loose form (letters and digits only) for names
+  pulled from prose and scene changes. Both keep letters from every script, so
+  place, item, and holder names in Cyrillic, Greek, CJK, or with accents now
+  match and are offered for linking instead of being dropped.
 - Where is everyone (slice 4.78). The World Bible Locations category shows
   **Where is everyone**: each character's position at the end of a chosen
   scene (or the latest), grouped by place with the places around it, and a

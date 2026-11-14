@@ -24,6 +24,7 @@ import {
   type ActorResolution,
   type CharacterIdentityMigrationReport
 } from './characterIdentity';
+import {normalizeNameExact} from '../names/nameMatching';
 
 export interface CharacterTransferPayloadV1 {
   schemaVersion: 1;
@@ -102,10 +103,6 @@ export function isCharacterTransferPayload(
     Array.isArray(value.data.consistencyAliases) &&
     Array.isArray(value.data.canonicalFacts)
   );
-}
-
-function normalizeName(value: string): string {
-  return value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
 }
 
 export function createCharacterTransferPayload(params: {
@@ -271,13 +268,13 @@ export function prepareCharacterTransferImport(params: {
     ? params.payload.data.categories
     : [];
   payloadCategories.forEach((category) => {
-    const normalizedName = normalizeName(category.name);
-    const normalizedSlug = normalizeName(category.slug);
+    const normalizedName = normalizeNameExact(category.name);
+    const normalizedSlug = normalizeNameExact(category.slug);
     const existing = params.existingCategories.find(
       (candidate) =>
         candidate.kind === category.kind &&
-        (normalizeName(candidate.name) === normalizedName ||
-          normalizeName(candidate.slug) === normalizedSlug)
+        (normalizeNameExact(candidate.name) === normalizedName ||
+          normalizeNameExact(candidate.slug) === normalizedSlug)
     );
     if (existing) {
       categoryIdMap.set(category.id, existing.id);

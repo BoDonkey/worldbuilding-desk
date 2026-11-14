@@ -1,16 +1,14 @@
 import type {Character} from '../../entityTypes';
 import type {ConsistencyAlias} from '../storage';
+import {normalizeNameExact} from '../names/nameMatching';
 
 export interface CharacterMergeCandidate {
   character: Character;
   reasons: string[];
 }
 
-const normalizeName = (value: string): string =>
-  value.trim().toLowerCase().replace(/\s+/g, ' ');
-
 const tokenizeName = (value: string): string[] =>
-  normalizeName(value)
+  normalizeNameExact(value)
     .split(/\s+/)
     .map((token) => token.trim())
     .filter(Boolean);
@@ -29,7 +27,7 @@ const buildAliasMapByCharacterId = (
         [...current, alias.alias]
           .map((entry) => entry.trim())
           .filter(Boolean)
-          .map((entry) => [normalizeName(entry), entry])
+          .map((entry) => [normalizeNameExact(entry), entry])
       ).values()
     );
     map.set(alias.targetId, next);
@@ -117,9 +115,9 @@ export const buildCharacterMergeCandidatesById = (params: {
 
   return new Map(
     params.characters.map((character) => {
-      const normalizedCharacterName = normalizeName(character.name);
+      const normalizedCharacterName = normalizeNameExact(character.name);
       const characterAliases = (aliasMapByCharacterId.get(character.id) ?? [])
-        .map(normalizeName)
+        .map(normalizeNameExact)
         .filter(Boolean)
         .filter((alias) => alias !== normalizedCharacterName);
 
@@ -127,9 +125,9 @@ export const buildCharacterMergeCandidatesById = (params: {
         .filter((candidate) => candidate.id !== character.id)
         .map((candidate) => {
           const reasons = new Set<string>();
-          const normalizedCandidateName = normalizeName(candidate.name);
+          const normalizedCandidateName = normalizeNameExact(candidate.name);
           const candidateAliases = (aliasMapByCharacterId.get(candidate.id) ?? [])
-            .map(normalizeName)
+            .map(normalizeNameExact)
             .filter(Boolean)
             .filter((alias) => alias !== normalizedCandidateName);
 

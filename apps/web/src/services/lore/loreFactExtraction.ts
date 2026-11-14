@@ -6,6 +6,7 @@ import type {
   LoreDocumentLink,
   LoreFactProposal
 } from '../../entityTypes';
+import {normalizeNameExact} from '../names/nameMatching';
 
 interface ExtractionTarget {
   type: 'character' | 'entity';
@@ -53,9 +54,6 @@ const LABEL_TO_FACT_TYPE: Record<string, CanonicalFactType> = {
   'contrast with verdezian police': 'background'
 };
 
-const normalize = (value: string): string =>
-  value.trim().toLowerCase().replace(/\s+/g, ' ');
-
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -83,9 +81,9 @@ function resolvePrimaryTarget(
     if (target) return target;
   }
 
-  const normalizedTitle = normalize(document.title);
+  const normalizedTitle = normalizeNameExact(document.title);
   return (
-    knownTargets.find((entry) => normalize(entry.name) === normalizedTitle) ?? null
+    knownTargets.find((entry) => normalizeNameExact(entry.name) === normalizedTitle) ?? null
   );
 }
 
@@ -171,7 +169,7 @@ function extractInlineHeritage(text: string): string | null {
 }
 
 function isEducationSection(section: string): boolean {
-  return normalize(section) === 'education';
+  return normalizeNameExact(section) === 'education';
 }
 
 function isAgeRangeLabel(label: string): boolean {
@@ -183,9 +181,9 @@ function resolveMentionedTarget(
   knownTargets: ExtractionTarget[],
   fallback: ExtractionTarget | null
 ): ExtractionTarget | null {
-  const normalizedText = normalize(text);
+  const normalizedText = normalizeNameExact(text);
   const fullNameMatches = knownTargets.filter((entry) => {
-    const normalizedName = normalize(entry.name);
+    const normalizedName = normalizeNameExact(entry.name);
     return new RegExp(
       `(?:^|[^\\p{L}\\p{N}_'-])${escapeRegex(normalizedName)}(?=$|[^\\p{L}\\p{N}_'-])`,
       'iu'
@@ -195,7 +193,7 @@ function resolveMentionedTarget(
   if (fullNameMatches.length > 1) return fallback;
 
   const firstNameMatches = knownTargets.filter((entry) => {
-    const firstName = normalize(entry.name).split(' ')[0];
+    const firstName = normalizeNameExact(entry.name).split(' ')[0];
     return !!firstName && new RegExp(
       `(?:^|[^\\p{L}\\p{N}_'-])${escapeRegex(firstName)}(?=$|[^\\p{L}\\p{N}_'-])`,
       'iu'
@@ -213,10 +211,10 @@ function resolveLastMentionedTarget(
   text: string,
   knownTargets: ExtractionTarget[]
 ): ExtractionTarget | null {
-  const normalizedText = normalize(text);
+  const normalizedText = normalizeNameExact(text);
   const matches = knownTargets
     .map((entry) => {
-      const normalizedName = normalize(entry.name);
+      const normalizedName = normalizeNameExact(entry.name);
       const firstName = normalizedName.split(' ')[0] ?? '';
       const surfaces = Array.from(new Set([normalizedName, firstName].filter(Boolean)));
       const lastIndex = Math.max(
@@ -490,7 +488,7 @@ export function extractLoreFactProposals(
       const isWrappedProseLabel =
         !/^[•*-]\s*/.test(unescaped) && nextLine.length > 0 && /^[a-z]/.test(nextLine);
       if (isWrappedProseLabel) continue;
-      const label = normalize(labelMatch[1]);
+      const label = normalizeNameExact(labelMatch[1]);
       const value = labelMatch[2].trim();
       const factType =
         isEducationSection(currentSection) && isAgeRangeLabel(labelMatch[1])
@@ -613,11 +611,11 @@ export function extractLoreFactProposals(
     if (
       currentSection &&
       ['special traits', 'personality', 'skills', 'goals and motivations'].includes(
-        normalize(currentSection)
+        normalizeNameExact(currentSection)
       )
     ) {
       const sectionType =
-        normalize(currentSection) === 'goals and motivations' ? 'goal' : 'trait';
+        normalizeNameExact(currentSection) === 'goals and motivations' ? 'goal' : 'trait';
       pushProposal(proposals, dedupe, {
         projectId: params.projectId,
         documentId: params.document.id,

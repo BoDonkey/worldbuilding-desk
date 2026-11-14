@@ -33,9 +33,6 @@ export const buildWorldBibleEntityContent = (entity: WorldEntity): string => {
   return `${entity.name}\n${fieldText}`;
 };
 
-export const normalizeName = (value: string): string =>
-  value.trim().toLowerCase().replace(/\s+/g, ' ');
-
 export const parseAlternativeNames = (value: string): string[] =>
   Array.from(
     new Map(

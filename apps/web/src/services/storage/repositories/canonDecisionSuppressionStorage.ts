@@ -1,6 +1,7 @@
 import type {CanonDecisionSuppression} from '../../../entityTypes';
 import {CANON_DECISION_SUPPRESSION_STORE_NAME, openDb} from '../db';
 import {readProjectRecords} from '../projectIndex';
+import {normalizeNameExact} from '../../names/nameMatching';
 
 function emitCanonDecisionRecordsChanged(): void {
   if (typeof window === 'undefined') return;
@@ -11,8 +12,7 @@ export function buildEntityDecisionSuppressionKey(params: {
   proposalName: string;
   targetName: string;
 }): string {
-  const normalize = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
-  const pair = [normalize(params.proposalName), normalize(params.targetName)].sort();
+  const pair = [normalizeNameExact(params.proposalName), normalizeNameExact(params.targetName)].sort();
   return `entity:${pair.join('|')}`;
 }
 
@@ -23,14 +23,13 @@ export function buildFactDecisionSuppressionKey(params: {
   canonicalValue: string;
   proposalValue: string;
 }): string {
-  const normalize = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
   return [
     'fact',
     params.targetType,
     params.targetId,
     params.factType,
-    normalize(params.canonicalValue),
-    normalize(params.proposalValue)
+    normalizeNameExact(params.canonicalValue),
+    normalizeNameExact(params.proposalValue)
   ].join('|');
 }
 

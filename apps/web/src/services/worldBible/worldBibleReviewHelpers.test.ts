@@ -10,9 +10,9 @@ import {
 } from './worldBibleReviewHelpers';
 import {
   ALTERNATIVE_NAMES_KEY,
-  normalizeName,
   parseAlternativeNames
 } from './worldBibleEntityHelpers';
+import {normalizeNameExact} from '../names/nameMatching';
 
 const projectId = 'project-1';
 const categoryId = 'cat-1';
@@ -91,7 +91,7 @@ describe('worldBibleReviewHelpers', () => {
       },
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
       ignoredEntityMatchKeys: new Set(),
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames
     });
 
@@ -131,7 +131,7 @@ describe('worldBibleReviewHelpers', () => {
       fieldValues: {},
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
       ignoredEntityMatchKeys: new Set(),
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames
     });
 
@@ -159,7 +159,7 @@ describe('worldBibleReviewHelpers', () => {
       fieldValues: {},
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
       ignoredEntityMatchKeys: new Set(),
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames
     });
     const surnameMatches = buildPotentialEntityMatches({
@@ -170,7 +170,7 @@ describe('worldBibleReviewHelpers', () => {
       fieldValues: {},
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
       ignoredEntityMatchKeys: new Set(),
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames
     });
 
@@ -203,7 +203,7 @@ describe('worldBibleReviewHelpers', () => {
       fieldValues: {},
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
       ignoredEntityMatchKeys: new Set(),
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames
     });
 
@@ -275,7 +275,7 @@ describe('worldBibleReviewHelpers', () => {
       },
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
       ignoredEntityMatchKeys,
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames
     });
 
@@ -294,7 +294,7 @@ describe('worldBibleReviewHelpers', () => {
       aliasMapByEntityId,
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
       ignoredEntityMatchKeys,
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames
     });
 
@@ -344,7 +344,7 @@ describe('worldBibleReviewHelpers', () => {
       aliasMapByEntityId,
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
       ignoredEntityMatchKeys: new Set(),
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames
     });
 

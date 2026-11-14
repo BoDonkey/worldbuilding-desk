@@ -7,12 +7,10 @@ import type {
   LoreFactProposal,
   WorldEntity
 } from '../../entityTypes';
-
-const normalize = (value: string): string =>
-  value.trim().toLowerCase().replace(/\s+/g, ' ');
+import {normalizeNameExact} from '../names/nameMatching';
 
 const tokenize = (value: string): string[] =>
-  normalize(value)
+  normalizeNameExact(value)
     .split(/\s+/)
     .map((token) => token.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ''))
     .map((token) => (token.length > 4 && token.endsWith('s') ? token.slice(0, -1) : token))
@@ -91,7 +89,7 @@ export function buildCanonDecisionClusters(
         .map((candidate) => ({
           ...candidate,
           score:
-            normalize(candidate.name) === normalize(proposal.name)
+            normalizeNameExact(candidate.name) === normalizeNameExact(proposal.name)
               ? 1
               : similarity(candidate.name, proposal.name)
         }))
@@ -100,8 +98,8 @@ export function buildCanonDecisionClusters(
 
       if (!bestMatch) return;
       const entitySuppressionKey = [
-        normalize(proposal.name),
-        normalize(bestMatch.name)
+        normalizeNameExact(proposal.name),
+        normalizeNameExact(bestMatch.name)
       ]
         .sort()
         .join('|');
@@ -146,7 +144,7 @@ export function buildCanonDecisionClusters(
           fact.targetType === proposal.targetType &&
           fact.targetId === proposal.targetId &&
           fact.factType === proposal.factType &&
-          normalize(formatFactValue(fact.value)) !== normalize(formatFactValue(proposal.value))
+          normalizeNameExact(formatFactValue(fact.value)) !== normalizeNameExact(formatFactValue(proposal.value))
         ))
         .sort((left, right) => {
           if (Boolean(left.validUntilSceneId) !== Boolean(right.validUntilSceneId)) {
@@ -160,8 +158,8 @@ export function buildCanonDecisionClusters(
         proposal.targetType,
         proposal.targetId,
         proposal.factType,
-        normalize(formatFactValue(conflict.value)),
-        normalize(formatFactValue(proposal.value))
+        normalizeNameExact(formatFactValue(conflict.value)),
+        normalizeNameExact(formatFactValue(proposal.value))
       ].join('|');
       if (suppressionMap.has(factSuppressionKey)) {
         return;

@@ -4,6 +4,7 @@ import type {
   EntityCategory,
   WorldEntity
 } from '../../entityTypes';
+import {normalizeNameExact} from '../names/nameMatching';
 
 export type CharacterIdentityClassification =
   | 'already-linked'
@@ -68,9 +69,6 @@ const CHARACTER_CATEGORY_HINTS = new Set([
   'people'
 ]);
 
-export const normalizeCharacterIdentityName = (value: string): string =>
-  value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
-
 export function inferLegacyCategoryKind(
   category: Pick<EntityCategory, 'name' | 'slug'> & {kind?: EntityCategory['kind']}
 ): EntityCategory['kind'] {
@@ -93,7 +91,7 @@ export const isCharacterCategory = (
 function groupByNormalizedName<T extends {name: string}>(records: T[]): Map<string, T[]> {
   const groups = new Map<string, T[]>();
   records.forEach((record) => {
-    const key = normalizeCharacterIdentityName(record.name);
+    const key = normalizeNameExact(record.name);
     const current = groups.get(key) ?? [];
     current.push(record);
     groups.set(key, current);
@@ -143,7 +141,7 @@ export function classifyCharacterIdentities(params: {
     const explicitEntity = character.entityId
       ? entityById.get(character.entityId)
       : undefined;
-    const normalizedName = normalizeCharacterIdentityName(character.name);
+    const normalizedName = normalizeNameExact(character.name);
     const entityCandidates = entitiesByName.get(normalizedName) ?? [];
     const characterCandidates = charactersByName.get(normalizedName) ?? [];
     let classification: CharacterIdentityClassification;
@@ -198,7 +196,7 @@ export function classifyCharacterIdentities(params: {
     const extensionEntityId = sheet.characterId
       ? characterById.get(sheet.characterId)?.entityId
       : undefined;
-    const normalizedName = normalizeCharacterIdentityName(sheet.name);
+    const normalizedName = normalizeNameExact(sheet.name);
     const entityCandidates = entitiesByName.get(normalizedName) ?? [];
     const sheetCandidates = sheetsByName.get(normalizedName) ?? [];
     let classification: CharacterIdentityClassification;
@@ -252,7 +250,7 @@ export function classifyCharacterIdentities(params: {
   });
 
   characterEntities.forEach((entity) => {
-    const normalizedName = normalizeCharacterIdentityName(entity.name);
+    const normalizedName = normalizeNameExact(entity.name);
     const characterCandidates = charactersByName.get(normalizedName) ?? [];
     const sheetCandidates = sheetsByName.get(normalizedName) ?? [];
     const sameNameCount = characterCandidates.length + sheetCandidates.length;

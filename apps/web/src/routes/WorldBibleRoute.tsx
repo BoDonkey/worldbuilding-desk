@@ -43,7 +43,6 @@ import {
   ALTERNATIVE_NAMES_KEY,
   buildWorldBibleEntityContent,
   formatAlternativeNames,
-  normalizeName,
   parseAlternativeNames
 } from '../services/worldBible/worldBibleEntityHelpers';
 import {
@@ -61,6 +60,7 @@ import {
 import {useWorldBibleRecordResolution} from '../hooks/useWorldBibleRecordResolution';
 import {RouteFeedback} from '../components/common';
 import {useWorldCanvas} from '../hooks/useWorldCanvas';
+import {normalizeNameExact} from '../services/names/nameMatching';
 
 const LATEST_POSITION: CharacterVoicePosition = {kind: 'latest'};
 
@@ -247,7 +247,7 @@ function WorldBibleRoute() {
     selectedEntity,
     alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
     ignoredEntityMatchKeys,
-    normalizeName,
+    normalizeName: normalizeNameExact,
     parseAlternativeNames
   });
 
@@ -326,7 +326,7 @@ function WorldBibleRoute() {
     setCompendiumLinkedEntityIds,
     hasRuleset,
     seriesParentProjectId: seriesConfig?.parentProjectId ?? null,
-    normalizeName,
+    normalizeName: normalizeNameExact,
     parseAlternativeNames,
     formatAlternativeNames,
     buildEntityContent: buildWorldBibleEntityContent,

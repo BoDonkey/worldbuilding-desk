@@ -5,6 +5,7 @@ import {
   type ManuscriptCustodyEvent
 } from '../state/manuscriptCustody';
 import type {RAGSearchResult} from '../rag/types';
+import {normalizeNameLoose} from '../names/nameMatching';
 
 const STORAGE_QUESTION_PATTERN =
   /^where (?:is|are|was|were) (.+?) (?:kept|stored|held|secured)\??$/i;
@@ -26,7 +27,7 @@ const getSubjectPattern = (subject: string): string => {
 };
 
 const getLocationSpecificity = (location: string): number => {
-  const normalized = location.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const normalized = normalizeNameLoose(location);
   const hasNamedPossessor = /^[A-Z][A-Za-z'’-]*['’]s\b/.test(location);
   return normalized.length + (hasNamedPossessor ? 100 : 0);
 };

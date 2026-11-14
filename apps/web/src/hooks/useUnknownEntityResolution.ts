@@ -20,9 +20,9 @@ import {isCharacterCategory} from '../services/characters/characterIdentity';
 import {
   buildCloseUnknownLinkOptions,
   buildUnknownLinkOptions,
-  namesLikelyReferToSameCharacter,
-  normalizeRecordName
+  namesLikelyReferToSameCharacter
 } from '../services/consistency/reviewLinkOptions';
+import {normalizeNameExact} from '../services/names/nameMatching';
 import type {ConsistencyReviewItem, HighlightableReviewIssue} from '../services/consistency/reviewReadiness';
 import {
   canonicalizeUnknownSurface,
@@ -234,11 +234,11 @@ export function useUnknownEntityResolution({
         );
         let acceptedReviewAliases: string[] = [];
         if (explicitCharacterSelection) {
-          const normalizedCharacterName = normalizeRecordName(normalizedName);
+          const normalizedCharacterName = normalizeNameExact(normalizedName);
           const linkedCharacterEntity = entities.find(
             (entity) =>
               entity.categoryId === chosenCategory.id &&
-              normalizeRecordName(entity.name) === normalizedCharacterName
+              normalizeNameExact(entity.name) === normalizedCharacterName
           );
           const closeCharacterEntityMatch = findCloseCharacterEntityMatch({
             entities,

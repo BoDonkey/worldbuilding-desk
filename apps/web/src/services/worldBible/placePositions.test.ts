@@ -63,6 +63,21 @@ describe('place name matching', () => {
     expect(matchPlaceId('Archive', index)).toBe('archive');
   });
 
+  it('matches and queues place names outside basic Latin (review D5)', () => {
+    const nonLatin = buildPlaceNameIndex({
+      categories,
+      entities: [record('moscow', 'Москва'), record('athens', 'Αθήνα'), record('kyoto', '京都'), record('cafe', 'Café Noir')],
+      aliases: []
+    });
+    expect(matchPlaceId('москва', nonLatin)).toBe('moscow');
+    expect(matchPlaceId('ΑΘΉΝΑ', nonLatin)).toBe('athens');
+    expect(matchPlaceId('京都', nonLatin)).toBe('kyoto');
+    expect(matchPlaceId('the café-noir', nonLatin)).toBe('cafe');
+    // An unknown non-Latin name is offered for linking rather than skipped.
+    expect(findUnlinkedPlaceNames({events: [move('a', 'Новгород')], index: nonLatin})
+      .map((item) => item.name)).toEqual(['Новгород']);
+  });
+
   it('refuses ambiguous names, unknown names, and aliases of non-place records', () => {
     expect(matchPlaceId('North Gate', index)).toBeNull();
     expect(matchPlaceId('Old Mill', index)).toBeNull();
