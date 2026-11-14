@@ -41,8 +41,22 @@ export const FEATURE_SWITCH: Record<ConsultationFeature, AISwitch> = {
   'ai-action-replace': 'prose'
 };
 
-/** The provider connection test sends no story text, so no switch gates it. */
-export type AIRequestFeature = ConsultationFeature | 'connection-test';
+/**
+ * Tags a request may carry besides a consultation feature. Neither spends
+ * from the consultation budget.
+ *
+ * - `connection-test`: the provider connection test. It sends no story text,
+ *   so no switch gates it.
+ * - `local-review`: local AI review annotations (slice 3.41). They run on
+ *   scene save and review refresh, on this computer only, under coaching.
+ */
+export type AIRequestFeature = ConsultationFeature | 'connection-test' | 'local-review';
+
+/** The switch each tagged request needs, apart from the ungated connection test. */
+const REQUEST_SWITCH: Record<Exclude<AIRequestFeature, 'connection-test'>, AISwitch> = {
+  ...FEATURE_SWITCH,
+  'local-review': 'coaching'
+};
 
 export const AI_SWITCH_LABELS: Record<AISwitch, string> = {
   coaching: 'AI coaching',
@@ -71,7 +85,7 @@ export function aiSwitchRefusal(
 ): string | null {
   if (feature === 'connection-test') return null;
   if (!feature) return 'This AI request was not tagged with a feature, so it was not sent.';
-  const owner = FEATURE_SWITCH[feature];
+  const owner = REQUEST_SWITCH[feature];
   if (!owner) return 'This AI request was not tagged with a known feature, so it was not sent.';
   if (readAISwitches(settings)[owner]) return null;
   return `${AI_SWITCH_LABELS[owner]} is off for this project. Turn it on in Settings → AI Settings.`;
