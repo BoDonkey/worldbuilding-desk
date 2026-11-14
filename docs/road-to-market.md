@@ -373,7 +373,7 @@ messages).
 | 3.43 | Canon Decisions: actions out of the route (B1, D4, T5) | 3 | M | — |
 | 3.44 | Assistant turn planning out of the component (B2) | 3 | M | — (after 3.39) |
 | 3.45 | One way to create a World Bible record (D3, B4, P1, P2) | 3 | M | — |
-| 3.46 | One name matcher (D5) | 3 | S | — (before 4.79) |
+| 3.46 | One name matcher (D5) | 3 | S | WIP |
 | 3.47 | Shared model-run hook for AI features (B3) | 3 | M | — (after 3.43; relates to 4.82) |
 | 3.48 | Projects: backup import as its own hook and panel (S2) | 3 | M | — |
 | 3.49 | World Bible imports: split the two pipelines (S2) | 3 | M | — (after 3.45) |

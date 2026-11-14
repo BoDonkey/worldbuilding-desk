@@ -12,11 +12,11 @@ import type {
 } from '../../entityTypes';
 import {
   createCharacterLinkResolver,
-  isCharacterCategory,
-  normalizeCharacterIdentityName
+  isCharacterCategory
 } from '../characters/characterIdentity';
 import type {ConsistencyAlias} from '../storage';
 import {convertPlainTextToRichHtml} from '../worldBible/worldBibleEntityHelpers';
+import {normalizeNameExact} from '../names/nameMatching';
 
 export const CHARACTER_PROFILE_FACT_TYPES = [
   'alias',
@@ -262,7 +262,7 @@ export function findCharacterNameCollisions(params: {
   sheets: CharacterSheet[];
   aliases: ConsistencyAlias[];
 }): CharacterNameCollision[] {
-  const wanted = normalizeCharacterIdentityName(params.name);
+  const wanted = normalizeNameExact(params.name);
   if (!wanted) return [];
   const characterCategoryIds = new Set(
     params.categories.filter((category) => isCharacterCategory(category)).map((category) => category.id)
@@ -276,12 +276,12 @@ export function findCharacterNameCollisions(params: {
   const collisions = new Map<string, CharacterNameCollision>();
   params.entities.forEach((entity) => {
     if (!characterCategoryIds.has(entity.categoryId)) return;
-    if (normalizeCharacterIdentityName(entity.name) === wanted) {
+    if (normalizeNameExact(entity.name) === wanted) {
       collisions.set(entity.id, {entityId: entity.id, name: entity.name, via: 'name', matchedText: entity.name});
     }
   });
   params.aliases.forEach((alias) => {
-    if (normalizeCharacterIdentityName(alias.alias) !== wanted) return;
+    if (normalizeNameExact(alias.alias) !== wanted) return;
     const entityId =
       (alias.targetType ?? 'entity') === 'entity'
         ? resolver.getEntity(alias.targetId)?.id

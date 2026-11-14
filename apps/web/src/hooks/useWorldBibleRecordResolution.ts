@@ -17,7 +17,6 @@ import {
 import {
   ALTERNATIVE_NAMES_KEY,
   formatAlternativeNames,
-  normalizeName,
   parseAlternativeNames
 } from '../services/worldBible/worldBibleEntityHelpers';
 import {
@@ -25,6 +24,7 @@ import {
   type PotentialEntityMatch
 } from '../services/worldBible/worldBibleReviewHelpers';
 import {describeError} from '../services/errors';
+import {normalizeNameExact} from '../services/names/nameMatching';
 
 interface FeedbackState {
   tone: 'success' | 'error';
@@ -114,7 +114,7 @@ export function useWorldBibleRecordResolution({
   const isCanonicalRenameDraft = Boolean(
     selectedEntity &&
       name.trim().length > 0 &&
-      normalizeName(selectedEntity.name) !== normalizeName(name)
+      normalizeNameExact(selectedEntity.name) !== normalizeNameExact(name)
   );
 
   const suggestedCharacterAliases = useMemo(() => {
@@ -127,13 +127,13 @@ export function useWorldBibleRecordResolution({
     }
     const existingAliases = new Set(
       parseAlternativeNames(fieldValues[ALTERNATIVE_NAMES_KEY] || '')
-        .map((alias) => normalizeName(alias))
+        .map((alias) => normalizeNameExact(alias))
         .filter(Boolean)
     );
     return deriveCharacterAliasSuggestions(currentName).filter(
       (alias) =>
-        normalizeName(alias) !== normalizeName(currentName) &&
-        !existingAliases.has(normalizeName(alias))
+        normalizeNameExact(alias) !== normalizeNameExact(currentName) &&
+        !existingAliases.has(normalizeNameExact(alias))
     );
   }, [activeCategoryIsCharacterLike, fieldValues, name]);
 
@@ -205,7 +205,7 @@ export function useWorldBibleRecordResolution({
           ]
             .filter(Boolean)
             .join(', ')
-        ).filter((candidate) => normalizeName(candidate) !== normalizeName(nextName))
+        ).filter((candidate) => normalizeNameExact(candidate) !== normalizeNameExact(nextName))
       );
       setName(nextName);
       setFieldValues((current) => ({

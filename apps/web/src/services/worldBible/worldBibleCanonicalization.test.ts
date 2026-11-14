@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {WorldEntity} from '../../entityTypes';
-import {ALTERNATIVE_NAMES_KEY, normalizeName, parseAlternativeNames} from './worldBibleEntityHelpers';
+import {ALTERNATIVE_NAMES_KEY, parseAlternativeNames} from './worldBibleEntityHelpers';
 import {
   buildCanonicalAliasList,
   buildCharacterCaptureAliasList,
@@ -10,6 +10,7 @@ import {
   getAliasConversionPlan,
   mergeEntityFields
 } from './worldBibleCanonicalization';
+import {normalizeNameExact} from '../names/nameMatching';
 
 const makeEntity = (overrides: Partial<WorldEntity>): WorldEntity => ({
   id: overrides.id ?? crypto.randomUUID(),
@@ -150,7 +151,7 @@ describe('worldBibleCanonicalization', () => {
       sourceIndexedAliases: ['The Scout'],
       targetIndexedAliases: ['Bladeborn'],
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames,
       aliasesReviewedAt: 42
     });
@@ -185,7 +186,7 @@ describe('worldBibleCanonicalization', () => {
       sourceIndexedAliases: ['The Scout'],
       targetIndexedAliases: ['Bladeborn'],
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames
     });
 
@@ -215,7 +216,7 @@ describe('worldBibleCanonicalization', () => {
       sourceIndexedAliases: [],
       targetIndexedAliases: [],
       alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
-      normalizeName,
+      normalizeName: normalizeNameExact,
       parseAlternativeNames
     });
 

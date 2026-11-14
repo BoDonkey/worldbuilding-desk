@@ -3,6 +3,7 @@ import type {ConsistencyAlias} from '../storage';
 import type {GuardrailIssue, KnownEntityRef} from './types';
 import type {ConsistencyReviewItem} from './reviewReadiness';
 import {createCharacterLinkResolver, isCharacterCategory} from '../characters/characterIdentity';
+import {normalizeNameExact} from '../names/nameMatching';
 
 export interface LinkTargetOption {
   id: string;
@@ -11,15 +12,12 @@ export interface LinkTargetOption {
   label: string;
 }
 
-export const normalizeRecordName = (value: string): string =>
-  value.trim().toLowerCase().replace(/\s+/g, ' ');
-
 const isLikelyShortFormOfRecord = (
   shortName: string,
   fullName: string
 ): boolean => {
-  const normalizedShort = normalizeRecordName(shortName);
-  const normalizedFull = normalizeRecordName(fullName);
+  const normalizedShort = normalizeNameExact(shortName);
+  const normalizedFull = normalizeNameExact(fullName);
   if (!normalizedShort || !normalizedFull || normalizedShort === normalizedFull) {
     return false;
   }
@@ -33,8 +31,8 @@ export const namesLikelyReferToSameCharacter = (
   left: string,
   right: string
 ): boolean => {
-  const normalizedLeft = normalizeRecordName(left);
-  const normalizedRight = normalizeRecordName(right);
+  const normalizedLeft = normalizeNameExact(left);
+  const normalizedRight = normalizeNameExact(right);
   return (
     normalizedLeft === normalizedRight ||
     isLikelyShortFormOfRecord(normalizedLeft, normalizedRight) ||
@@ -201,9 +199,9 @@ export function buildCloseUnknownLinkOptions(params: {
     if (!surface) return;
     const normalizedSurface = surface.toLowerCase();
     optionMap[surface] = (params.unknownLinkOptions[surface] ?? []).filter((record) => {
-      const normalizedName = normalizeRecordName(record.name);
+      const normalizedName = normalizeNameExact(record.name);
       return (
-        normalizedName === normalizeRecordName(normalizedSurface) ||
+        normalizedName === normalizeNameExact(normalizedSurface) ||
         normalizedName.includes(normalizedSurface) ||
         normalizedSurface.includes(normalizedName) ||
         isLikelyShortFormOfRecord(normalizedSurface, normalizedName) ||

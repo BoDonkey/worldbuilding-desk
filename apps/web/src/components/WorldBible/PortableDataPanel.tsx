@@ -32,6 +32,7 @@ import type {RAGProvider} from '../../services/rag/RAGService';
 import type {ShodhMemoryProvider} from '../../services/shodh/ShodhMemoryService';
 import shared from './worldBibleShared.module.css';
 import styles from './WorldBibleImportDrafts.module.css';
+import {normalizeNameExact} from '../../services/names/nameMatching';
 
 type WikiLinkAction = 'ignore' | 'link' | 'alias';
 
@@ -55,16 +56,14 @@ interface PortableDataPanelProps {
   onFeedback: (feedback: {tone: 'success' | 'error'; message: string}) => void;
 }
 
-const normalizeName = (value: string): string => value.trim().toLowerCase();
-
 const findCategoryId = (
   draft: PortableMarkdownDraft,
   categories: EntityCategory[]
 ): string => {
   const category = categories.find(
     (candidate) =>
-      normalizeName(candidate.slug) === normalizeName(draft.frontmatter.categorySlug ?? '') ||
-      normalizeName(candidate.name) === normalizeName(draft.frontmatter.category ?? '')
+      normalizeNameExact(candidate.slug) === normalizeNameExact(draft.frontmatter.categorySlug ?? '') ||
+      normalizeNameExact(candidate.name) === normalizeNameExact(draft.frontmatter.category ?? '')
   );
   return category?.id ?? categories[0]?.id ?? '';
 };
@@ -74,11 +73,11 @@ const matchEntity = (
   entities: WorldEntity[],
   aliases: ConsistencyAlias[]
 ): WorldEntity | null => {
-  const key = normalizeName(name);
-  const direct = entities.find((entity) => normalizeName(entity.name) === key);
+  const key = normalizeNameExact(name);
+  const direct = entities.find((entity) => normalizeNameExact(entity.name) === key);
   if (direct) return direct;
   const alias = aliases.find(
-    (candidate) => candidate.targetType === 'entity' && normalizeName(candidate.alias) === key
+    (candidate) => candidate.targetType === 'entity' && normalizeNameExact(candidate.alias) === key
   );
   return alias ? entities.find((entity) => entity.id === alias.targetId) ?? null : null;
 };

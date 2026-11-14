@@ -3,6 +3,7 @@ import { CONSISTENCY_ALIAS_STORE_NAME, openDb } from '../db';
 import {readProjectRecords} from '../projectIndex';
 import {createCharacterLinkResolver, isCharacterCategory} from '../../characters/characterIdentity';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
+import {normalizeNameExact} from '../../names/nameMatching';
 
 export interface ConsistencyAlias {
   id: string;
@@ -14,8 +15,6 @@ export interface ConsistencyAlias {
   createdAt: number;
   updatedAt: number;
 }
-
-const normalizeAlias = (value: string): string => value.trim().toLowerCase();
 
 export function resolveCharacterAliasEntityMigrations(params: {
   aliases: ConsistencyAlias[];
@@ -43,7 +42,7 @@ export function resolveCharacterAliasEntityMigrations(params: {
   const normalizedEntityAliasKeys = new Set(
     params.aliases
       .filter((alias) => alias.targetType === 'entity')
-      .map((alias) => `${alias.targetId}:${normalizeAlias(alias.alias)}`)
+      .map((alias) => `${alias.targetId}:${normalizeNameExact(alias.alias)}`)
   );
 
   return params.aliases.flatMap(
@@ -60,7 +59,7 @@ export function resolveCharacterAliasEntityMigrations(params: {
       if (!targetEntity) {
         return [];
       }
-      const duplicateKey = `${targetEntity.id}:${normalizeAlias(alias.alias)}`;
+      const duplicateKey = `${targetEntity.id}:${normalizeNameExact(alias.alias)}`;
       if (normalizedEntityAliasKeys.has(duplicateKey)) {
         return [{from: alias, to: null}];
       }
@@ -162,8 +161,8 @@ export function planAliasSave(
   input: Omit<ConsistencyAlias, 'id' | 'createdAt' | 'updatedAt' | 'entityId'>,
   now: number = Date.now()
 ): ConsistencyAlias {
-  const normalized = normalizeAlias(input.alias);
-  const duplicate = existing.find((alias) => normalizeAlias(alias.alias) === normalized);
+  const normalized = normalizeNameExact(input.alias);
+  const duplicate = existing.find((alias) => normalizeNameExact(alias.alias) === normalized);
   return duplicate
     ? {
         ...duplicate,
@@ -233,7 +232,7 @@ export async function replaceAliasesForTarget(input: {
       input.aliases
         .map((alias) => alias.trim())
         .filter(Boolean)
-        .map((alias) => [normalizeAlias(alias), alias])
+        .map((alias) => [normalizeNameExact(alias), alias])
     ).values()
   );
   const now = Date.now();
@@ -246,9 +245,9 @@ export async function replaceAliasesForTarget(input: {
     const keptNormalizedAliases = new Set<string>();
 
     existing.forEach((aliasRecord) => {
-      const normalized = normalizeAlias(aliasRecord.alias);
+      const normalized = normalizeNameExact(aliasRecord.alias);
       const shouldBelongToEntity = desiredAliases.some(
-        (alias) => normalizeAlias(alias) === normalized
+        (alias) => normalizeNameExact(alias) === normalized
       );
 
       if (shouldBelongToEntity) {
@@ -278,14 +277,14 @@ export async function replaceAliasesForTarget(input: {
     });
 
     desiredAliases.forEach((alias) => {
-      const normalized = normalizeAlias(alias);
+      const normalized = normalizeNameExact(alias);
       const existingRecord = kept.find(
-        (entry) => normalizeAlias(entry.alias) === normalized
+        (entry) => normalizeNameExact(entry.alias) === normalized
       );
       if (existingRecord) return;
 
       const duplicate = existing.find(
-        (entry) => normalizeAlias(entry.alias) === normalized
+        (entry) => normalizeNameExact(entry.alias) === normalized
       );
       const nextRecord: ConsistencyAlias = duplicate
         ? {

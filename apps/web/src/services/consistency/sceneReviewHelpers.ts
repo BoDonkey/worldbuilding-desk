@@ -1,7 +1,8 @@
 import type {WorldEntity, WritingDocument} from '../../entityTypes';
 import type {GuardrailIssue} from './types';
 import {normalizeCanonText} from './textMatcher';
-import {namesLikelyReferToSameCharacter, normalizeRecordName} from './reviewLinkOptions';
+import {namesLikelyReferToSameCharacter} from './reviewLinkOptions';
+import {normalizeNameExact} from '../names/nameMatching';
 
 /** Pure helpers shared by the Workspace review hooks. */
 
@@ -55,15 +56,15 @@ export function findCloseCharacterEntityMatch(params: {
     .filter((candidate) => {
       if (
         candidate.categoryId !== categoryId ||
-        normalizeRecordName(candidate.name) === normalizedCharacterName
+        normalizeNameExact(candidate.name) === normalizedCharacterName
       ) {
         return false;
       }
-      return isCloseCharacterName(normalizeRecordName(candidate.name), normalizedCharacterName);
+      return isCloseCharacterName(normalizeNameExact(candidate.name), normalizedCharacterName);
     })
     .sort((left, right) => {
-      const leftClose = isCloseCharacterName(normalizeRecordName(left.name), normalizedCharacterName) ? 0 : 1;
-      const rightClose = isCloseCharacterName(normalizeRecordName(right.name), normalizedCharacterName) ? 0 : 1;
+      const leftClose = isCloseCharacterName(normalizeNameExact(left.name), normalizedCharacterName) ? 0 : 1;
+      const rightClose = isCloseCharacterName(normalizeNameExact(right.name), normalizedCharacterName) ? 0 : 1;
       if (leftClose !== rightClose) {
         return leftClose - rightClose;
       }

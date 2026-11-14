@@ -1,4 +1,5 @@
 import type {WritingDocument} from '../../entityTypes';
+import {normalizeNameLoose} from '../names/nameMatching';
 
 export const manuscriptPlainText = (value: string): string =>
   value
@@ -17,9 +18,6 @@ export const manuscriptPlainText = (value: string): string =>
 const STORAGE_CONTAINER =
   "(?:(?:[A-Z][A-Za-z'’-]*['’]s|my|his|her|their)\\s+)?(?:deep\\s+)?(?:vault|cabinet|safe|armory|archive|locker|storehouse)";
 
-export const normalizeCustodyText = (value: string): string =>
-  value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -31,12 +29,12 @@ const getSubjectPattern = (subject: string): string => {
 };
 
 export const getStorageBase = (location: string): string =>
-  normalizeCustodyText(location)
+  normalizeNameLoose(location)
     .replace(/^(?:my|his|her|their)\s+/, '')
-    .replace(/^[a-z0-9]+ s\s+/, '');
+    .replace(/^[\p{L}\p{M}\p{N}]+ s\s+/u, '');
 
 const getLocationSpecificity = (location: string): number => {
-  const normalized = normalizeCustodyText(location);
+  const normalized = normalizeNameLoose(location);
   const hasNamedPossessor = /^[A-Z][A-Za-z'’-]*['’]s\b/.test(location);
   return normalized.length + (hasNamedPossessor ? 100 : 0);
 };
@@ -198,7 +196,7 @@ export const analyzeManuscriptCustody = (
     new Map(
       laterCustody
         .filter((event) => Boolean(event.holder))
-        .map((event) => [normalizeCustodyText(event.holder ?? ''), event.holder ?? ''])
+        .map((event) => [normalizeNameLoose(event.holder ?? ''), event.holder ?? ''])
     ).values()
   ).filter(Boolean);
 

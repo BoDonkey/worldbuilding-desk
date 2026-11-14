@@ -1,6 +1,7 @@
 import type {EntityCategory, EntityFields, WorldEntity} from '../../entityTypes';
 import {getCategoriesByProject, saveCategory, getEntitiesByProject, saveEntity} from '../storage';
-import {isCharacterCategory, normalizeCharacterIdentityName} from './characterIdentity';
+import {isCharacterCategory} from './characterIdentity';
+import {normalizeNameExact} from '../names/nameMatching';
 
 const DEFAULT_CHARACTER_FIELD_SCHEMA: EntityCategory['fieldSchema'] = [
   {key: 'description', label: 'Description', type: 'textarea'},
@@ -50,11 +51,11 @@ export function planCharacterCanonIntake(params: {
     };
   }
 
-  const normalizedName = normalizeCharacterIdentityName(name);
+  const normalizedName = normalizeNameExact(name);
   const exactMatches = params.entities.filter(
     (entity) =>
       characterCategoryIds.has(entity.categoryId) &&
-      normalizeCharacterIdentityName(entity.name) === normalizedName
+      normalizeNameExact(entity.name) === normalizedName
   );
   if (exactMatches.length > 1) {
     throw new Error(

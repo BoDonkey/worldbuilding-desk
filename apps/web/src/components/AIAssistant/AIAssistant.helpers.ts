@@ -1,5 +1,6 @@
 import type {RAGSearchResult} from '../../services/rag/types';
 import {isEvidenceGatedFactualQuestion} from '../../services/assistant/factualQuestionBoundary';
+import {normalizeNameLoose} from '../../services/names/nameMatching';
 
 export type AIAssistantContextType =
   | 'document'
@@ -14,9 +15,6 @@ const EYE_COLOR_PATTERN =
   /\b(gray|grey|blue|brown|green|hazel|amber|black|violet|red|golden?|silver|white)(?:[- ](gray|grey|blue|brown|green|hazel|amber|black|violet|red|golden?|silver|white))?\s+eyes\b/i;
 const EXPLICIT_EYE_COLOR_PATTERN =
   /\b(?:eye[_ ]?color|eyes)\s*:\s*(gray|grey|blue|brown|green|hazel|amber|black|violet|red|golden?|silver|white)(?:[- ](gray|grey|blue|brown|green|hazel|amber|black|violet|red|golden?|silver|white))?\b/i;
-
-const normalizeFactName = (value: string): string =>
-  value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 type SavedFactIntent =
   | {kind: 'eye-color'; subject: string}
@@ -92,7 +90,7 @@ const parseCanonFact = (result: RAGSearchResult): ParsedCanonFact | null => {
   return {
     result,
     target,
-    factType: normalizeFactName(remainder.slice(0, separatorIndex)),
+    factType: normalizeNameLoose(remainder.slice(0, separatorIndex)),
     value: validityMatch?.[1]?.trim() ?? rawValue,
     validity: validityMatch?.[2]?.trim()
   };
@@ -102,8 +100,8 @@ const stateValidity = (content: string, fact: ParsedCanonFact): string =>
   fact.validity ? `${content} This fact applies ${fact.validity}.` : content;
 
 const factMatchesSubject = (fact: ParsedCanonFact, subject: string): boolean => {
-  const normalizedSubject = normalizeFactName(subject);
-  const normalizedTarget = normalizeFactName(fact.target);
+  const normalizedSubject = normalizeNameLoose(subject);
+  const normalizedTarget = normalizeNameLoose(fact.target);
   return (
     normalizedTarget === normalizedSubject ||
     normalizedTarget.startsWith(`${normalizedSubject} `)
@@ -113,7 +111,7 @@ const factMatchesSubject = (fact: ParsedCanonFact, subject: string): boolean => 
 const resolveSingleAcceptedFact = (
   facts: ParsedCanonFact[]
 ): ParsedCanonFact | null => {
-  const values = new Set(facts.map((fact) => normalizeFactName(fact.value)));
+  const values = new Set(facts.map((fact) => normalizeNameLoose(fact.value)));
   return values.size === 1 ? facts[0] ?? null : null;
 };
 
@@ -134,7 +132,7 @@ export const getDirectSavedFactAnswer = (
   if (!intent) return null;
 
   const subject = intent.subject;
-  const normalizedSubject = normalizeFactName(subject);
+  const normalizedSubject = normalizeNameLoose(subject);
   const canonFacts = results
     .map(parseCanonFact)
     .filter((fact): fact is ParsedCanonFact => Boolean(fact));
@@ -142,7 +140,7 @@ export const getDirectSavedFactAnswer = (
     if (intent.kind === 'treatment') {
       return (
         fact.factType === 'background' &&
-        normalizeFactName(fact.value).includes(normalizeFactName(subject)) &&
+        normalizeNameLoose(fact.value).includes(normalizeNameLoose(subject)) &&
         /\btreatment\s*:/i.test(fact.value)
       );
     }
@@ -236,7 +234,7 @@ export const getDirectSavedFactAnswer = (
     ) {
       return false;
     }
-    const normalizedTitle = normalizeFactName(result.chunk.documentTitle);
+    const normalizedTitle = normalizeNameLoose(result.chunk.documentTitle);
     return (
       normalizedTitle === normalizedSubject ||
       normalizedTitle.startsWith(`${normalizedSubject} `)

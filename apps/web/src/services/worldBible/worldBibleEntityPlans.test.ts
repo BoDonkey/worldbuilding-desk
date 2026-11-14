@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {EntityCategory, WorldEntity} from '../../entityTypes';
 import type {ReviewQueueItem} from '../consistency';
-import {formatAlternativeNames, normalizeName, parseAlternativeNames} from './worldBibleEntityHelpers';
+import {formatAlternativeNames, parseAlternativeNames} from './worldBibleEntityHelpers';
 import {
   getCategorySlug,
   inferCompendiumDomain,
@@ -11,6 +11,7 @@ import {
   planEntityDraft,
   type EntityDraftInput
 } from './worldBibleEntityPlans';
+import {normalizeNameExact} from '../names/nameMatching';
 
 const category = (id: string, slug: string, name = slug, fieldSchema: EntityCategory['fieldSchema'] = []): EntityCategory =>
   ({id, projectId: 'p', slug, name, fieldSchema, createdAt: 1}) as EntityCategory;
@@ -82,7 +83,7 @@ describe('planEntityDraft', () => {
     indexedAliases: [],
     reviewingFromQueue: false,
     alternativeNamesKey: KEY,
-    normalizeName,
+    normalizeName: normalizeNameExact,
     parseAlternativeNames,
     formatAlternativeNames,
     ...overrides
