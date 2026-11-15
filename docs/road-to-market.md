@@ -337,7 +337,7 @@ messages).
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
 | 4.79 | Maps and placements (data, distance) | 4 | L | Done `2049ede` |
 | 4.80 | Map surface: image import, pins, scene view, export | 4 | L | Done `b58810f` |
-| 4.81 | Grid and hex maps | 4 | M | — (after 4.80) |
+| 4.81 | Grid and hex maps | 4 | M | Done `d08c897` |
 | 5.1 | Auto-update decision + implementation | 5 | M | Done `c1c4f33` + `7357671` + `4efa1d1` + `a56e5dd` |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | In progress (author-approved exception to the Phase 5 gate, 2026-10-31) — data folder moved to `SagaSpine` with a one-time migration and packaged test; builds stay unsigned through the beta by author decision; signing (macOS first) before paid launch |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | Done `9d748f4` + `613a8e3` + `88eb908` + `5ad6a77` |

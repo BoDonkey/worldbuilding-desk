@@ -190,4 +190,37 @@ describe('Maps, placements, and distance', () => {
       cy.get('ul[aria-label="Distance to Ford"]').should('contain.text', '4 miles — authored on the road');
     });
   });
+
+  it('counts hexes on a grid map (4.81)', () => {
+    mapsPanel().contains('button', 'New map').click();
+    cy.get('form[aria-label="New map"]').within(() => {
+      cy.contains('label', 'Name').find('input').type('Marches');
+      cy.contains('label', 'Grid').find('select').select('Hexes');
+      cy.contains('label', 'Distance unit').should('not.exist');
+      cy.contains('label', "from one cell's centre to the next").find('input').type('10');
+      cy.contains('label', 'Hex top').find('select').should('have.value', 'pointy');
+      cy.contains('button', 'Save map').click();
+    });
+    cy.contains('Saved Marches.').should('be.visible');
+    mapsPanel().contains('li', 'Marches').should('contain.text', 'Hex grid, 10 map units per cell');
+
+    openLocation('Ford');
+    putOnMap('Marches', '1', '1');
+    cy.contains('button', 'Save Changes').click();
+    cy.contains('[role="status"]', 'Entry updated.').should('be.visible');
+
+    openLocation('Varn');
+    putOnMap('Marches', '61', '1');
+    cy.get('section[aria-label="Place"]').within(() => {
+      cy.contains('label', 'Distance to').find('select').select('Ford');
+      cy.get('ul[aria-label="Distance to Ford"]').should('contain.text', '6 hexes — counted on the Marches grid');
+    });
+
+    readStore<{name: string; distanceUnit: string; grid?: {kind: string; cellSize: number}}>('maps').then((maps) => {
+      const marches = maps.find((map) => map.name === 'Marches');
+      expect(marches?.distanceUnit).to.eq('hexes');
+      expect(marches?.grid).to.deep.include({kind: 'hex', cellSize: 10});
+    });
+  });
 });
+

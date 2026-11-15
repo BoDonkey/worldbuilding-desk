@@ -87,3 +87,14 @@ describe('units', () => {
     ])).toEqual([{from: 'miles', to: 'leagues', factor: 0.25}]);
   });
 });
+
+describe('grid maps (4.81)', () => {
+  it('counts a grid map in its cells and refuses a bad cell size', () => {
+    const input = {name: 'Dungeon', distanceUnit: 'feet', scale: 5};
+    const saved = normalizeMapInput({input: {...input, grid: {kind: 'hex', cellSize: 40}}, projectId: 'p', maps, now: 5});
+    expect(saved).toMatchObject({map: {distanceUnit: 'hexes', scale: 1 / 40, grid: {kind: 'hex', cellSize: 40, hexOrientation: 'pointy'}}});
+    expect(normalizeMapInput({input: {...input, grid: {kind: 'square', cellSize: -1}}, projectId: 'p', maps, now: 5}))
+      .toMatchObject({error: expect.stringMatching(/cell size/)});
+    expect(normalizeMapInput({input, projectId: 'p', maps, now: 5})).not.toHaveProperty('map.grid');
+  });
+});

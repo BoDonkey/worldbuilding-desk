@@ -79,7 +79,8 @@ Procedure:
    **Distance to** gives the same figure and source as in the original.
    Map surface (slice 4.80): before exporting, **Open** the region map,
    import an image, and pin a place on it; in the copy confirm the image
-   shows with the pin in the same spot.
+   shows with the pin in the same spot. Give the city map a hex grid (slice
+   4.81) and confirm the copy keeps it and **Distance to** still counts hexes.
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated

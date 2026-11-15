@@ -2,6 +2,7 @@ import {useMemo, useState} from 'react';
 import type {
   CharacterSheet,
   EntityCategory,
+  MapGrid,
   StateMutationEvent,
   UnitConversion,
   WorldEntity,
@@ -37,9 +38,17 @@ interface MapForm {
   parentMapId: string;
   parentX: string;
   parentY: string;
+  grid: '' | MapGrid['kind'];
+  cellSize: string;
+  hexOrientation: 'pointy' | 'flat';
+  gridX: string;
+  gridY: string;
 }
 
-const EMPTY_FORM: MapForm = {name: '', distanceUnit: 'miles', scale: '1', parentMapId: '', parentX: '', parentY: ''};
+const EMPTY_FORM: MapForm = {
+  name: '', distanceUnit: 'miles', scale: '1', parentMapId: '', parentX: '', parentY: '',
+  grid: '', cellSize: '', hexOrientation: 'pointy', gridX: '0', gridY: '0'
+};
 const UNIT_SUGGESTIONS = ['miles', 'kilometres', 'leagues', 'feet', 'metres', 'squares', 'hexes'];
 
 const formFor = (map: WorldMap): MapForm => ({
@@ -49,7 +58,12 @@ const formFor = (map: WorldMap): MapForm => ({
   scale: String(map.scale),
   parentMapId: map.parentPlacement?.mapId ?? '',
   parentX: map.parentPlacement ? String(map.parentPlacement.x) : '',
-  parentY: map.parentPlacement ? String(map.parentPlacement.y) : ''
+  parentY: map.parentPlacement ? String(map.parentPlacement.y) : '',
+  grid: map.grid?.kind ?? '',
+  cellSize: map.grid ? String(map.grid.cellSize) : '',
+  hexOrientation: map.grid?.hexOrientation ?? 'pointy',
+  gridX: String(map.grid?.originX ?? 0),
+  gridY: String(map.grid?.originY ?? 0)
 });
 
 const numberOrNaN = (value: string): number => (value.trim() === '' ? Number.NaN : Number(value));
@@ -99,6 +113,15 @@ export function MapsPanel(props: MapsPanelProps) {
         scale: numberOrNaN(form.scale),
         parentPlacement: form.parentMapId
           ? {mapId: form.parentMapId, x: numberOrNaN(form.parentX), y: numberOrNaN(form.parentY)}
+          : undefined,
+        grid: form.grid
+          ? {
+              kind: form.grid,
+              cellSize: numberOrNaN(form.cellSize),
+              hexOrientation: form.hexOrientation,
+              originX: numberOrNaN(form.gridX),
+              originY: numberOrNaN(form.gridY)
+            }
           : undefined
       });
       if (problem) {
@@ -193,13 +216,55 @@ export function MapsPanel(props: MapsPanelProps) {
             <input value={form.name} onChange={(event) => update({name: event.target.value})} />
           </label>
           <label className={styles.field}>
-            Distance unit
-            <input list='map-unit-suggestions' value={form.distanceUnit} onChange={(event) => update({distanceUnit: event.target.value})} />
+            Grid
+            <select value={form.grid} onChange={(event) => update({grid: event.target.value as MapForm['grid']})}>
+              <option value=''>No grid</option>
+              <option value='square'>Squares</option>
+              <option value='hex'>Hexes</option>
+            </select>
           </label>
-          <label className={styles.field}>
-            One map unit is this many {form.distanceUnit.trim() || 'units'}
-            <input type='number' min={0} step='any' value={form.scale} onChange={(event) => update({scale: event.target.value})} />
-          </label>
+          {form.grid ? (
+            <div className={styles.gridFields} role='group' aria-label='Grid'>
+              <p className={styles.empty}>
+                Distances on this map are counted in {form.grid === 'square' ? 'squares; a diagonal step counts as one' : 'hexes'}.
+                Map units are image pixels on a map with an image.
+              </p>
+              <label className={styles.field}>
+                Map units from one cell's centre to the next
+                <input type='number' min={0} step='any' value={form.cellSize} onChange={(event) => update({cellSize: event.target.value})} />
+              </label>
+              {form.grid === 'hex' && (
+                <label className={styles.field}>
+                  Hex top
+                  <select value={form.hexOrientation} onChange={(event) => update({hexOrientation: event.target.value as MapForm['hexOrientation']})}>
+                    <option value='pointy'>Pointed</option>
+                    <option value='flat'>Flat</option>
+                  </select>
+                </label>
+              )}
+              <div className={styles.pointRow}>
+                <label className={styles.field}>
+                  Grid starts at X
+                  <input type='number' step='any' value={form.gridX} onChange={(event) => update({gridX: event.target.value})} />
+                </label>
+                <label className={styles.field}>
+                  Grid starts at Y
+                  <input type='number' step='any' value={form.gridY} onChange={(event) => update({gridY: event.target.value})} />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <>
+              <label className={styles.field}>
+                Distance unit
+                <input list='map-unit-suggestions' value={form.distanceUnit} onChange={(event) => update({distanceUnit: event.target.value})} />
+              </label>
+              <label className={styles.field}>
+                One map unit is this many {form.distanceUnit.trim() || 'units'}
+                <input type='number' min={0} step='any' value={form.scale} onChange={(event) => update({scale: event.target.value})} />
+              </label>
+            </>
+          )}
           <label className={styles.field}>
             Sits on
             <select value={form.parentMapId} onChange={(event) => update({parentMapId: event.target.value})}>
@@ -238,7 +303,9 @@ export function MapsPanel(props: MapsPanelProps) {
                 <div>
                   <strong>{map.name}</strong>
                   <small>
-                    1 map unit = {map.scale} {map.distanceUnit}
+                    {map.grid
+                      ? `${map.grid.kind === 'square' ? 'Square' : 'Hex'} grid, ${map.grid.cellSize} map units per cell`
+                      : `1 map unit = ${map.scale} ${map.distanceUnit}`}
                     {parents.length > 0 && map.parentPlacement
                       ? ` · on ${parents[0].name} at (${map.parentPlacement.x}, ${map.parentPlacement.y})`
                       : ''}

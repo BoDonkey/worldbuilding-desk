@@ -529,8 +529,25 @@ export interface WorldMap {
   scale: number;
   /** Where this whole map sits, as one point, on a larger map. */
   parentPlacement?: PlacePlacement;
+  /** Squares or hexes (slice 4.81): distance on this map is counted in cells. */
+  grid?: MapGrid;
   createdAt: number;
   updatedAt: number;
+}
+
+/**
+ * A square or hex grid over a map (slice 4.81, places brief § 4). It changes
+ * how distance is measured on that map, never where places are.
+ */
+export interface MapGrid {
+  kind: 'square' | 'hex';
+  /** Map units between the centres of two neighbouring cells. */
+  cellSize: number;
+  /** Hexes only: a point or a flat side at the top. */
+  hexOrientation?: 'pointy' | 'flat';
+  /** Where the grid is anchored, in map units: a square's corner or a hex's centre. */
+  originX?: number;
+  originY?: number;
 }
 
 /**

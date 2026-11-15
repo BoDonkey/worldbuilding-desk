@@ -1,10 +1,11 @@
 import type {WorldMap} from '../../entityTypes';
+import {gridTile} from './mapGrid';
 import {exportScale, type MapOccupant, type MapPathPoint, type MapPin} from './mapSurface';
 
 /*
  * The pinned map as a PNG (slice 4.80): the author's image with each pin, its
  * name, and who is there at the chosen scene, plus a character's path when
- * one is shown. Colours come from the current theme tokens, so the export
+ * one is shown and the map's grid when it has one (4.81). Colours come from the current theme tokens, so the export
  * looks like the screen.
  */
 
@@ -18,6 +19,39 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
     image.onerror = () => reject(new Error('Unable to read the map image.'));
     image.src = src;
   });
+
+/** Most grid tiles drawn on an export; a finer grid is left off rather than stall the export. */
+const MAX_GRID_TILES = 100_000;
+
+const drawGrid = (context: CanvasRenderingContext2D, map: WorldMap, scale: number, unit: number, line: string, halo: string) => {
+  if (!map.grid || !map.image) return;
+  const tile = gridTile(map.grid);
+  const startX = tile.x - Math.ceil(tile.x / tile.width) * tile.width;
+  const startY = tile.y - Math.ceil(tile.y / tile.height) * tile.height;
+  const columns = Math.ceil((map.image.width - startX) / tile.width);
+  const rows = Math.ceil((map.image.height - startY) / tile.height);
+  if (columns * rows > MAX_GRID_TILES) return;
+  const piece = new Path2D(tile.path);
+  const grid = new Path2D();
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const x = startX + column * tile.width;
+      const y = startY + row * tile.height;
+      grid.addPath(piece, new DOMMatrix([scale, 0, 0, scale, x * scale, y * scale]));
+    }
+  }
+  // A halo under each line keeps the grid visible on light and dark images alike.
+  context.save();
+  context.strokeStyle = halo;
+  context.globalAlpha = 0.45;
+  context.lineWidth = Math.max(3, unit * 1.5);
+  context.stroke(grid);
+  context.strokeStyle = line;
+  context.globalAlpha = 0.55;
+  context.lineWidth = Math.max(1, unit / 2);
+  context.stroke(grid);
+  context.restore();
+};
 
 export const renderMapExport = async (params: {
   map: WorldMap;
@@ -41,6 +75,8 @@ export const renderMapExport = async (params: {
   const panel = token('--surface-panel-elevated');
   const text = token('--color-text-primary');
   const border = token('--surface-border-strong');
+
+  if (map.grid) drawGrid(context, map, scale, unit, text, panel);
 
   if (path.length > 1) {
     context.strokeStyle = accent;

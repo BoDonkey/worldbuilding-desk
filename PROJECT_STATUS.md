@@ -167,6 +167,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   copies, and project delete carry it with no schema change; portable export
   adds the image file under `maps/` and an `image` column in `maps/maps.csv`.
   No drawing tools.
+- Grid and hex maps (slice 4.81). A map can have a **Grid** of squares or
+  hexes (pointed or flat top), with the map units between neighbouring cell
+  centres and where the grid starts, so it can line up with a grid drawn on
+  the image. Distance on that map is counted in cells: **Distance to** reads
+  "6 hexes — counted on the Marches grid", and a diagonal step counts as one
+  square. A grid map's unit is squares or hexes; add a unit conversion
+  ("1 square = 5 feet") to add its routes to other units. The map surface
+  and the exported image draw the grid. Portable export adds `grid`,
+  `cell_size`, `hex_top`, `grid_x`, `grid_y` to `maps/maps.csv`. Stored on
+  the map record; no schema change.
 - Names are compared by one module, `services/names/nameMatching.ts`
   (slice 3.46): an exact form (case and spacing) for records, aliases, and
   duplicate checks, and a loose form (letters and digits only) for names

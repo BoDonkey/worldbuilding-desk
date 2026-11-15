@@ -466,7 +466,10 @@ belong to a map, never to the world; there is no global grid.
   optional `image` (the author's imported background, stored inline as a
   data URL with its pixel size, slice 4.80; one map unit is one pixel), and
   optional `parentPlacement` (the point where the whole map sits on a larger
-  map). Parent maps nest; a map
+  map), and optional `grid` (slice 4.81: `kind` square or hex, `cellSize`
+  in map units between neighbouring cell centres, `hexOrientation`, and an
+  origin). A grid map's unit is squares or hexes and its scale is one cell
+  per `cellSize`. Parent maps nest; a map
   that would sit on itself or on a map inside it is refused.
 - **Placement** (`place.placements` on a location record): `{mapId, x, y}` in
   that map's units, at most one per map.
@@ -479,7 +482,10 @@ and always returns it: (1) authored distance or travel time on a direct
 connection; (2) the shortest route over connections, adding up legs whose
 units the conversions link; (3) a straight line on the most detailed map both
 places share, lifting a placement through parent placements, times that map's
-scale. A straight line never replaces an authored or route figure. Figures in
+scale. On a grid map the straight-line figure is instead the number of cells
+between the two points (a diagonal step counts as one square; hexes count hex
+steps), and says it was counted on the grid. A straight line never replaces an
+authored or route figure. Figures in
 units no conversion links are returned side by side and never compared.
 
 A place with no point on any map is measured from the point of the nearest
