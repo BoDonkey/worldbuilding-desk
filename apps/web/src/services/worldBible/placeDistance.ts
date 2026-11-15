@@ -1,5 +1,6 @@
 import type {AuthoredMeasure, PlaceConnection, UnitConversion} from '../../entityTypes';
 import {normalizeNameExact} from '../names/nameMatching';
+import {gridDistance, gridUnit} from './mapGrid';
 import {mapAncestors, unitFactor, unitKey, type MapsById} from './maps';
 import {connectionsForPlace, formatMeasure, placeAncestors, type PlacesById} from './places';
 
@@ -9,7 +10,8 @@ import {connectionsForPlace, formatMeasure, placeAncestors, type PlacesById} fro
  *
  * 1. Authored: a distance or travel time on a connection between the two.
  * 2. Route: the shortest chain of connections, adding up authored legs.
- * 3. Straight line: placements on a shared map, times the map's scale.
+ * 3. Straight line: placements on a shared map, times the map's scale, or
+ *    on a grid map the squares or hexes between them (4.81).
  *
  * A straight-line figure never replaces an authored or route one. Figures in
  * units the author has not linked with a conversion are returned side by
@@ -22,6 +24,8 @@ export type DistanceSource =
   | {
       kind: 'straight-line';
       mapId: string;
+      /** Set when the map has a grid: the figure counts its cells (4.81). */
+      grid?: 'square' | 'hex';
       /** Set when a place had no map point and used the point of a place it is inside. */
       fromPointOf?: string;
       toPointOf?: string;
@@ -221,12 +225,15 @@ const straightLineFigures = (
     .sort((left, right) => maps.get(left.mapId)!.name.localeCompare(maps.get(right.mapId)!.name))
     .map((entry) => {
       const map = maps.get(entry.mapId)!;
-      const amount = Math.hypot(entry.a.x - entry.b.x, entry.a.y - entry.b.y) * map.scale;
+      const amount = map.grid
+        ? gridDistance(entry.a, entry.b, map.grid)
+        : Math.hypot(entry.a.x - entry.b.x, entry.a.y - entry.b.y) * map.scale;
       return {
-        measure: {amount, unit: map.distanceUnit},
+        measure: {amount, unit: map.grid ? gridUnit(map.grid) : map.distanceUnit},
         source: {
           kind: 'straight-line' as const,
           mapId: map.id,
+          ...(map.grid ? {grid: map.grid.kind} : {}),
           ...(fromSource !== fromId ? {fromPointOf: fromSource} : {}),
           ...(toSource !== toId ? {toPointOf: toSource} : {})
         }
@@ -304,7 +311,7 @@ const roundAmount = (amount: number): string =>
 /**
  * One line for a figure, naming its source: "3 days — authored on the road",
  * "12 leagues — route via Ford, Mill", "about 40 miles — straight line on
- * Region".
+ * Region", "6 hexes — counted on the Marches grid".
  */
 export const describeDistanceFigure = (
   figure: DistanceFigure,
@@ -325,5 +332,10 @@ export const describeDistanceFigure = (
     .filter((id): id is string => Boolean(id))
     .map((id) => `${places.get(id)?.name ?? 'a missing place'}'s point`);
   const using = borrowed.length > 0 ? ` (using ${borrowed.join(' and ')})` : '';
-  return `about ${value} — straight line on ${maps.get(source.mapId)?.name ?? 'a missing map'}${using}`;
+  const mapName = maps.get(source.mapId)?.name ?? 'a missing map';
+  if (source.grid) {
+    const cells = measure.amount === 1 ? `1 ${source.grid === 'square' ? 'square' : 'hex'}` : value;
+    return `${cells} — counted on the ${mapName} grid${using}`;
+  }
+  return `about ${value} — straight line on ${mapName}${using}`;
 };

@@ -247,3 +247,47 @@ describe('describeDistanceFigure', () => {
     expect(describeDistanceFigure(authored.distances[0], places, maps)).toBe('2 miles — authored on the road');
   });
 });
+
+describe('grid maps (4.81)', () => {
+  const grid = (kind: 'square' | 'hex', cellSize = 10) => ({kind, cellSize, ...(kind === 'hex' ? {hexOrientation: 'pointy' as const} : {})});
+
+  it('counts squares, a diagonal step counting as one', () => {
+    const entities = [
+      place('gate', {placements: [{mapId: 'dungeon', x: 5, y: 5}]}),
+      place('vault', {placements: [{mapId: 'dungeon', x: 45, y: 25}]})
+    ];
+    const maps = [map('dungeon', 'squares', 0.1, {grid: grid('square')})];
+    const [figure] = distance(entities, 'gate', 'vault', maps).distances;
+    expect(figure.measure).toEqual({amount: 4, unit: 'squares'});
+    expect(figure.source).toMatchObject({kind: 'straight-line', mapId: 'dungeon', grid: 'square'});
+    expect(describeDistanceFigure(figure, placesById(categories, entities), mapsById(maps)))
+      .toBe('4 squares — counted on the Dungeon grid');
+  });
+
+  it('counts hexes, and names a single cell in the singular', () => {
+    const entities = [
+      place('camp', {placements: [{mapId: 'marches', x: 1, y: 1}]}),
+      place('ford', {placements: [{mapId: 'marches', x: 61, y: 1}]}),
+      place('well', {placements: [{mapId: 'marches', x: 11, y: 0}]})
+    ];
+    const maps = [map('marches', 'hexes', 0.1, {grid: grid('hex')})];
+    const places = placesById(categories, entities);
+    expect(distance(entities, 'camp', 'ford', maps).distances[0].measure).toEqual({amount: 6, unit: 'hexes'});
+    const [near] = distance(entities, 'camp', 'well', maps).distances;
+    expect(describeDistanceFigure(near, places, mapsById(maps))).toBe('1 hex — counted on the Marches grid');
+  });
+
+  it('counts on the grid of the most detailed shared map, and measures the larger map without one', () => {
+    const entities = [
+      place('hall', {placements: [{mapId: 'keep', x: 5, y: 5}]}),
+      place('cellar', {placements: [{mapId: 'keep', x: 35, y: 5}]}),
+      place('town', {placements: [{mapId: 'region', x: 3, y: 4}]})
+    ];
+    const maps = [
+      map('region', 'miles', 1),
+      map('keep', 'squares', 0.1, {grid: grid('square'), parentPlacement: {mapId: 'region', x: 0, y: 0}})
+    ];
+    expect(distance(entities, 'hall', 'cellar', maps).distances[0].measure).toEqual({amount: 3, unit: 'squares'});
+    expect(distance(entities, 'hall', 'town', maps).distances[0].measure).toEqual({amount: 5, unit: 'miles'});
+  });
+});

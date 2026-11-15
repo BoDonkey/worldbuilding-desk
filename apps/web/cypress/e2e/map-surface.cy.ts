@@ -220,4 +220,23 @@ describe('Map surface: image, pins, scene view, export', () => {
     }).then((map) => expect(map).not.to.have.property('image'));
     placementOf('place-isle').should('deep.equal', {mapId: 'map-region', x: 900, y: 10});
   });
+
+  it('draws a square grid over the image (4.81)', () => {
+    mapPng().then((png) => {
+      withStores<void>(['maps'], 'readwrite', (tx) => {
+        tx.objectStore('maps').put({
+          id: 'map-region', projectId: PROJECT, name: 'Region', distanceUnit: 'squares', scale: 0.05,
+          grid: {kind: 'square', cellSize: 20}, createdAt: 1, updatedAt: 1,
+          image: {dataUrl: `data:image/png;base64,${png.toString('base64')}`, mimeType: 'image/png', width: 400, height: 200, byteLength: png.length}
+        });
+      });
+    });
+    cy.reload();
+    openRegion();
+    surface().should('contain.text', 'Square grid, 20 pixels per cell. Distances are counted in squares.');
+    surface().find('svg[data-grid="square"] pattern').should('have.attr', 'width', '20');
+    surface().contains('button', 'Export image').click();
+    cy.contains('Exported Region as an image.').should('be.visible');
+  });
 });
+

@@ -24,6 +24,7 @@ import {
   pinsOnMap,
   readMapImageFile
 } from '../../services/worldBible/mapSurface';
+import {gridTile} from '../../services/worldBible/mapGrid';
 import {characterPath, positionsAtScene} from '../../services/worldBible/placeMovement';
 import {useNotificationStore} from '../../store/notificationStore';
 import {triggerBlobDownload} from '../../utils/downloadJson';
@@ -201,6 +202,7 @@ export function MapSurface(props: MapSurfaceProps) {
   const selectedPin = pins.find((pin) => pin.place.id === selectedPlaceId) ?? null;
   const offImage = pins.filter((pin) => !pin.onImage);
   const armedName = places.get(armedPlaceId || selectedPlaceId || '')?.name;
+  const tile = map.grid ? gridTile(map.grid) : null;
   const occupiedPins = pins.filter((pin) => occupants.byPlaceId.has(pin.place.id));
 
   return (
@@ -209,7 +211,13 @@ export function MapSurface(props: MapSurfaceProps) {
         <div>
           <div className={shared.castEyebrow}>Map</div>
           <h3 id='map-surface-title'>{map.name}</h3>
-          <p>{image ? `One pixel is ${map.scale} ${map.distanceUnit}.` : 'No image yet.'}</p>
+          <p>
+            {!image
+              ? 'No image yet.'
+              : map.grid
+                ? `${map.grid.kind === 'square' ? 'Square' : 'Hex'} grid, ${map.grid.cellSize} pixels per cell. Distances are counted in ${map.distanceUnit}.`
+                : `One pixel is ${map.scale} ${map.distanceUnit}.`}
+          </p>
         </div>
         <div className={styles.actions}>
           <input
@@ -291,6 +299,18 @@ export function MapSurface(props: MapSurfaceProps) {
             onClick={clickStage}
           >
             <img src={image.dataUrl} alt={`${map.name} map`} draggable={false} />
+            {tile && (
+              <svg className={styles.grid} viewBox={`0 0 ${image.width} ${image.height}`} preserveAspectRatio='none' aria-hidden='true' data-grid={map.grid?.kind}>
+                <defs>
+                  <pattern id={`map-grid-${map.id}`} patternUnits='userSpaceOnUse' x={tile.x} y={tile.y} width={tile.width} height={tile.height}>
+                    {/* A halo under each line keeps the grid visible on light and dark images alike. */}
+                    <path className={styles.gridHalo} d={tile.path} strokeWidth={Math.max(3, image.width / 270)} />
+                    <path d={tile.path} strokeWidth={Math.max(1, image.width / 800)} />
+                  </pattern>
+                </defs>
+                <rect width={image.width} height={image.height} fill={`url(#map-grid-${map.id})`} />
+              </svg>
+            )}
             {path.length > 1 && (
               <svg className={styles.path} viewBox={`0 0 ${image.width} ${image.height}`} preserveAspectRatio='none' aria-hidden='true'>
                 <polyline points={path.map((point) => `${point.x},${point.y}`).join(' ')} vectorEffect='non-scaling-stroke' />

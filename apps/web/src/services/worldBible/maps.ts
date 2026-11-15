@@ -1,5 +1,6 @@
-import type {PlacePlacement, UnitConversion, WorldMap} from '../../entityTypes';
+import type {MapGrid, PlacePlacement, UnitConversion, WorldMap} from '../../entityTypes';
 import {normalizeNameExact} from '../names/nameMatching';
+import {gridUnit, normalizeMapGrid} from './mapGrid';
 
 /*
  * Maps and units (slice 4.79, places brief § 4).
@@ -61,6 +62,8 @@ export interface MapInput {
   distanceUnit: string;
   scale: number;
   parentPlacement?: PlacePlacement;
+  /** A square or hex grid (4.81). Its unit replaces `distanceUnit`, one cell per `cellSize` map units. */
+  grid?: MapGrid;
 }
 
 /**
@@ -75,10 +78,18 @@ export const normalizeMapInput = (params: {
 }): {map: WorldMap} | {error: string} => {
   const {input, maps, now} = params;
   const name = input.name.trim();
-  const distanceUnit = input.distanceUnit.trim();
   if (!name) return {error: 'Give the map a name.'};
+  let grid: MapGrid | undefined;
+  if (input.grid) {
+    const result = normalizeMapGrid(input.grid);
+    if ('error' in result) return result;
+    grid = result.grid;
+  }
+  // A grid map counts in its cells: one square or hex every `cellSize` map units.
+  const distanceUnit = grid ? gridUnit(grid) : input.distanceUnit.trim();
+  const scale = grid ? 1 / grid.cellSize : input.scale;
   if (!distanceUnit) return {error: 'Say what distances on this map are measured in, such as miles.'};
-  if (!isFiniteNumber(input.scale) || input.scale <= 0) {
+  if (!isFiniteNumber(scale) || scale <= 0) {
     return {error: 'The scale must be a number above zero.'};
   }
   const id = input.id ?? crypto.randomUUID();
@@ -103,8 +114,9 @@ export const normalizeMapInput = (params: {
       name,
       ...(existing?.image ? {image: existing.image} : {}),
       distanceUnit,
-      scale: input.scale,
+      scale,
       ...(parentPlacement ? {parentPlacement} : {}),
+      ...(grid ? {grid} : {}),
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
     }
