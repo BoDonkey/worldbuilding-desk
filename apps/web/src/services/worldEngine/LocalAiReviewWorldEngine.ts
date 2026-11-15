@@ -5,12 +5,13 @@ import type {
   ValidationResult
 } from '../consistency';
 import type {ProjectAISettings} from '../../entityTypes';
-import {OllamaProvider} from '../llm/providers/ollama';
+import {LLMService} from '../llm/LLMService';
+import {getInstalledOllamaModels} from '../llm/ollamaModels';
 import {PROVIDER_DEFAULT_BASE_URLS} from '../llm/providerConfig';
+import {isLoopbackUrl, REMOTE_OLLAMA_REASON, resolveLocalOllamaModel} from '../llm/providerRoute';
 import {
   ReviewIssueAnnotationSchema,
-  ReviewClassificationSchema,
-  WorldEngineStatusSchema
+  ReviewClassificationSchema
 } from './types';
 import type {
   ObservationProposal,
@@ -20,7 +21,6 @@ import type {
   WorldEngineReviewResult,
   WorldEngineStatus
 } from './types';
-import {classifyError, describeError} from '../errors';
 
 const OLLAMA_FALLBACK_BASE_URL = PROVIDER_DEFAULT_BASE_URLS.ollama ?? 'http://localhost:11434';
 const LOCAL_AI_REVIEW_TIMEOUT_MS = 12000;
@@ -55,18 +55,16 @@ const withTimeout = async <T>(
   timeoutMs: number,
   label: string
 ): Promise<T> => {
-  let timeoutId: number | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = window.setTimeout(() => {
+    timeoutId = setTimeout(() => {
       reject(new Error(`${label} timed out after ${timeoutMs}ms.`));
     }, timeoutMs);
   });
   try {
     return await Promise.race([promise, timeoutPromise]);
   } finally {
-    if (typeof timeoutId === 'number') {
-      window.clearTimeout(timeoutId);
-    }
+    clearTimeout(timeoutId);
   }
 };
 
@@ -175,33 +173,32 @@ const formatIssuePrompt = (
   };
 };
 
-interface ResolvedLocalModel {
-  baseUrl: string;
-  model: string;
-}
-
+/**
+ * Deterministic review, with each issue's note rewritten by a local Ollama
+ * model. The request goes through `LLMService` like every other model request
+ * (slice 3.41): tagged `local-review`, refused when AI coaching is off, and
+ * sent from the main process in the desktop app. The model is always Ollama's,
+ * whichever provider the project uses elsewhere, and is chosen by the shared
+ * lookup, so a cloud model or a remote address is never used.
+ */
 export class LocalAiReviewWorldEngine implements WorldEngine {
   private readonly baseEngine: WorldEngine;
   private readonly baseUrl: string;
   private readonly configuredModel?: string;
+  private readonly llm: LLMService;
 
   constructor(baseEngine: WorldEngine, settings?: ProjectAISettings | null) {
     this.baseEngine = baseEngine;
     this.baseUrl = settings?.configs?.ollama?.baseUrl?.trim() || OLLAMA_FALLBACK_BASE_URL;
     this.configuredModel = settings?.configs?.ollama?.model?.trim() || undefined;
+    this.llm = new LLMService({
+      ...(settings ?? {configs: {}}),
+      provider: 'ollama'
+    } as ProjectAISettings);
   }
 
   async getStatus(): Promise<WorldEngineStatus> {
-    const resolved = await this.resolveModel().catch((error) =>
-      this.mapStatusError(error)
-    );
-    if ('state' in resolved) {
-      return resolved;
-    }
-    return WorldEngineStatusSchema.parse({
-      state: 'available',
-      modelLabel: `Local AI review (${resolved.model})`
-    });
+    return (await this.resolveModel()).status;
   }
 
   async extractObservations(input: ExtractProposalInput): Promise<ObservationProposal[]> {
@@ -259,23 +256,21 @@ export class LocalAiReviewWorldEngine implements WorldEngine {
       return [];
     }
 
-    const resolved = await this.resolveModel().catch(() => null);
-    if (!resolved) {
+    const {model} = await this.resolveModel();
+    if (!model) {
       return null;
     }
 
     const baseAnnotations = await Promise.all(
       issues.map((issue) => this.baseEngine.classifyReviewItem({issue, sourceText}))
     );
-    const provider = new OllamaProvider({
-      baseUrl: resolved.baseUrl,
-      model: resolved.model
-    });
 
     try {
       const promptIssues = issues.map((issue) => formatIssuePrompt(issue, sourceText));
       const response = await withTimeout(
-        provider.generateCompletion({
+        this.llm.complete({
+          feature: 'local-review',
+          cache: false,
           messages: [
             {
               role: 'system',
@@ -296,13 +291,13 @@ export class LocalAiReviewWorldEngine implements WorldEngine {
                 `Issues:\n${JSON.stringify(promptIssues)}`
             }
           ],
-          model: resolved.model,
-          baseUrl: resolved.baseUrl,
+          model,
+          baseUrl: this.baseUrl,
           temperature: 0.2,
           maxTokens: Math.min(700, Math.max(220, issues.length * 140))
         }),
         LOCAL_AI_REVIEW_TIMEOUT_MS,
-        `Local AI review (${resolved.model})`
+        `Local AI review (${model})`
       );
 
       const parsedArray = extractJsonArray(response.content);
@@ -329,7 +324,7 @@ export class LocalAiReviewWorldEngine implements WorldEngine {
           issueCode:
             candidate.issueCode === issue.code ? candidate.issueCode : fallback.issueCode,
           source: 'local-ai',
-          engineLabel: `Local AI review (${resolved.model})`,
+          engineLabel: `Local AI review (${model})`,
           confidence: clampConfidence(candidate.confidence, fallback.confidence),
           summary: candidate.summary?.trim() || fallback.summary,
           evidence: hasValidEvidence
@@ -343,62 +338,33 @@ export class LocalAiReviewWorldEngine implements WorldEngine {
       });
     } catch (error) {
       console.warn(
-        `Local AI review annotations fell back to deterministic output for ${resolved.model}.`,
+        `Local AI review annotations fell back to deterministic output for ${model}.`,
         error
       );
       return null;
     }
   }
 
-  private async resolveModel(): Promise<ResolvedLocalModel> {
-    const response = await fetch(`${this.baseUrl.replace(/\/$/, '')}/api/tags`);
-    if (!response.ok) {
-      throw new Error(`Ollama responded with ${response.status} ${response.statusText}.`);
+  /**
+   * The model a review would use, and the status to show for it. Uses the
+   * shared installed-model lookup and model choice, so the answer matches what
+   * `LLMService` will send. `model` is set only when the status is available.
+   */
+  private async resolveModel(): Promise<{status: WorldEngineStatus; model?: string}> {
+    if (!isLoopbackUrl(this.baseUrl)) {
+      return {status: {state: 'installedUnavailable', reason: REMOTE_OLLAMA_REASON}};
     }
-    const data = await response.json();
-    const detectedModels = Array.isArray(data.models)
-      ? data.models
-          .map((entry: {name?: unknown}) =>
-            typeof entry?.name === 'string' ? entry.name.trim() : ''
-          )
-          .filter(Boolean)
-      : [];
-
-    if (detectedModels.length === 0) {
-      throw new Error('No Ollama models are installed.');
+    const installed = await getInstalledOllamaModels(this.baseUrl);
+    if (!installed || !installed.some((entry) => !entry.cloud)) {
+      return {status: {state: 'notInstalled'}};
     }
-
-    if (this.configuredModel) {
-      if (!detectedModels.includes(this.configuredModel)) {
-        throw new Error(
-          `Configured Ollama model "${this.configuredModel}" is not installed.`
-        );
-      }
-      return {
-        baseUrl: this.baseUrl,
-        model: this.configuredModel
-      };
+    const resolution = resolveLocalOllamaModel(installed, this.configuredModel);
+    if (!resolution.ok) {
+      return {status: {state: 'installedUnavailable', reason: resolution.reason}};
     }
-
     return {
-      baseUrl: this.baseUrl,
-      model: detectedModels[0]
+      status: {state: 'available', modelLabel: `Local AI review (${resolution.model})`},
+      model: resolution.model
     };
-  }
-
-  private mapStatusError(error: unknown): WorldEngineStatus {
-    if (classifyError(error) === 'network') {
-      return WorldEngineStatusSchema.parse({state: 'notInstalled'});
-    }
-
-    const message = describeError(error, 'Ollama is unavailable.');
-    if (message === 'No Ollama models are installed.') {
-      return WorldEngineStatusSchema.parse({state: 'notInstalled'});
-    }
-
-    return WorldEngineStatusSchema.parse({
-      state: 'installedUnavailable',
-      reason: message
-    });
   }
 }

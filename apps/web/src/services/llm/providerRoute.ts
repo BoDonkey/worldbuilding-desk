@@ -133,7 +133,7 @@ function ollamaCloudReason(model: string): string {
 export const LOCAL_SERVER_REMOTE_REASON =
   'The local model server must run on this computer (localhost or 127.0.0.1). Remote addresses are blocked.';
 
-const REMOTE_OLLAMA_REASON =
+export const REMOTE_OLLAMA_REASON =
   'Ollama must run on this computer (localhost or 127.0.0.1). Remote Ollama addresses are blocked.';
 
 /**

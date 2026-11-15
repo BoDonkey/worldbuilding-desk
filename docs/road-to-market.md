@@ -368,7 +368,7 @@ messages).
 | 3.38 | State changes follow the scene list (review D1, D8, P4) | 3 | M | Done `67adbe1` |
 | 3.39 | Assistant fact answers: remove story-specific wording (T1) | 3 | XS | Done `0b77c67` |
 | 3.40 | One validated path for saving a state change (T2, B5) | 3 | S | Done `cd2948b` — local Cypress needed three runs: Electron renderer crashed twice in `post-merge-smoke.cy.ts` (passes alone) |
-| 3.41 | Local AI review through the request gate (T3) | 3 | S | — (author chose: keep, route through `LLMService`, 2026-11-13) |
+| 3.41 | Local AI review through the request gate (T3) | 3 | S | Done `c27e1f8` |
 | 3.42 | AI-written Source Notes are labelled (T4) | 3 | S | — |
 | 3.43 | Canon Decisions: actions out of the route (B1, D4, T5) | 3 | M | — |
 | 3.44 | Assistant turn planning out of the component (B2) | 3 | M | — (after 3.39) |
