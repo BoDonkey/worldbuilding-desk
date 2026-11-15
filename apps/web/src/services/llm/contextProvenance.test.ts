@@ -7,6 +7,7 @@ import {
   getLoreDocumentIdFromRagDocumentId,
   getRagContextSource
 } from './contextProvenance';
+import {sectionForContextSource} from './contextBudget';
 
 function makeResult(
   type: RAGSearchResult['chunk']['metadata']['type'],
@@ -68,6 +69,32 @@ describe('context provenance labels', () => {
     );
   });
 
+  it('says when a Source Note was saved from an AI session, keeping the words the budget sorts by', () => {
+    const aiSessionNoteIds = new Set(['lore-1', 'lore-2']);
+    expect(
+      getRagContextSource(makeResult('lore', 'lore:lore-1', 'Character lab: Mara'), [linkedSourceNote], aiSessionNoteIds)
+    ).toBe(
+      'Linked Source Note (saved from an AI session, may be model-written): source material, not automatically canon - Character lab: Mara'
+    );
+    const general = buildRagContextChunk(makeResult('lore', 'lore:lore-2', 'Assistant note'), [], aiSessionNoteIds);
+    expect(general.source).toBe(
+      'General Source Note (saved from an AI session, may be model-written): project reference, not automatically canon - Assistant note'
+    );
+    expect(sectionForContextSource(general.source)).toBe('source-note');
+    expect(
+      sectionForContextSource(
+        getRagContextSource(makeResult('lore', 'lore:lore-1', 'X'), [linkedSourceNote], aiSessionNoteIds)
+      )
+    ).toBe('linked-source-note');
+    // A note the author typed is unchanged, and other record types never take the wording.
+    expect(getRagContextSource(makeResult('lore', 'lore:lore-3', 'Myths'), [], aiSessionNoteIds)).toBe(
+      'General Source Note: project reference, not automatically canon - Myths'
+    );
+    expect(getRagContextSource(makeResult('worldbible', 'lore-1', 'Mara'), [], aiSessionNoteIds)).toBe(
+      'Accepted canon: World Bible record - Mara'
+    );
+  });
+
   it('preserves provider context shape while replacing generic titles with trust labels', () => {
     expect(
       buildRagContextChunk(makeResult('scene', 'scene-1', 'Chapter One'))
@@ -84,6 +111,7 @@ describe('context provenance labels', () => {
     expect(prompt).toContain('Custom author prompt.');
     expect(prompt).toContain('Treat accepted canon and accepted canon facts');
     expect(prompt).toContain('Treat Source Notes as evidence and background material');
+    expect(prompt).toContain('"saved from an AI session" may hold text a model wrote');
   });
 
   it('names the record a Source Note or World Bible chunk came from, and no record for others', () => {

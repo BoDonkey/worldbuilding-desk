@@ -7,6 +7,7 @@ import type {
   LoreFactProposal
 } from '../../entityTypes';
 import {normalizeNameExact} from '../names/nameMatching';
+import {withoutSuggestedDetails} from './sourceNoteOrigin';
 
 interface ExtractionTarget {
   type: 'character' | 'entity';
@@ -441,8 +442,10 @@ function extractNaturalProseFacts(
 }
 
 export function extractLoreFactProposals(
-  params: ExtractLoreFactParams
+  input: ExtractLoreFactParams
 ): LoreFactProposal[] {
+  // Kept model suggestions are "not canon": they are never evidence for a fact.
+  const params = {...input, document: withoutSuggestedDetails(input.document)};
   const proposals: LoreFactProposal[] = [];
   const dedupe = new Set<string>();
   const target = resolvePrimaryTarget(

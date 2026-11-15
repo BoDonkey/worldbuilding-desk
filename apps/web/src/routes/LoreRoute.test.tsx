@@ -2,7 +2,8 @@ import {fireEvent, screen, waitFor, within} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import LoreRoute from './LoreRoute';
 import {renderRoute, seedRouteTestState} from '../test/renderRoute';
-import {getLoreDocumentsByProject} from '../services/storage';
+import {getLoreDocumentsByProject, saveLoreDocument} from '../services/storage';
+import {SUGGESTED_DETAILS_HEADING} from '../services/lore/sourceNoteOrigin';
 
 const indexGate = vi.hoisted(() => {
   let release: () => void = () => {};
@@ -71,6 +72,54 @@ describe('LoreRoute', () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Title')).toHaveValue('Late Save Note');
     expect(screen.getByRole('button', {name: 'Extract Candidates'})).toBeEnabled();
+  });
+
+  it('labels a note saved from an AI session and keeps its suggested details out of extraction', async () => {
+    const base = {
+      projectId: 'route-smoke-project',
+      kind: 'character_dossier' as const,
+      format: 'plain_text' as const,
+      status: 'active' as const,
+      createdAt: 1,
+      updatedAt: 1
+    };
+    await saveLoreDocument({
+      ...base,
+      id: 'note-typed',
+      title: 'Typed Note',
+      content: 'Occupation: weaver',
+      source: {type: 'manual'}
+    });
+    await saveLoreDocument({
+      ...base,
+      id: 'note-lab',
+      title: 'Character lab: Wren',
+      content: `Occupation: ferry pilot\n\n${SUGGESTED_DETAILS_HEADING}\n- Age: 41\n- Height: towering`,
+      source: {type: 'ai-session', sessionId: 'session-1'}
+    });
+
+    renderRoute(<LoreRoute />, '/lore');
+    const typed = (await screen.findByText('Typed Note', {selector: 'article h3'})).closest('article') as HTMLElement;
+    const lab = screen.getByText('Character lab: Wren', {selector: 'article h3'}).closest('article') as HTMLElement;
+    expect(within(lab).getByText('From an AI session')).toBeInTheDocument();
+    expect(within(typed).queryByText('From an AI session')).not.toBeInTheDocument();
+
+    fireEvent.click(within(lab).getByRole('button', {name: 'Edit'}));
+    await screen.findByRole('heading', {name: 'Edit Source Note', level: 2});
+    expect(screen.getByText(/Parts of it may have been written by a model, not by you/)).toBeInTheDocument();
+    expect(screen.getByText(/evidence quoted under a candidate may be model-written/)).toBeInTheDocument();
+    expect(screen.getByText(/Extraction skips everything from the/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', {name: 'Extract Candidates'}));
+    expect(await screen.findByText('ferry pilot')).toBeInTheDocument();
+    expect(screen.queryByText('41')).not.toBeInTheDocument();
+    expect(screen.queryByText('towering')).not.toBeInTheDocument();
+
+    fireEvent.click(within(typed).getByRole('button', {name: 'Edit'}));
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Typed Note'));
+    expect(screen.queryByText(/Parts of it may have been written by a model/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/evidence quoted under a candidate may be model-written/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Extraction skips everything from the/)).not.toBeInTheDocument();
   });
 
   it('imports Markdown into the visual editor and keeps it Markdown when saved', async () => {

@@ -14,7 +14,8 @@ vi.mock('../services/storage/repositories/loreStorage', () => ({getLoreDocuments
 
 const proposal = (id: string, status: LoreFactProposal['status'] = 'proposed') =>
   ({id, loreDocumentId: 'note-1', status}) as LoreFactProposal;
-const note = {id: 'note-1', title: 'Harbor rumors'} as LoreDocument;
+const note = {id: 'note-1', title: 'Harbor rumors', source: {type: 'manual'}} as LoreDocument;
+const aiNote = {id: 'note-2', title: 'Assistant note', source: {type: 'ai-session', sessionId: 's'}} as LoreDocument;
 
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
@@ -28,7 +29,7 @@ const deferred = <T,>() => {
 
 beforeEach(() => {
   storage.getLoreFactProposalsByProject.mockReset();
-  storage.getLoreDocumentsByProject.mockReset().mockResolvedValue([note]);
+  storage.getLoreDocumentsByProject.mockReset().mockResolvedValue([note, aiNote]);
 });
 
 describe('usePendingProposals', () => {
@@ -50,6 +51,7 @@ describe('usePendingProposals', () => {
     if (state.status !== 'ready') throw new Error('expected ready');
     expect(state.context.proposals.map((entry) => entry.id)).toEqual(['p1']);
     expect(state.context.sourceTitleById.get('note-1')).toBe('Harbor rumors');
+    expect([...state.context.aiSessionNoteIds]).toEqual(['note-2']);
   });
 
   it('reports a failed read as an error, never as zero proposals, and recovers on retry', async () => {

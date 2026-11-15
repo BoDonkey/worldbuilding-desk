@@ -7,6 +7,7 @@ import type {
   WorldEntity
 } from '../../entityTypes';
 import {normalizeCanonText} from '../consistency/textMatcher';
+import {withoutSuggestedDetails} from './sourceNoteOrigin';
 
 interface ExtractLoreEntityParams {
   projectId: string;
@@ -156,8 +157,10 @@ function extractTitleCandidates(document: LoreDocument): Array<{name: string; ki
 }
 
 export function extractLoreEntityProposals(
-  params: ExtractLoreEntityParams
+  input: ExtractLoreEntityParams
 ): LoreEntityProposal[] {
+  // Kept model suggestions are "not canon": a name found only there proposes no record.
+  const params = {...input, document: withoutSuggestedDetails(input.document)};
   const proposals: LoreEntityProposal[] = [];
   const dedupe = new Set<string>();
   const text = params.document.content;

@@ -1,4 +1,5 @@
 import type {LoreDocument, LoreDocumentLink} from '../../entityTypes';
+import {AI_SESSION_NOTE_BADGE, AI_SESSION_NOTE_EXPLANATION, isAiSessionSourceNote} from '../../services/lore/sourceNoteOrigin';
 import styles from '../../styles/LoreRoute.module.css';
 
 interface SourceNoteDocumentListProps {
@@ -68,6 +69,11 @@ export const SourceNoteDocumentList = ({
                 </span>
                 <span>{acceptedCountByDocumentId(document.id)} accepted</span>
                 {links.length > 0 ? <span>{links.length} linked</span> : null}
+                {isAiSessionSourceNote(document) ? (
+                  <span className={styles.originBadge} title={AI_SESSION_NOTE_EXPLANATION}>
+                    {AI_SESSION_NOTE_BADGE}
+                  </span>
+                ) : null}
               </div>
             </article>
           );

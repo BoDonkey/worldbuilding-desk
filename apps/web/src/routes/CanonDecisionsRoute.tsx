@@ -12,6 +12,7 @@ import type {
   WorldEntity
 } from '../entityTypes';
 import {LLMService} from '../services/llm/LLMService';
+import {buildRagContextChunks} from '../services/llm/contextProvenance';
 import {
   getCharactersByProject,
   getEntitiesByProject,
@@ -671,12 +672,9 @@ function CanonDecisionsRoute() {
       const service = new LLMService(aiSettingsForConsultation);
       budget.spend('canon-decision');
 
+      // The same trust labels the assistant uses, so a Source Note is not read as canon.
       const ragChunks = ragService
-        ? (await ragService.search(searchQuery, 3)).map((result) => ({
-            content: result.chunk.content,
-            source: result.chunk.documentTitle,
-            relevance: result.score
-          }))
+        ? await buildRagContextChunks(activeProject.id, await ragService.search(searchQuery, 3))
         : [];
 
       await modelRun.run(

@@ -1,13 +1,26 @@
-import type {CanonicalFact, LoreFactProposal} from '../../entityTypes';
+import type {CanonicalFact, LoreDocument, LoreFactProposal} from '../../entityTypes';
 import {buildCanonicalFactSummary} from '../../services/lore/canonicalFactActions';
 import type {SourceNoteExtractionReviewState} from '../../hooks/useSourceNoteExtractionReview';
+import {
+  AI_SESSION_EVIDENCE_WARNING,
+  SUGGESTED_DETAILS_SKIPPED_NOTICE,
+  hasSuggestedDetails,
+  isAiSessionSourceNote
+} from '../../services/lore/sourceNoteOrigin';
 import styles from '../../styles/LoreRoute.module.css';
 
 const formatFactValue = (value: CanonicalFact['value'] | LoreFactProposal['value']): string =>
   typeof value === 'string' ? value : `${value.label}: ${value.value}`;
 
 /** Entity and fact candidates from the open Source Note, and its accepted canon. */
-export function SourceNoteExtractionReview({review}: {review: SourceNoteExtractionReviewState}) {
+export function SourceNoteExtractionReview({
+  review,
+  document
+}: {
+  review: SourceNoteExtractionReviewState;
+  /** The saved note under review; its origin decides which cautions are shown. */
+  document?: LoreDocument | null;
+}) {
   const {
     actingProposalId,
     actingEntityProposalId,
@@ -40,6 +53,12 @@ export function SourceNoteExtractionReview({review}: {review: SourceNoteExtracti
         accept one; an accepted candidate can then become a World Bible
         record or canon fact.
       </p>
+      {document && isAiSessionSourceNote(document) ? (
+        <p className={styles.originNotice}>{AI_SESSION_EVIDENCE_WARNING}</p>
+      ) : null}
+      {document && hasSuggestedDetails(document.content) ? (
+        <p className={styles.subsectionCopy}>{SUGGESTED_DETAILS_SKIPPED_NOTICE}</p>
+      ) : null}
       <div className={styles.acceptedSection}>
         <div className={styles.cardHeader}>
           <h3>Entity Candidates</h3>

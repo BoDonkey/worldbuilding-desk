@@ -117,7 +117,7 @@ interface AIAssistantProps {
    * model sees them labeled "Pending proposal, not canon"; deterministic answers
    * stay accepted-canon only and list matching proposals separately.
    */
-  pendingProposals?: {proposals: LoreFactProposal[]; sourceTitleById: Map<string, string>} | null;
+  pendingProposals?: {proposals: LoreFactProposal[]; sourceTitleById: Map<string, string>; aiSessionNoteIds?: ReadonlySet<string>} | null;
   placeholder?: string;
   /**
    * When set, nothing is sent and this explains why (for example, pending
@@ -491,7 +491,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
       const ragChunks = await buildRagContextChunks(projectId, ragResults.slice(0, 3));
       const pendingChunks = pendingProposals
-        ? buildPendingProposalChunks(pendingProposals.proposals, pendingProposals.sourceTitleById)
+        ? buildPendingProposalChunks(pendingProposals.proposals, pendingProposals.sourceTitleById, pendingProposals.aiSessionNoteIds)
         : [];
       const contextChunks = [...shodhChunks, ...ragChunks, ...pendingChunks];
 

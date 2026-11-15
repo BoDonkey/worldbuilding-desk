@@ -133,7 +133,10 @@ validation, retrieval prefers `canon_fact` > `worldbible` > `lore` > `scene`;
 creative assistance may use a broader mix. Assistant context carries explicit
 trust-tier labels (accepted canon, accepted canon facts, linked Source Notes,
 general Source Notes, scene drafts, rules references), with a modest ranking
-boost so accepted canon outranks Source Notes on close matches. Pending and
+boost so accepted canon outranks Source Notes on close matches. A Source Note
+saved from an AI session (`source.type: 'ai-session'`) adds "saved from an AI
+session, may be model-written" to its label, and extraction skips its
+"Suggested details from the character lab (not canon)" block. Pending and
 rejected proposals stay out of ordinary assistant context. Derived RAG/Shodh
 indexes are rebuildable and never the source of truth.
 

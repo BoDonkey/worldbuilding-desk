@@ -234,7 +234,18 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   and the selected range against the live editor before one undoable plain-text
   insertion. Stale revisions stay unapplied with recovery guidance. The
   assistant can also capture its own output as a draft Source Note (never
-  canon; enters the normal extraction/review pipeline), and the canon
+  canon; enters the normal extraction/review pipeline). Notes saved from an
+  AI session (an assistant or coach reply, a kept World Canvas brainstorm
+  item, a character created from a description) show "From an AI session" in
+  the Source Notes list, editor, and extraction review, and carry "saved from
+  an AI session, may be model-written" wherever a prompt names or quotes them
+  (retrieved context and its `Sources used` list, pending-proposal context,
+  the Canon Decisions consultation, which now uses the same trust-tier labels
+  as the assistant). Extraction proposes nothing from the "Suggested details
+  from the character lab (not canon)" block: everything from that heading to
+  the end of the note is skipped, and the review says so. Brainstorm items
+  kept before this change were saved as author-typed notes and stay
+  unlabelled. The canon
   rubber-duck can prefill its alias/accept/reject choice from a deterministic,
   position-anchored `Suggested Action:` tag in its response — never free-prose
   matching — with the rationale visible and the author's click still required.
