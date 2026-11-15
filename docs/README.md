@@ -42,8 +42,6 @@ Other files:
   review-completion smoke.
 - `fixtures/trust-dogfood/README.md` — the active multi-day execution runbook,
   resume checkpoint, and A–G results log for roadmap slice 1.1.
-- `apps/web/editor-config.md` — developer reference for TipTap editor/toolbar
-  customization (moved from the repo root).
 - `docs/game-simulation-brief.md` — author-approved design brief for the
   hidden Game Simulation mode (adventures, playthroughs, sessions, trust
   boundary in play). Design only; not a commitment to build. Structural

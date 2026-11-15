@@ -3,11 +3,7 @@ import type {MemoryEntry} from '../shodh/ShodhMemoryService';
 import {ShodhMemoryService} from '../shodh/ShodhMemoryService';
 import {RAGService} from '../rag/RAGService';
 import type {DocumentChunk} from '../rag/types';
-import {
-  getAllProjects,
-  getProjectById,
-  saveProject
-} from '../storage';
+import {getProjectById, saveProject} from '../storage';
 
 export interface SeriesBibleConfig {
   parentProjectId?: string;
@@ -53,10 +49,6 @@ export async function getCanonSyncState(project: Project): Promise<{
   };
 }
 
-export function isChildProject(project: Project | null | undefined): boolean {
-  return Boolean(project?.parentProjectId);
-}
-
 export async function linkProjectToParent(
   childProjectId: string,
   options: SeriesBibleConfig
@@ -99,15 +91,6 @@ export async function unlinkProjectFromParent(
   };
   await saveProject(updated);
   return updated;
-}
-
-export async function getChildProjects(
-  parentProjectId: string
-) {
-  const projects = await getAllProjects();
-  return projects.filter(
-    (project) => project.parentProjectId === parentProjectId
-  );
 }
 
 export async function touchCanonVersion(

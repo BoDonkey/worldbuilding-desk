@@ -176,6 +176,3 @@ export function unpinCanvasReference(canvas: WorldCanvasDocument, target: Canvas
     updatedAt: now
   };
 }
-
-export const addQuestion = addOpenThread;
-export const updateQuestion = updateOpenThread;

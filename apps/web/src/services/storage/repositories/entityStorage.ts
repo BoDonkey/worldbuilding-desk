@@ -8,24 +8,6 @@ function emitEntityRecordsChanged(): void {
   window.dispatchEvent(new CustomEvent('wbd:entity-records-changed'));
 }
 
-export async function getAllEntities(): Promise<WorldEntity[]> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(ENTITY_STORE_NAME, 'readonly');
-    const store = tx.objectStore(ENTITY_STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      resolve(request.result as WorldEntity[]);
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
-}
-
 export async function getEntitiesByProject(projectId: string): Promise<WorldEntity[]> {
   return readProjectRecords<WorldEntity>(ENTITY_STORE_NAME, projectId);
 }

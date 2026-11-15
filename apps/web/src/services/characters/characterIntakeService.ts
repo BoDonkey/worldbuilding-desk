@@ -1,5 +1,4 @@
 import type {EntityCategory, EntityFields, WorldEntity} from '../../entityTypes';
-import {getCategoriesByProject, saveCategory, getEntitiesByProject, saveEntity} from '../storage';
 import {isCharacterCategory} from './characterIdentity';
 import {normalizeNameExact} from '../names/nameMatching';
 
@@ -101,26 +100,4 @@ export function planCharacterCanonIntake(params: {
     categoryToCreate: characterCategories.length === 0 ? category : null,
     entityToCreate: entity
   };
-}
-
-export async function ensureCanonicalCharacterForIntake(params: {
-  projectId: string;
-  name: string;
-  fields?: EntityFields;
-  preferredEntityId?: string;
-  categories?: EntityCategory[];
-  entities?: WorldEntity[];
-}): Promise<CharacterCanonIntakePlan> {
-  const [categories, entities] = await Promise.all([
-    params.categories ?? getCategoriesByProject(params.projectId),
-    params.entities ?? getEntitiesByProject(params.projectId)
-  ]);
-  const plan = planCharacterCanonIntake({...params, categories, entities});
-  if (plan.categoryToCreate) {
-    await saveCategory(plan.categoryToCreate);
-  }
-  if (plan.entityToCreate) {
-    await saveEntity(plan.entityToCreate);
-  }
-  return plan;
 }

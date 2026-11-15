@@ -38,14 +38,6 @@ export async function getStateMutationEventsByProject(
   return all.sort(compareStateMutationEvents);
 }
 
-export async function getStateMutationEventsByScene(
-  projectId: string,
-  sceneId: string
-): Promise<StateMutationEvent[]> {
-  const events = await getStateMutationEventsByProject(projectId);
-  return events.filter((event) => event.sceneId === sceneId);
-}
-
 export async function invalidateStateMutationEventsFromScene(params: {
   projectId: string;
   sceneId: string;
