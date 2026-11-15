@@ -270,8 +270,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Above the narrow-viewport drawer (1250) and lore popovers (1300), below toasts (1350). */
-  z-index: 1320;
+  /* Above the narrow-viewport drawer and lore popovers, below toasts. */
+  z-index: calc(var(--layer-popover) + 20);
 }
 
 .readerCard {

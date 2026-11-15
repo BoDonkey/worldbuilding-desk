@@ -1,6 +1,6 @@
 .popover {
   position: fixed;
-  z-index: 1300;
+  z-index: var(--layer-popover);
   width: min(360px, calc(100vw - 2rem));
   box-sizing: border-box;
   max-height: calc(100vh - 1.5rem);

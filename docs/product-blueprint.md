@@ -496,6 +496,13 @@ and returns the caller's fallback for technical noise. The raw error goes to
 the console and to the redacted local diagnostics log shown under Settings →
 Diagnostics, which the author may copy by hand; nothing is ever transmitted.
 
+Layers: anything that stacks above the page takes its `z-index` from the
+`--layer-*` scale in `theme.css` (overlay, drawer, popover, navigation,
+modal, modal-raised, confirm, toast), never a new number. Dialogs sit above
+drawers and navigation, confirmations above any dialog, and the toast
+viewport above everything so a sticky error can always be dismissed. Use
+`calc(var(--layer-…) ± n)` for a small offset inside one layer.
+
 ### Layout and breakpoints
 
 Desktop: fixed 88px left rail; main content uses

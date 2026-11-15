@@ -1,3 +1,20 @@
+/*
+ * Stacking layers (slice 4.84). Every element that stacks above the page
+ * takes its z-index from this scale, so a new layer is placed by name.
+ * Dialogs sit above drawers and navigation; confirmations sit above any
+ * dialog they open from; toasts stay readable and dismissable over all.
+ */
+:root {
+  --layer-overlay: 1200;      /* in-page overlays, full-screen editors, selection bubbles */
+  --layer-drawer: 1250;       /* Workspace scene and context drawers, scratchpad popover */
+  --layer-popover: 1300;      /* popovers anchored to content, update notice */
+  --layer-navigation: 1700;   /* rail, bottom bar, and their menus */
+  --layer-modal: 2000;        /* dialogs */
+  --layer-modal-raised: 2100; /* command palette, Character Lab */
+  --layer-confirm: 2200;      /* confirmations, which can open from any dialog */
+  --layer-toast: 2300;        /* the app-shell toast viewport */
+}
+
 :root[data-theme="light"] {
   --color-bg-primary: #ffffff;
   --color-bg-secondary: #f5f5f5;

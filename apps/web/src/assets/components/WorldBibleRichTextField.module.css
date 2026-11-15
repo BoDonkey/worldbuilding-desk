@@ -150,7 +150,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: var(--layer-overlay);
   background: var(--color-overlay);
   backdrop-filter: blur(6px);
   display: flex;

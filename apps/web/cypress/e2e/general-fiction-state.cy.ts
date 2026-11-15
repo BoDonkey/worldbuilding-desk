@@ -138,8 +138,9 @@ describe('General Fiction descriptive state', () => {
   });
 
   it('records a picked-up item and a move, then shows both in the Continuity overview', () => {
-    // Wide enough that the open context drawer leaves the change dialog clear.
-    cy.viewport(1440, 900);
+    // At 1,000px the context drawer overlaps the middle of the page; the change
+    // dialog must still open above it and take typing without forcing (4.84).
+    cy.viewport(1000, 900);
     seedGeneralFictionCharacter([
       ['scene-alpha', 'Alpha Scene', 'Sera picked up the brass key.'],
       ['scene-beta', 'Beta Scene', 'The tide turned.']
@@ -168,6 +169,12 @@ describe('General Fiction descriptive state', () => {
       cy.contains('summary', 'Place and items at this moment').click();
       cy.contains('brass key').should('be.visible');
       cy.contains('button', 'Record change here').click();
+    });
+    cy.get('[role="dialog"][aria-label="Record positioned state change"]').should(($dialog) => {
+      // The dialog is the topmost element at its own centre, not the drawer.
+      const rect = $dialog[0].getBoundingClientRect();
+      const top = $dialog[0].ownerDocument.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      expect($dialog[0].contains(top)).to.eq(true);
     });
     cy.get('[role="dialog"][aria-label="Record positioned state change"]').within(() => {
       cy.contains('label', 'Type').find('select option').then((options) => {
