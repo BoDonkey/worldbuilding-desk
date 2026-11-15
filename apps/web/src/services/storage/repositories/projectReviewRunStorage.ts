@@ -57,13 +57,3 @@ export async function saveProjectReviewRun(run: ProjectReviewRun): Promise<void>
     request.onerror = () => reject(request.error);
   });
 }
-
-export async function deleteProjectReviewRun(projectId: string): Promise<void> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(PROJECT_REVIEW_RUN_STORE_NAME, 'readwrite');
-    const request = tx.objectStore(PROJECT_REVIEW_RUN_STORE_NAME).delete(projectId);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-}

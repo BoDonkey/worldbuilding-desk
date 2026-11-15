@@ -1,3 +1,10 @@
+> **Archived 2026-11-15 (slice 3.51).** This guide described a
+> configuration-driven toolbar (`config/toolbarConfig.ts`) and custom marks
+> (`extensions/CustomMarks.ts`, `extensions/WordCountExtension.ts`) that the
+> editor no longer used; the dead-code sweep deleted those files. The live
+> editor is `apps/web/src/components/TipTapEditor.tsx` with its extensions
+> configured in `apps/web/src/config/editorConfig.ts`.
+
 # TipTap Editor Customization Guide
 
 ## Extensible Toolbar System

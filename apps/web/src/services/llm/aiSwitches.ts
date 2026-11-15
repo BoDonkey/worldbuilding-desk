@@ -65,7 +65,6 @@ export const AI_SWITCH_LABELS: Record<AISwitch, string> = {
 
 /** Shown where a surface's switch is off but the surface was reached anyway (an old link). */
 export const OFF_COACHING_NOTE = 'AI coaching is off for this project. Turn it on in Settings → AI Settings.';
-export const OFF_PROSE_NOTE = 'AI prose is off for this project. Turn it on in Settings → AI Settings.';
 
 export const readAISwitches = (
   settings: Pick<ProjectAISettings, 'aiCoaching' | 'aiProse'> | null | undefined
@@ -75,8 +74,6 @@ export const readAISwitches = (
 });
 
 export const anyAISwitchOn = (switches: AISwitches): boolean => switches.coaching || switches.prose;
-
-export const switchForFeature = (feature: ConsultationFeature): AISwitch => FEATURE_SWITCH[feature];
 
 /** Why a request for `feature` may not be sent, or null when its switch is on. */
 export function aiSwitchRefusal(

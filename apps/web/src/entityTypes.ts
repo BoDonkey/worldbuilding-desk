@@ -805,13 +805,6 @@ export interface CompendiumEntry {
   updatedAt: number;
 }
 
-export interface CompendiumRewardEffect {
-  targetType: 'stat' | 'resource' | 'custom';
-  targetId: string;
-  operation: 'add' | 'multiply' | 'set';
-  value: number | string | boolean;
-}
-
 export interface CompendiumMilestone {
   id: string;
   projectId: string;
@@ -819,7 +812,6 @@ export interface CompendiumMilestone {
   description?: string;
   pointsRequired: number;
   unlockRecipeIds?: string[];
-  permanentEffects?: CompendiumRewardEffect[];
   createdAt: number;
 }
 

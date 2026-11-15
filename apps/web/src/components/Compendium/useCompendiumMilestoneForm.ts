@@ -24,7 +24,6 @@ export function useCompendiumMilestoneForm({activeProject, setFeedback, setMiles
       description: milestoneDescription.trim() || undefined,
       pointsRequired: Math.max(0, Math.floor(milestonePoints)),
       unlockRecipeIds: recipeIds,
-      permanentEffects: [],
       createdAt: Date.now()
     };
     setFeedback(null);
