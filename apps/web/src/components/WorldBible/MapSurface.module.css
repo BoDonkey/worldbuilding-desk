@@ -1,0 +1,232 @@
+.surface {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--color-bg-primary);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.header h3,
+.who h4 {
+  margin: 0;
+}
+
+.header p,
+.empty,
+.hint {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-secondary);
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.actions button,
+.toolbar > button {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background-color: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+}
+
+.actions button:hover:not(:disabled),
+.toolbar > button:hover:not(:disabled) {
+  background-color: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.actions button:disabled,
+.toolbar > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.fileInput {
+  display: none;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.field select {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--color-text-primary);
+}
+
+.field select:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 30%, transparent);
+}
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+  user-select: none;
+}
+
+.stageArmed {
+  cursor: crosshair;
+}
+
+.stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.path {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.path polyline {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 3;
+  stroke-dasharray: 8 5;
+}
+
+.pin {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-primary);
+  transform: translate(-0.45rem, -50%);
+  cursor: pointer;
+}
+
+.pin:focus-visible {
+  outline: none;
+}
+
+.pinDot {
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--surface-panel-elevated);
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
+.pin:focus-visible .pinDot,
+.pinSelected .pinDot {
+  box-shadow: 0 0 0 3px var(--color-focus);
+}
+
+.pinLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  background: var(--surface-panel-elevated);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pinCount {
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 0.7rem;
+}
+
+.selected {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-accent-soft-border);
+  border-radius: 10px;
+  background: var(--color-accent-soft-bg);
+}
+
+.selected small {
+  color: var(--color-text-secondary);
+}
+
+.who {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.who ul {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.linkButton {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 620px) {
+  .pinLabel {
+    font-size: 0.7rem;
+    padding: 0 0.3rem;
+  }
+
+  .toolbar {
+    display: grid;
+  }
+
+  .toolbar > button {
+    justify-self: start;
+  }
+}

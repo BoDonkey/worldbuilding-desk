@@ -463,8 +463,10 @@ belong to a map, never to the world; there is no global grid.
 
 - **Map** (`WorldMap`, store `maps`): `name`, `distanceUnit` (the author's
   word: miles, leagues, squares), `scale` (distance units per map unit),
-  optional `imageRef` (used from 4.80), and optional `parentPlacement` (the
-  point where the whole map sits on a larger map). Parent maps nest; a map
+  optional `image` (the author's imported background, stored inline as a
+  data URL with its pixel size, slice 4.80; one map unit is one pixel), and
+  optional `parentPlacement` (the point where the whole map sits on a larger
+  map). Parent maps nest; a map
   that would sit on itself or on a map inside it is refused.
 - **Placement** (`place.placements` on a location record): `{mapId, x, y}` in
   that map's units, at most one per map.

@@ -77,6 +77,9 @@ Procedure:
    the copy confirm both maps, the city map's point on the region map, the
    conversion, and each place's **On maps** values are intact, and that
    **Distance to** gives the same figure and source as in the original.
+   Map surface (slice 4.80): before exporting, **Open** the region map,
+   import an image, and pin a place on it; in the copy confirm the image
+   shows with the pin in the same spot.
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated

@@ -1,11 +1,13 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import type {UnitConversion, WorldMap} from '../entityTypes';
+import type {MapImage, UnitConversion, WorldEntity, WorldMap} from '../entityTypes';
 import {
   deleteMap,
   getMapsByProject,
   MAPS_CHANGED_EVENT,
+  saveEntity,
   saveMap
 } from '../services/storage';
+import {withPlacement} from '../services/worldBible/mapSurface';
 import {
   mapsById,
   normalizeMapInput,
@@ -70,6 +72,27 @@ export function useProjectMaps() {
     [projectId]
   );
 
+  /** Sets or removes (null) a map's background image (slice 4.80). */
+  const saveMapImage = useCallback(
+    async (mapId: string, image: MapImage | null) => {
+      const map = byId.get(mapId);
+      if (!map) return;
+      const next: WorldMap = {...map, updatedAt: Date.now()};
+      if (image) next.image = image;
+      else delete next.image;
+      await saveMap(next);
+    },
+    [byId]
+  );
+
+  /** Pins a place at a point on a map, or unpins it (null). The author's action only. */
+  const savePlacement = useCallback(
+    async (place: WorldEntity, mapId: string, point: {x: number; y: number} | null) => {
+      await saveEntity(withPlacement(place, mapId, point, Date.now()));
+    },
+    []
+  );
+
   const saveConversions = useCallback(
     async (next: UnitConversion[]): Promise<string | null> => {
       if (!projectSettings) return 'Project settings are still loading.';
@@ -79,5 +102,5 @@ export function useProjectMaps() {
     [projectSettings, saveProjectSettings]
   );
 
-  return {maps, mapsById: byId, conversions, saveMapInput, removeMap, saveConversions};
+  return {maps, mapsById: byId, conversions, saveMapInput, removeMap, saveMapImage, savePlacement, saveConversions};
 }

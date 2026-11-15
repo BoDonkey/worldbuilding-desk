@@ -1,18 +1,32 @@
 import {useMemo, useState} from 'react';
-import type {EntityCategory, UnitConversion, WorldEntity, WorldMap} from '../../entityTypes';
+import type {
+  CharacterSheet,
+  EntityCategory,
+  StateMutationEvent,
+  UnitConversion,
+  WorldEntity,
+  WorldMap,
+  WritingDocument
+} from '../../entityTypes';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {useProjectMaps} from '../../hooks/useProjectMaps';
 import {describeError} from '../../services/errors';
+import type {ConsistencyAlias} from '../../services/storage';
 import {useNotificationStore} from '../../store/notificationStore';
 import {InlineAlert} from '../common/InlineAlert';
 import {mapAncestors, normalizeUnitConversions, parentMapOptions} from '../../services/worldBible/maps';
 import {placesById} from '../../services/worldBible/places';
+import {MapSurface} from './MapSurface';
 import shared from './worldBibleShared.module.css';
 import styles from './MapsPanel.module.css';
 
 interface MapsPanelProps {
   categories: EntityCategory[];
   entities: WorldEntity[];
+  aliases: ConsistencyAlias[];
+  characterSheets: CharacterSheet[];
+  documents: WritingDocument[];
+  stateMutationEvents: StateMutationEvent[];
 }
 
 interface MapForm {
@@ -41,16 +55,19 @@ const formFor = (map: WorldMap): MapForm => ({
 const numberOrNaN = (value: string): number => (value.trim() === '' ? Number.NaN : Number(value));
 
 /**
- * Maps of the world and the author's unit conversions (slice 4.79). There is
- * no map surface yet (4.80): places are put on a map with numbers in their
- * location record. A map can sit, as one point, on a larger map.
+ * Maps of the world and the author's unit conversions (slice 4.79). A map
+ * opens as a picture with pins (4.80); places can also be put on a map with
+ * numbers in their location record. A map can sit, as one point, on a larger
+ * map.
  */
-export function MapsPanel({categories, entities}: MapsPanelProps) {
+export function MapsPanel(props: MapsPanelProps) {
+  const {categories, entities} = props;
   const {maps, mapsById, conversions, saveMapInput, removeMap, saveConversions} = useProjectMaps();
   const {requestConfirm, confirmDialog} = useConfirmDialog();
   const [form, setForm] = useState<MapForm | null>(null);
   const [conversionDraft, setConversionDraft] = useState<UnitConversion[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [openMapId, setOpenMapId] = useState<string | null>(null);
   const pushToast = useNotificationStore((state) => state.pushToast);
   const notify = (message: string) => pushToast({tone: 'success', message});
 
@@ -67,6 +84,8 @@ export function MapsPanel({categories, entities}: MapsPanelProps) {
     () => parentMapOptions(form?.id ?? null, mapsById),
     [form?.id, mapsById]
   );
+
+  const openMap = openMapId ? mapsById.get(openMapId) ?? null : null;
 
   const update = (change: Partial<MapForm>) => setForm((current) => (current ? {...current, ...change} : current));
 
@@ -148,7 +167,7 @@ export function MapsPanel({categories, entities}: MapsPanelProps) {
         <div>
           <div className={shared.castEyebrow}>Maps</div>
           <h2 id='maps-panel-title'>Maps and distances</h2>
-          <p>Each map has its own unit and scale. Put a place on a map from its record.</p>
+          <p>Each map has its own unit and scale. Open a map to import its image and pin places on it.</p>
         </div>
         {!form && (
           <button type='button' className={styles.actionButton} onClick={() => { setForm(EMPTY_FORM); setError(null); }}>
@@ -224,9 +243,13 @@ export function MapsPanel({categories, entities}: MapsPanelProps) {
                       ? ` · on ${parents[0].name} at (${map.parentPlacement.x}, ${map.parentPlacement.y})`
                       : ''}
                     {` · ${placed} place${placed === 1 ? '' : 's'}`}
+                    {map.image ? ' · image' : ''}
                   </small>
                 </div>
                 <div className={styles.mapActions}>
+                  <button type='button' aria-pressed={openMapId === map.id} onClick={() => setOpenMapId(openMapId === map.id ? null : map.id)}>
+                    {openMapId === map.id ? 'Close' : 'Open'}
+                  </button>
                   <button type='button' onClick={() => { setForm(formFor(map)); setError(null); }}>Edit</button>
                   <button type='button' className={shared.dismissButton} onClick={() => confirmRemove(map)}>Delete</button>
                 </div>
@@ -234,6 +257,20 @@ export function MapsPanel({categories, entities}: MapsPanelProps) {
             );
           })}
         </ul>
+      )}
+
+      {openMap && (
+        <MapSurface
+          key={openMap.id}
+          map={openMap}
+          categories={categories}
+          entities={entities}
+          aliases={props.aliases}
+          characterSheets={props.characterSheets}
+          documents={props.documents}
+          stateMutationEvents={props.stateMutationEvents}
+          onClose={() => setOpenMapId(null)}
+        />
       )}
 
       <section className={styles.conversions} aria-labelledby='unit-conversions-title'>

@@ -31,6 +31,8 @@ import {transactionToPromise} from './idbRequest';
 const uuid = () => crypto.randomUUID();
 
 /** A project whose records point at each other through every kind of reference. */
+const MAP_IMAGE = {dataUrl: 'data:image/png;base64,iVBORw0KGgo=', mimeType: 'image/png', width: 4, height: 3, byteLength: 8, fileName: 'region.png'};
+
 async function seedLinkedProject(name: string) {
   const projectId = uuid();
   const ids = {
@@ -61,7 +63,7 @@ async function seedLinkedProject(name: string) {
     [STATE_MUTATION_EVENT_STORE_NAME, {id: ids.event, projectId, sceneId: ids.scene1, sceneOrder: 1, status: 'accepted', commands: [{type: 'stat_change', actorId: ids.mira, statDefinitionId: ids.stat, delta: 1}], createdAt: 1}],
     [CONSISTENCY_ALIAS_STORE_NAME, {id: uuid(), projectId, alias: 'Scout', targetId: ids.mira, targetType: 'entity', createdAt: 1, updatedAt: 1}],
     [MECHANICS_DRAFT_STORE_NAME, {id: `${projectId}:mechanics-draft:${ids.sera}`, projectId, entityId: ids.sera, kind: 'stat', name: 'Grit', defaultValue: '3', updatedAt: 1}],
-    [MAP_STORE_NAME, {id: ids.region, projectId, name: 'Region', distanceUnit: 'miles', scale: 1, createdAt: 1, updatedAt: 1}],
+    [MAP_STORE_NAME, {id: ids.region, projectId, name: 'Region', distanceUnit: 'miles', scale: 1, image: MAP_IMAGE, createdAt: 1, updatedAt: 1}],
     [MAP_STORE_NAME, {id: ids.city, projectId, name: 'City', distanceUnit: 'feet', scale: 1, parentPlacement: {mapId: ids.region, x: 6, y: 8}, createdAt: 1, updatedAt: 1}],
     [WORLD_CANVAS_STORE_NAME, {id: projectId, projectId, premise: 'Rain city', lenses: [{kind: 'people', linkedEntityIds: [ids.mira], linkedSourceNoteIds: [ids.lore]}], questions: [], createdAt: 1, updatedAt: 1}]
   ];
@@ -104,6 +106,7 @@ function expectIndependentCopy(copy: ProjectSnapshot, source: ProjectSnapshot) {
   const region = data.maps.find((map) => map.name === 'Region')!;
   const city = data.maps.find((map) => map.name === 'City')!;
   expect(city.parentPlacement).toEqual({mapId: region.id, x: 6, y: 8});
+  expect(region.image).toEqual(MAP_IMAGE);
   expect(sera.place?.placements).toEqual([{mapId: city.id, x: 1, y: 2}]);
   expect(data.corkboardChapterCards[0].sceneIds?.every((id) => scenes.has(id))).toBe(true);
   expect(data.characters[0].entityId).toBe(mira.id);

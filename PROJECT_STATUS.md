@@ -142,7 +142,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   page creates maps with a distance unit, a scale, and an optional point on a
   larger map (nesting checked for cycles), plus project unit conversions
   ("1 league = 3 miles"). Location records put the place on maps by number
-  (**On maps**; the map surface is 4.80) and show **Distance to** another
+  (**On maps**) and show **Distance to** another
   place with its source: authored on a connection, a route over connections,
   or a straight line on the most detailed shared map; a place with no map
   point uses the point of the nearest place it is inside, and says so. Figures in unlinked
@@ -150,6 +150,23 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   ids) and portable export (`maps/maps.csv`, `maps/unit-conversions.csv`,
   `placements` in place frontmatter and CSV). Project storage schema 12,
   backup snapshot schema 14, IndexedDB version 31.
+- Map surface (slice 4.80). **Open** on a map in **Maps and distances**
+  imports a background image (PNG, JPEG, WebP, or GIF; up to 10 MB and 16384
+  pixels a side, refused with a message naming the limit) and shows it with
+  place records pinned on it; one map unit is one image pixel. The author
+  pins a place by choosing it and clicking the map, or with **Pin at centre**
+  and the arrow keys on the focused pin (Shift moves further, Enter saves,
+  Escape puts it back); a pin is a placement, so **On maps** and **Distance
+  to** read the same point. **Who is where at the end of** a chosen scene
+  shows each character at their place's pin, or at the pin of a place it is
+  inside, and lists characters the map does not show; **Show the path of**
+  draws one character's moves between pinned places up to that scene. Points
+  entered by number outside the image are listed with **Move onto the map**.
+  **Export image** saves the pinned map, with who is where and any path, as a
+  PNG. The image is stored on the map record, so backups, vaults, project
+  copies, and project delete carry it with no schema change; portable export
+  adds the image file under `maps/` and an `image` column in `maps/maps.csv`.
+  No drawing tools.
 - Names are compared by one module, `services/names/nameMatching.ts`
   (slice 3.46): an exact form (case and spacing) for records, aliases, and
   duplicate checks, and a loose form (letters and digits only) for names

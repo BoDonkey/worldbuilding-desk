@@ -159,9 +159,12 @@ describe('portable data export', () => {
     expect(readable).toContain('Ford,,,,,,road to Ember Archive — three days; by horse: 1 day | chute to Ember Archive (one-way),');
   });
 
-  it('carries map placements, maps, and unit conversions (4.79)', () => {
+  it('carries map placements, maps, map images, and unit conversions (4.79, 4.80)', () => {
     const maps: WorldMap[] = [
-      {id: 'region', projectId: 'project-1', name: 'Region', distanceUnit: 'leagues', scale: 0.5, createdAt: 1, updatedAt: 1},
+      {
+        id: 'region', projectId: 'project-1', name: 'Region', distanceUnit: 'leagues', scale: 0.5, createdAt: 1, updatedAt: 1,
+        image: {dataUrl: `data:image/png;base64,${btoa('PNGBYTES')}`, mimeType: 'image/png', width: 8, height: 1, byteLength: 8}
+      },
       {
         id: 'city', projectId: 'project-1', name: 'Varn, city', distanceUnit: 'feet', scale: 10,
         parentPlacement: {mapId: 'region', x: 6, y: 8}, createdAt: 1, updatedAt: 1
@@ -187,7 +190,9 @@ describe('portable data export', () => {
     expect(readable).toContain('place: {"placements":[{"map":"Region","x":3,"y":4}]}');
     expect(readable).toContain('## On maps\n\n- Region (3, 4)');
     expect(readable).not.toContain('gone');
-    expect(readable).toContain('name,distance_unit,scale,sits_on,x,y\r\nRegion,leagues,0.5,,,\r\n"Varn, city",feet,10,Region,6,8\r\n');
+    expect(readable).toContain('name,distance_unit,scale,sits_on,x,y,image\r\nRegion,leagues,0.5,,,,region.png\r\n"Varn, city",feet,10,Region,6,8,\r\n');
+    expect(readable).toContain('maps/region.png');
+    expect(readable).toContain('PNGBYTES');
     expect(readable).toContain('from,factor,to\r\nleague,3,miles\r\n');
   });
 });
