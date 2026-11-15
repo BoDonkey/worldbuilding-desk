@@ -3,7 +3,7 @@
   top: 1rem;
   right: 1rem;
   /* Above page chrome and the stat panel (1260), below dialogs and toasts (1350). */
-  z-index: 1300;
+  z-index: var(--layer-popover);
   display: grid;
   gap: 0.45rem;
   width: min(380px, calc(100vw - 2rem));

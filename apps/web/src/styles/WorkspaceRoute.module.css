@@ -713,12 +713,12 @@
 }
 
 .sceneOverlay {
-  z-index: 1240;
+  z-index: calc(var(--layer-drawer) - 10);
   justify-content: flex-start;
 }
 
 .contextOverlay {
-  z-index: 1250;
+  z-index: var(--layer-drawer);
   justify-content: flex-end;
 }
 
@@ -1328,7 +1328,7 @@
 
 .consistencyPopover {
   position: fixed;
-  z-index: 1300;
+  z-index: var(--layer-popover);
   width: min(360px, calc(100vw - 2rem));
   padding: 0.75rem;
   border-radius: 10px;
@@ -1534,7 +1534,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--layer-modal);
 }
 
 .modalCard {

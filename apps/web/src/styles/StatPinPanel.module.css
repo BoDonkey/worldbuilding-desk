@@ -5,7 +5,7 @@
 .panel {
   position: fixed;
   bottom: 1rem;
-  z-index: 1260;
+  z-index: calc(var(--layer-drawer) + 10);
   display: flex;
   width: min(320px, calc(100vw - 2rem));
   max-height: min(70vh, 640px);
