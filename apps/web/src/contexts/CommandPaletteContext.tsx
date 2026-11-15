@@ -31,6 +31,7 @@ import {
   CommandPaletteContext,
   type CommandPaletteContextValue
 } from './commandPaletteApi';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 interface CommandPaletteProviderProps {
   children: ReactNode;
@@ -169,17 +170,17 @@ export const CommandPaletteProvider = ({children}: CommandPaletteProviderProps) 
       void loadSearchCommands();
     };
 
-    window.addEventListener('wbd:entity-records-changed', reload);
-    window.addEventListener('wbd:alias-records-changed', reload);
-    window.addEventListener('wbd:writing-records-changed', reload);
-    window.addEventListener('wbd:character-sheet-records-changed', reload);
+    window.addEventListener(RECORDS_CHANGED.entity, reload);
+    window.addEventListener(RECORDS_CHANGED.alias, reload);
+    window.addEventListener(RECORDS_CHANGED.writing, reload);
+    window.addEventListener(RECORDS_CHANGED.characterSheet, reload);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('wbd:entity-records-changed', reload);
-      window.removeEventListener('wbd:alias-records-changed', reload);
-      window.removeEventListener('wbd:writing-records-changed', reload);
-      window.removeEventListener('wbd:character-sheet-records-changed', reload);
+      window.removeEventListener(RECORDS_CHANGED.entity, reload);
+      window.removeEventListener(RECORDS_CHANGED.alias, reload);
+      window.removeEventListener(RECORDS_CHANGED.writing, reload);
+      window.removeEventListener(RECORDS_CHANGED.characterSheet, reload);
     };
   }, [activeProject, isOpen, navigate]);
 

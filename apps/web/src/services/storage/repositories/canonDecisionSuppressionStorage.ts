@@ -2,10 +2,11 @@ import type {CanonDecisionSuppression} from '../../../entityTypes';
 import {CANON_DECISION_SUPPRESSION_STORE_NAME, openDb} from '../db';
 import {readProjectRecords} from '../projectIndex';
 import {normalizeNameExact} from '../../names/nameMatching';
+import {RECORDS_CHANGED} from '../../recordEvents';
 
 function emitCanonDecisionRecordsChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('wbd:canon-decision-records-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.canonDecision));
 }
 
 export function buildEntityDecisionSuppressionKey(params: {

@@ -9,7 +9,6 @@ import type {
 } from '../entityTypes';
 import {invalidateStateMutationEventById} from '../services/storage';
 import type {ActorResolution} from '../services/characters/characterIdentity';
-import {hashString} from '../services/characters/characterSheetDefaults';
 import {replayCharacterState} from '../services/state/stateReplay';
 import {saveStateChange, saveStateChangeRecord} from '../services/state/stateChangeSave';
 import {getAppStateKind} from '../services/state/kinds';
@@ -17,6 +16,7 @@ import {describeError} from '../services/errors';
 import type {MutationFormType} from '../components/CharacterSheets/MutationForm';
 import {useCharacterSheetMutationPreview} from './useCharacterSheetMutationPreview';
 import type {CharacterSheetsFeedback} from './useCharacterSheetsData';
+import {hashString} from '../utils/hashString';
 
 /**
  * "Record scene changes": the change being drafted against a sheet and scene,

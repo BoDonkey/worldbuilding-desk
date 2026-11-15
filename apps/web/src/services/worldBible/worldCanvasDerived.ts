@@ -7,6 +7,7 @@ import type {
   WorldCanvasLensKind,
   WorldEntity
 } from '../../entityTypes';
+import {isLocationCategory} from './locationCategory';
 import {isSystemNegativeSpaceCategory} from './systemNegativeSpace';
 
 const SOURCE_NOTE_KIND_BY_LENS: Readonly<
@@ -28,7 +29,7 @@ const LENS_ORDER: readonly WorldCanvasLensKind[] = [
 export function mapCategoryToLens(category: EntityCategory): WorldCanvasLensKind | null {
   if (category.kind === 'character') return 'people';
   const slug = category.slug.toLowerCase();
-  if (['location', 'place', 'region'].some((hint) => slug.includes(hint))) return 'places';
+  if (isLocationCategory(category)) return 'places';
   if (['faction', 'guild', 'house', 'order'].some((hint) => slug.includes(hint))) return 'factions';
   return null;
 }

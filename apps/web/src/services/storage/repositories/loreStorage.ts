@@ -8,10 +8,11 @@ import {readProjectRecords} from '../projectIndex';
 import {normalizeLoreDocumentLinks} from '../../lore/loreDocumentLinks';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
 import {requestToPromise} from '../idbRequest';
+import {RECORDS_CHANGED} from '../../recordEvents';
 
 function emitLoreRecordsChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('wbd:lore-records-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.lore));
 }
 
 export async function getLoreDocumentsByProject(projectId: string): Promise<LoreDocument[]> {

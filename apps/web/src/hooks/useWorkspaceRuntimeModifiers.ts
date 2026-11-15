@@ -1,8 +1,8 @@
 import {useEffect, useMemo} from 'react';
 import type {Character, Project} from '../entityTypes';
 import {
+  buildProjectRuntimeModifiers,
   DEFAULT_PARTY_SYNERGY_RULES,
-  deriveCharacterRuntimeModifiers,
   getPartySynergySuggestions
 } from '../services/compendium';
 import type {useWorkspaceProjectData} from './useWorkspaceProjectData';
@@ -44,12 +44,13 @@ export function useWorkspaceRuntimeModifiers({
   );
   const runtimeModifiers = useMemo(
     () =>
-      deriveCharacterRuntimeModifiers({
+      buildProjectRuntimeModifiers({
+        characters,
         settlementState,
         settlementModules,
         activePartySynergies
       }),
-    [settlementState, settlementModules, activePartySynergies]
+    [characters, settlementState, settlementModules, activePartySynergies]
   );
   useEffect(() => {
     if (!activeProject) return;

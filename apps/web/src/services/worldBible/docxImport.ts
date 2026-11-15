@@ -1,88 +1,4 @@
-const readU16LE = (bytes: Uint8Array, offset: number): number =>
-  bytes[offset] | (bytes[offset + 1] << 8);
-
-const readU32LE = (bytes: Uint8Array, offset: number): number =>
-  (bytes[offset] |
-    (bytes[offset + 1] << 8) |
-    (bytes[offset + 2] << 16) |
-    (bytes[offset + 3] << 24)) >>> 0;
-
-const findZipEntry = (
-  bytes: Uint8Array,
-  entryName: string
-): {
-  compressionMethod: number;
-  compressedData: Uint8Array;
-} | null => {
-  const eocdSignature = 0x06054b50;
-  const centralSignature = 0x02014b50;
-  const localSignature = 0x04034b50;
-
-  const minEocdSize = 22;
-  const maxCommentLength = 0xffff;
-  const searchStart = Math.max(0, bytes.length - (minEocdSize + maxCommentLength));
-  let eocdOffset = -1;
-  for (let i = bytes.length - minEocdSize; i >= searchStart; i -= 1) {
-    if (readU32LE(bytes, i) === eocdSignature) {
-      eocdOffset = i;
-      break;
-    }
-  }
-  if (eocdOffset === -1) return null;
-
-  const centralDirectorySize = readU32LE(bytes, eocdOffset + 12);
-  const centralDirectoryOffset = readU32LE(bytes, eocdOffset + 16);
-  const centralDirectoryEnd = centralDirectoryOffset + centralDirectorySize;
-  if (centralDirectoryEnd > bytes.length) return null;
-
-  const decoder = new TextDecoder('utf-8');
-  let cursor = centralDirectoryOffset;
-
-  while (cursor + 46 <= centralDirectoryEnd) {
-    if (readU32LE(bytes, cursor) !== centralSignature) {
-      break;
-    }
-    const compressionMethod = readU16LE(bytes, cursor + 10);
-    const compressedSize = readU32LE(bytes, cursor + 20);
-    const fileNameLength = readU16LE(bytes, cursor + 28);
-    const extraLength = readU16LE(bytes, cursor + 30);
-    const commentLength = readU16LE(bytes, cursor + 32);
-    const localHeaderOffset = readU32LE(bytes, cursor + 42);
-    const fileNameStart = cursor + 46;
-    const fileNameEnd = fileNameStart + fileNameLength;
-    if (fileNameEnd > bytes.length) return null;
-
-    const fileName = decoder.decode(bytes.slice(fileNameStart, fileNameEnd));
-    cursor = fileNameEnd + extraLength + commentLength;
-
-    if (fileName !== entryName) continue;
-    if (localHeaderOffset + 30 > bytes.length) return null;
-    if (readU32LE(bytes, localHeaderOffset) !== localSignature) return null;
-
-    const localNameLength = readU16LE(bytes, localHeaderOffset + 26);
-    const localExtraLength = readU16LE(bytes, localHeaderOffset + 28);
-    const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
-    const dataEnd = dataStart + compressedSize;
-    if (dataEnd > bytes.length) return null;
-
-    return {
-      compressionMethod,
-      compressedData: bytes.slice(dataStart, dataEnd)
-    };
-  }
-
-  return null;
-};
-
-const inflateRaw = async (compressedData: Uint8Array): Promise<Uint8Array> => {
-  const copy = new Uint8Array(compressedData.byteLength);
-  copy.set(compressedData);
-  const stream = new Blob([copy.buffer]).stream().pipeThrough(
-    new DecompressionStream('deflate-raw')
-  );
-  const decompressed = await new Response(stream).arrayBuffer();
-  return new Uint8Array(decompressed);
-};
+import {readZipEntryText} from '../../utils/unzip';
 
 export interface DocxImportDocument {
   /** Paragraph text; heading paragraphs are prefixed with Markdown `#` markers. */
@@ -228,30 +144,12 @@ export const docxXmlToImportDocument = (
   };
 };
 
-export const readZipEntryText = async (
-  bytes: Uint8Array,
-  entryName: string
-): Promise<string | null> => {
-  const entry = findZipEntry(bytes, entryName);
-  if (!entry) return null;
-
-  let xmlBytes: Uint8Array;
-  if (entry.compressionMethod === 0) {
-    xmlBytes = entry.compressedData;
-  } else if (entry.compressionMethod === 8) {
-    xmlBytes = await inflateRaw(entry.compressedData);
-  } else {
-    throw new Error(`Unsupported DOCX compression method (${entry.compressionMethod}).`);
-  }
-  return new TextDecoder('utf-8').decode(xmlBytes);
-};
-
 export const parseDocxFile = async (file: File): Promise<DocxImportDocument> => {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const documentXml = await readZipEntryText(bytes, 'word/document.xml');
+  const documentXml = await readZipEntryText(bytes, 'word/document.xml', 'DOCX');
   if (documentXml === null) {
     throw new Error('Could not read DOCX structure.');
   }
-  const stylesXml = await readZipEntryText(bytes, 'word/styles.xml').catch(() => null);
+  const stylesXml = await readZipEntryText(bytes, 'word/styles.xml', 'DOCX').catch(() => null);
   return docxXmlToImportDocument(documentXml, stylesXml ?? '');
 };

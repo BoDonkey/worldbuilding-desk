@@ -2,6 +2,9 @@ import type {CompendiumDomain, EntityCategory, PlaceData, WorldEntity} from '../
 import type {ReviewQueueItem} from '../consistency';
 import {buildCanonicalAliasList, deriveFirstNameAlias} from './worldBibleCanonicalization';
 import {normalizeRichTextValue} from './worldBibleEntityHelpers';
+import {isLocationCategory} from './locationCategory';
+
+export {isLocationCategory};
 
 /*
  * Pure World Bible record logic moved from useWorldBibleEntityActions (3.22):
@@ -10,7 +13,6 @@ import {normalizeRichTextValue} from './worldBibleEntityHelpers';
  */
 
 const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
-const LOCATION_CATEGORY_HINTS = ['location', 'locations', 'place', 'places', 'region', 'zone'];
 
 const findCategory = (categories: EntityCategory[], entity: WorldEntity) =>
   categories.find((item) => item.id === entity.categoryId);
@@ -21,12 +23,6 @@ export const isCharacterLikeEntity = (categories: EntityCategory[], entity: Worl
   const slug = (category?.slug ?? '').toLowerCase();
   const categoryName = (category?.name ?? '').toLowerCase();
   return CHARACTER_CATEGORY_HINTS.some((hint) => slug.includes(hint) || categoryName.includes(hint));
-};
-
-/** Location-like by slug only. */
-export const isLocationCategory = (category: EntityCategory | null | undefined): boolean => {
-  const slug = (category?.slug ?? '').toLowerCase();
-  return LOCATION_CATEGORY_HINTS.some((hint) => slug.includes(hint));
 };
 
 export const isLocationLikeEntity = (categories: EntityCategory[], entity: WorldEntity): boolean =>

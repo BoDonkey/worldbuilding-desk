@@ -7,6 +7,7 @@ import {getProjectCapabilities} from '../projectMode';
 import {useAppStore} from '../store/appStore';
 import styles from '../assets/components/Navigation.module.css';
 import {readAISwitches} from '../services/llm/aiSwitches';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 interface NavigationProps {
   isRailCollapsed?: boolean;
@@ -66,11 +67,11 @@ export const Navigation: FC<NavigationProps> = ({
     const handleRecordsChanged = () => {
       void loadPendingCounts();
     };
-    window.addEventListener('wbd:compendium-records-changed', handleRecordsChanged);
+    window.addEventListener(RECORDS_CHANGED.compendium, handleRecordsChanged);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('wbd:compendium-records-changed', handleRecordsChanged);
+      window.removeEventListener(RECORDS_CHANGED.compendium, handleRecordsChanged);
     };
   }, [loadPendingCounts, location.pathname]);
 

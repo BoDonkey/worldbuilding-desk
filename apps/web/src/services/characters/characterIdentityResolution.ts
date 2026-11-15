@@ -16,6 +16,7 @@ import {
   type CharacterIdentityClassificationRecord,
   type CharacterIdentityMigrationReport
 } from './characterIdentity';
+import {RECORDS_CHANGED} from '../recordEvents';
 
 export type CharacterIdentityResolutionClassification = Extract<
   CharacterIdentityClassification,
@@ -113,9 +114,9 @@ export function buildCharacterIdentityResolutionQueue(params: {
 
 const emitIdentityChanges = (): void => {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('wbd:entity-records-changed'));
-  window.dispatchEvent(new CustomEvent('wbd:character-records-changed'));
-  window.dispatchEvent(new CustomEvent('wbd:character-sheet-records-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.entity));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.character));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.characterSheet));
 };
 
 export interface CharacterIdentityResolutionParams {

@@ -1,4 +1,5 @@
 import type {EntityCategory} from '../../entityTypes';
+import {htmlTextContent} from '../../utils/textHelpers';
 import {convertPlainTextToRichHtml} from './worldBibleEntityHelpers';
 
 export type WorldBibleImportSectionAction =
@@ -554,11 +555,7 @@ const mapInlineLabelsToExistingFields = (
   });
 };
 
-export const htmlToText = (raw: string): string => {
-  const parser = new DOMParser();
-  const parsed = parser.parseFromString(raw, 'text/html');
-  return parsed.body.textContent?.trim() ?? '';
-};
+export const htmlToText = (raw: string): string => htmlTextContent(raw).trim();
 
 export const sanitizeImportedHtml = (raw: string): string => {
   const parser = new DOMParser();

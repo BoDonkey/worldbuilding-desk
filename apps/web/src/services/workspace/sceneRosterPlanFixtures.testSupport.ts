@@ -1,9 +1,10 @@
 import type {CompendiumEntry, EntityCategory, Project, StateMutationEvent, WritingDocument} from '../../entityTypes';
 import {CONTINUITY_CORPUS} from '../../fixtures/continuityCorpus';
 import {captureStateMutationAnchor, textSnapshotFromPlainText} from '../state/stateMutationAnchor';
-import {hashSceneContent, type PendingInventoryCapture} from './sceneRosterMutationTypes';
+import type {PendingInventoryCapture} from './sceneRosterMutationTypes';
 import type {SceneRosterCharacterCard} from './sceneRosterTypes';
 import {buildStateSubjects, type StateSubject} from '../state/stateSubjects';
+import {hashString} from '../../utils/hashString';
 
 // Exercise the same Sera/Pale Draught baseline as the trust-dogfood continuity corpus.
 export const corpus = CONTINUITY_CORPUS.find((entry) => entry.id === 'state-pale-draught-baseline-consumption')!;
@@ -33,12 +34,12 @@ export const category: EntityCategory = {
 export const event: StateMutationEvent = {
   id: 'consume', projectId: 'corpus', sceneId: scene.id, sceneTitle: scene.title,
   sceneOrder: 1, sceneSequence: 4, scenePosition: position, sceneAnchor: anchor,
-  sourceType: 'manual', sourceRevision: 2, sourceHash: hashSceneContent(scene.content),
+  sourceType: 'manual', sourceRevision: 2, sourceHash: hashString(scene.content),
   status: 'accepted', commands: [{type: 'inventory_consume', actorId: sheet.id, itemName: 'Pale Draught', quantity: 1}],
   consumableEffect: {definitionId: definition.id, itemName: definition.name, phase: 'consume'}, createdAt: 3
 };
 export const capture: PendingInventoryCapture = {
-  sceneId: scene.id, sourceHash: hashSceneContent(scene.content), itemName: definition.name,
+  sceneId: scene.id, sourceHash: hashString(scene.content), itemName: definition.name,
   evidenceText: scene.content, action: 'acquire', position, anchor
 };
 export const captureContext = {

@@ -335,6 +335,28 @@ export function deriveCharacterRuntimeModifiers(params: {
   };
 }
 
+/**
+ * A project's character runtime modifiers: settlement effects plus the
+ * party-synergy level bonus under the default synergy rules. The Workspace,
+ * Character Sheets, Character Lab, and the stat peek all build them here so
+ * the same project gives the same numbers everywhere (slice 3.52). Pass
+ * `activePartySynergies` when the caller already has them.
+ */
+export function buildProjectRuntimeModifiers(params: {
+  characters: Character[];
+  settlementState: SettlementState | null;
+  settlementModules: SettlementModule[];
+  activePartySynergies?: PartySynergySuggestion[];
+}): CharacterRuntimeModifiers {
+  return deriveCharacterRuntimeModifiers({
+    settlementState: params.settlementState,
+    settlementModules: params.settlementModules,
+    activePartySynergies:
+      params.activePartySynergies ??
+      getPartySynergySuggestions({characters: params.characters, rules: DEFAULT_PARTY_SYNERGY_RULES})
+  });
+}
+
 export function getEffectiveStatValue(params: {
   definitionId: string;
   baseValue: number;

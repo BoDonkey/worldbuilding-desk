@@ -51,6 +51,7 @@ import {
 } from '../services/worldBible/worldBibleSummary';
 import {describeError} from '../services/errors';
 import {parseAlternativeNames} from '../services/worldBible/worldBibleEntityHelpers';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 interface WorldBibleFeedback {
   tone: 'success' | 'error';
@@ -181,10 +182,10 @@ export function useWorldBibleProjectData({
     };
 
     void loadLoreLinks();
-    window.addEventListener('wbd:lore-records-changed', loadLoreLinks);
+    window.addEventListener(RECORDS_CHANGED.lore, loadLoreLinks);
     return () => {
       cancelled = true;
-      window.removeEventListener('wbd:lore-records-changed', loadLoreLinks);
+      window.removeEventListener(RECORDS_CHANGED.lore, loadLoreLinks);
     };
   }, [activeProject]);
 
@@ -284,36 +285,36 @@ export function useWorldBibleProjectData({
       });
     };
 
-    window.addEventListener('wbd:writing-records-changed', refreshProjectHealthData);
-    window.addEventListener('wbd:lore-fact-records-changed', refreshProjectHealthData);
+    window.addEventListener(RECORDS_CHANGED.writing, refreshProjectHealthData);
+    window.addEventListener(RECORDS_CHANGED.loreFact, refreshProjectHealthData);
     window.addEventListener(
-      'wbd:state-mutation-events-changed',
+      RECORDS_CHANGED.stateMutationEvents,
       refreshProjectHealthData
     );
-    window.addEventListener('wbd:entity-records-changed', refreshCharacterIdentityData);
-    window.addEventListener('wbd:character-records-changed', refreshCharacterIdentityData);
+    window.addEventListener(RECORDS_CHANGED.entity, refreshCharacterIdentityData);
+    window.addEventListener(RECORDS_CHANGED.character, refreshCharacterIdentityData);
     window.addEventListener(
-      'wbd:character-sheet-records-changed',
+      RECORDS_CHANGED.characterSheet,
       refreshCharacterIdentityData
     );
     return () => {
       cancelled = true;
       window.removeEventListener(
-        'wbd:writing-records-changed',
+        RECORDS_CHANGED.writing,
         refreshProjectHealthData
       );
       window.removeEventListener(
-        'wbd:lore-fact-records-changed',
+        RECORDS_CHANGED.loreFact,
         refreshProjectHealthData
       );
       window.removeEventListener(
-        'wbd:state-mutation-events-changed',
+        RECORDS_CHANGED.stateMutationEvents,
         refreshProjectHealthData
       );
-      window.removeEventListener('wbd:entity-records-changed', refreshCharacterIdentityData);
-      window.removeEventListener('wbd:character-records-changed', refreshCharacterIdentityData);
+      window.removeEventListener(RECORDS_CHANGED.entity, refreshCharacterIdentityData);
+      window.removeEventListener(RECORDS_CHANGED.character, refreshCharacterIdentityData);
       window.removeEventListener(
-        'wbd:character-sheet-records-changed',
+        RECORDS_CHANGED.characterSheet,
         refreshCharacterIdentityData
       );
     };
@@ -337,10 +338,10 @@ export function useWorldBibleProjectData({
     };
 
     refreshAliases();
-    window.addEventListener('wbd:alias-records-changed', refreshAliases);
+    window.addEventListener(RECORDS_CHANGED.alias, refreshAliases);
     return () => {
       cancelled = true;
-      window.removeEventListener('wbd:alias-records-changed', refreshAliases);
+      window.removeEventListener(RECORDS_CHANGED.alias, refreshAliases);
     };
   }, [activeProject]);
 

@@ -1,3 +1,5 @@
+import {htmlTextContent} from '../../utils/textHelpers';
+
 export type SceneRosterCandidateType = 'character' | 'entity';
 
 export interface SceneRosterCandidate {
@@ -46,21 +48,6 @@ const normalizeSurface = (value: string): string =>
     .replace(/\s+/g, ' ')
     .trim();
 
-const decodeHtmlText = (html: string): string => {
-  if (typeof DOMParser !== 'undefined') {
-    return new DOMParser().parseFromString(html, 'text/html').body.textContent ?? '';
-  }
-  return html
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#(?:39|x27);/gi, "'");
-};
-
 const containsSurface = (normalizedText: string, surface: string): boolean => {
   const normalizedSurface = normalizeSurface(surface);
   if (!normalizedSurface) return false;
@@ -91,7 +78,7 @@ export function selectSceneRoster(params: {
     });
   });
 
-  const normalizedText = normalizeSurface(decodeHtmlText(params.content));
+  const normalizedText = normalizeSurface(htmlTextContent(params.content));
   const matchedByKey = new Map<string, string>();
   const ambiguousSurfaces = new Set<string>();
 

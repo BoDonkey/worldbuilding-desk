@@ -2,10 +2,11 @@ import type {CanonDecisionCluster} from '../../../entityTypes';
 import {CANON_DECISION_CLUSTER_STORE_NAME, openDb} from '../db';
 import {getAllByProject, readProjectRecords} from '../projectIndex';
 import {requestToPromise} from '../idbRequest';
+import {RECORDS_CHANGED} from '../../recordEvents';
 
 function emitCanonDecisionRecordsChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('wbd:canon-decision-records-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.canonDecision));
 }
 
 export async function getCanonDecisionClustersByProject(

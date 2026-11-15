@@ -4,14 +4,7 @@ import {
   describeStateMutationEventStaleness,
   getStateMutationEventStaleness
 } from './stateMutationStaleness';
-
-function hashString(value: string): string {
-  let hash = 5381;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 33) ^ value.charCodeAt(index);
-  }
-  return `h${(hash >>> 0).toString(16)}`;
-}
+import {hashString} from '../../utils/hashString';
 
 function makeEvent(overrides: Partial<StateMutationEvent>): StateMutationEvent {
   return {

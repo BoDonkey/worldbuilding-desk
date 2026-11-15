@@ -2,8 +2,9 @@ import type {ActorResolution} from '../characters/characterIdentity';
 import type {StateMutationEvent, StoredRuleset, WritingDocument} from '../../entityTypes';
 import {replayStateSubject, stateSubjectAccepts, type StateSubject} from '../state/stateSubjects';
 import {sortWritingDocuments} from '../storage';
-import {hashSceneContent, type PendingPositionedChange, type RosterPlanResult} from './sceneRosterMutationTypes';
+import type {PendingPositionedChange, RosterPlanResult} from './sceneRosterMutationTypes';
 import type {StateMutationTextAnchor} from '../state/stateMutationAnchor';
+import {hashString} from '../../utils/hashString';
 export function planPositionedChange({
   input,
   projectId,
@@ -58,7 +59,7 @@ export function planPositionedChange({
     label: input.label || undefined,
     sourceType: 'manual',
     sourceRevision: selectedDocument.updatedAt,
-    sourceHash: hashSceneContent(selectedDocument.content),
+    sourceHash: hashString(selectedDocument.content),
     status: 'accepted',
     commands: input.commands.map((command) => ({
       ...command,
@@ -95,7 +96,7 @@ export function planRosterReanchor({
       scenePosition: sceneCursorPosition,
       sceneAnchor: sceneCursorAnchor,
       sourceRevision: selectedDocument.updatedAt,
-      sourceHash: hashSceneContent(selectedDocument.content),
+      sourceHash: hashString(selectedDocument.content),
       invalidatedAt: undefined,
       invalidationReason: undefined
     }

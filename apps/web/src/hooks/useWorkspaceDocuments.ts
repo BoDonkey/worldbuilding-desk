@@ -28,9 +28,9 @@ import {
 import {
   fileNameToTitle,
   fileToHtml,
-  parseDocxToText,
   parsePagesToText
 } from '../utils/workspaceImport';
+import {parseDocxFile} from '../services/worldBible/docxImport';
 import {
   useWorkspaceUiStore,
   type WorkspaceExportFormat,
@@ -395,17 +395,19 @@ export const useWorkspaceDocuments = ({
               continue;
             }
 
-            const raw = lower.endsWith('.docx')
-              ? await parseDocxToText(file)
-              : lower.endsWith('.pages')
-                ? await parsePagesToText(file)
-                : await file.text();
+            // DOCX keeps its headings, read the same way as World Bible and Source Note import.
+            const content = lower.endsWith('.docx')
+              ? (await parseDocxFile(file)).html
+              : fileToHtml(
+                  file.name,
+                  lower.endsWith('.pages') ? await parsePagesToText(file) : await file.text()
+                );
             const now = Date.now();
             const doc: WritingDocument = {
               id: crypto.randomUUID(),
               projectId: activeProject.id,
               title: fileNameToTitle(file.name),
-              content: fileToHtml(file.name, raw),
+              content,
               consistencyReviewMode:
                 consistencyModeForBatch === 'strict' ? 'default' : 'deferred',
               order: nextOrder,

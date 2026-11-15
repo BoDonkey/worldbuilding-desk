@@ -1,11 +1,8 @@
 import {describe, expect, it} from 'vitest';
 import type {StateMutationCommand, StoredRuleset} from '../../entityTypes';
-import {
-  buildDefaultResources,
-  buildDefaultStats,
-  hashString
-} from './characterSheetDefaults';
+import {buildDefaultResources, buildDefaultStats} from './characterSheetDefaults';
 import {summarizeMutationCommand} from '../state/kinds';
+import {hashString} from '../../utils/hashString';
 
 const ruleset = {
   id: 'rules',

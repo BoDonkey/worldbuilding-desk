@@ -379,7 +379,7 @@ messages).
 | 3.49 | World Bible imports: split the two pipelines (S2) | 3 | M | — (after 3.45) |
 | 3.50 | Seam maps for the four baseline files (S1, plan only) | 3 | S | — |
 | 3.51 | Dead code sweep (X1–X4) | 3 | S | Done `6d3a69c` — rules-engine factory helpers kept as public API (author, 2026-11-15) |
-| 3.52 | One ZIP and DOCX reader; shared text helpers (D6, D7) | 3 | S | — (after 3.51) |
+| 3.52 | One ZIP and DOCX reader; shared text helpers (D6, D7) | 3 | S | Done ea157de |
 | 3.53 | Scene review in one function (D2) | 3 | S | — |
 | 3.54 | Rules wizard on theme tokens (Y1, Y2) | 3 | M | — |
 | 3.55 | Architecture doc catch-up (B6, P3) | 3 | XS | — |

@@ -7,10 +7,11 @@ import {
 import {getAllByProject, readProjectRecords} from '../projectIndex';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
 import {requestToPromise} from '../idbRequest';
+import {RECORDS_CHANGED} from '../../recordEvents';
 
 function emitLoreFactRecordsChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('wbd:lore-fact-records-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.loreFact));
 }
 
 export async function getLoreFactProposalsByProject(

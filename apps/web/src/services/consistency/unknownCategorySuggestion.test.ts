@@ -2,13 +2,8 @@ import {describe, expect, it} from 'vitest';
 import type {EntityCategory, WorldEntity} from '../../entityTypes';
 import type {GuardrailIssue} from './types';
 import {findCategoryIdForSuggestedKind, suggestUnknownCategory} from './unknownCategorySuggestion';
-import {
-  canonicalizeUnknownSurface,
-  downgradeUnknownIssuesToWarnings,
-  findCloseCharacterEntityMatch,
-  getReviewSourceForDocument,
-  hashString
-} from './sceneReviewHelpers';
+import {canonicalizeUnknownSurface, downgradeUnknownIssuesToWarnings, findCloseCharacterEntityMatch, getReviewSourceForDocument} from './sceneReviewHelpers';
+import {hashString} from '../../utils/hashString';
 
 const issue = (changes: Partial<GuardrailIssue> = {}): GuardrailIssue => ({
   code: 'UNKNOWN_ENTITY', severity: 'blocking', message: 'Unknown', surface: 'Vex', ...changes

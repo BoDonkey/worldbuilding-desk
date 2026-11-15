@@ -16,7 +16,6 @@ import {
   planSelectionInventoryCapture,
   planSelectionConsumptionCapture
 } from '../services/workspace/sceneRosterItemPlans';
-import {hashSceneContent} from '../services/workspace/sceneRosterMutationTypes';
 import {useCallback, useDeferredValue, useMemo} from 'react';
 import type {StateMutationEvent, CompendiumEntry, InventoryQuantityStateMutationCommand} from '../entityTypes';
 import type {
@@ -51,6 +50,7 @@ import {
   findStateSubject,
   replayStateSubject
 } from '../services/state/stateSubjects';
+import {hashString} from '../utils/hashString';
 
 export type {PendingPositionedChange, PendingInventoryCapture} from '../services/workspace/sceneRosterMutationTypes';
 
@@ -244,7 +244,7 @@ export function useWorkspaceSceneRoster({
       });
       setPendingInventoryCapture({
         sceneId: selectedDocument.id,
-        sourceHash: hashSceneContent(selectedDocument.content),
+        sourceHash: hashString(selectedDocument.content),
         itemName: detected?.itemName ?? input.itemName.trim(),
         evidenceText: input.itemName.trim(),
         suggestedActorId: detected?.actorId,

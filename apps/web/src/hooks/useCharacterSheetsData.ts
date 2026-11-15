@@ -22,11 +22,7 @@ import type {ActorResolution} from '../services/characters/characterIdentity';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../services/shodh/getShodhService';
 import {getSeriesBibleConfig} from '../services/seriesBible/SeriesBibleService';
-import {
-  DEFAULT_PARTY_SYNERGY_RULES,
-  deriveCharacterRuntimeModifiers,
-  getPartySynergySuggestions
-} from '../services/compendium';
+import {buildProjectRuntimeModifiers} from '../services/compendium';
 import {
   reconcileCharacterResources,
   reconcileCharacterStats
@@ -180,22 +176,9 @@ export const useCharacterSheetsData = (params: {
     };
   }, [activeProject, setFeedback]);
 
-  const activePartySynergies = useMemo(
-    () =>
-      getPartySynergySuggestions({
-        characters,
-        rules: DEFAULT_PARTY_SYNERGY_RULES
-      }),
-    [characters]
-  );
   const runtimeModifiers = useMemo(
-    () =>
-      deriveCharacterRuntimeModifiers({
-        settlementState,
-        settlementModules,
-        activePartySynergies
-      }),
-    [settlementState, settlementModules, activePartySynergies]
+    () => buildProjectRuntimeModifiers({characters, settlementState, settlementModules}),
+    [characters, settlementState, settlementModules]
   );
 
   return {

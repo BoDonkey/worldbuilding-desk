@@ -6,6 +6,7 @@ import {
 } from '../services/storage';
 import {loadStateMutationEventsInSceneOrder} from '../services/state/stateSceneOrder';
 import {buildStoryDashboard} from '../services/dashboard/storyDashboard';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 export function useStoryDashboardData(params: {
   projectId: string | null;
@@ -49,11 +50,11 @@ export function useStoryDashboardData(params: {
 
   useEffect(() => {
     void refresh();
-    window.addEventListener('wbd:writing-records-changed', refresh);
-    window.addEventListener('wbd:state-mutation-events-changed', refresh);
+    window.addEventListener(RECORDS_CHANGED.writing, refresh);
+    window.addEventListener(RECORDS_CHANGED.stateMutationEvents, refresh);
     return () => {
-      window.removeEventListener('wbd:writing-records-changed', refresh);
-      window.removeEventListener('wbd:state-mutation-events-changed', refresh);
+      window.removeEventListener(RECORDS_CHANGED.writing, refresh);
+      window.removeEventListener(RECORDS_CHANGED.stateMutationEvents, refresh);
     };
   }, [refresh]);
 

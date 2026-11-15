@@ -4,6 +4,8 @@ import {
   textSnapshotFromPlainText,
   type StateMutationAnchorResolution
 } from './stateMutationAnchor';
+import {hashString} from '../../utils/hashString';
+import {htmlTextContent} from '../../utils/textHelpers';
 
 export interface StateMutationEventStaleness {
   isMissingSourceScene: boolean;
@@ -11,26 +13,6 @@ export interface StateMutationEventStaleness {
   hasHashMismatch: boolean;
   anchorStatus: StateMutationAnchorResolution['status'] | 'legacy';
   isStale: boolean;
-}
-
-function plainTextFromHtml(value: string): string {
-  if (typeof DOMParser !== 'undefined') {
-    return new DOMParser().parseFromString(value, 'text/html').body.textContent ?? '';
-  }
-  return value
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>');
-}
-
-function hashString(value: string): string {
-  let hash = 5381;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 33) ^ value.charCodeAt(index);
-  }
-  return `h${(hash >>> 0).toString(16)}`;
 }
 
 export function getStateMutationEventStaleness(params: {
@@ -53,7 +35,7 @@ export function getStateMutationEventStaleness(params: {
   const anchorResolution =
     params.event.sceneAnchor && params.event.scenePosition !== undefined
       ? resolveStateMutationAnchor({
-          snapshot: textSnapshotFromPlainText(plainTextFromHtml(document.content)),
+          snapshot: textSnapshotFromPlainText(htmlTextContent(document.content)),
           anchor: params.event.sceneAnchor,
           originalPosition: params.event.scenePosition
         })
