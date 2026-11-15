@@ -1,18 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
-import type {PlaceNameIndex} from '../services/worldBible/placePositions';
-import type {Dispatch, SetStateAction} from 'react';
-import type {
-  CanonicalFact,
-  Character,
-  Project,
-  StateMutationEvent,
-  StoredRuleset,
-  WorldEntity,
-  WritingDocument
-} from '../entityTypes';
-import type {StateSubject} from '../services/state/stateSubjects';
+import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
+import type {Project, WritingDocument} from '../entityTypes';
 import type {GuardrailIssue, KnownEntityRef} from '../services/consistency';
-import {findCanonContradictions} from '../services/consistency';
 import {
   hashReviewInputs,
   markStaleReviewItems,
@@ -26,18 +15,17 @@ import {
 } from '../services/storage';
 import type {WorldEngine, WorldEngineStatus} from '../services/worldEngine';
 import {htmlToPlainText} from '../utils/textHelpers';
-import type {ActorResolution} from '../services/characters/characterIdentity';
-import {findStateContinuityReviewItems} from '../services/state/stateContinuityReview';
-import {
-  getReviewIssueKey,
-  makeReviewItemId,
-  mapReviewAnnotationsByIssueKey,
-  type ConsistencyReviewItem
-} from '../services/consistency/reviewReadiness';
+import type {ConsistencyReviewItem} from '../services/consistency/reviewReadiness';
 import {
   downgradeUnknownIssuesToWarnings,
   getReviewSourceForDocument
 } from '../services/consistency/sceneReviewHelpers';
+import {
+  buildSceneIssueItems,
+  findContinuityItems,
+  reviewScene,
+  type SceneContinuityContext
+} from '../services/consistency/sceneReview';
 import {
   isModelCheckItem,
   pruneModelCheckItems,
@@ -68,15 +56,7 @@ export type ConsistencySystemHistory = (input: {
 export function useConsistencyReviewRuns({
   activeProject,
   documents,
-  entities,
-  characters,
-  canonicalFacts,
-  stateSubjects,
-  actorResolutions,
-  ruleset,
-  stateMutationEvents,
-  placeNameIndex,
-  placeNamesKeptAsText,
+  continuityContext,
   resolvedActionCues,
   worldEngine,
   setFeedback,
@@ -85,19 +65,13 @@ export function useConsistencyReviewRuns({
   filterDismissedUnknownIssues,
   setGuardrailIssues,
   consistencyReviewItems,
-  setConsistencyReviewItems
+  setConsistencyReviewItems,
+  dismissedContinuityItemIdsRef
 }: {
   activeProject: Project | null;
   documents: WritingDocument[];
-  entities: WorldEntity[];
-  characters: Character[];
-  canonicalFacts: CanonicalFact[];
-  stateSubjects: StateSubject[];
-  actorResolutions: ActorResolution[];
-  ruleset: StoredRuleset | null;
-  stateMutationEvents: StateMutationEvent[];
-  placeNameIndex: PlaceNameIndex;
-  placeNamesKeptAsText?: string[];
+  /** Project records the canon and state continuity checks read. */
+  continuityContext: SceneContinuityContext;
   resolvedActionCues: string[];
   worldEngine: WorldEngine;
   setFeedback: ConsistencyFeedback;
@@ -107,11 +81,12 @@ export function useConsistencyReviewRuns({
   setGuardrailIssues: Dispatch<SetStateAction<GuardrailIssue[]>>;
   consistencyReviewItems: ConsistencyReviewItem[];
   setConsistencyReviewItems: Dispatch<SetStateAction<ConsistencyReviewItem[]>>;
+  /** Continuity items dismissed this session; shared with the scene save. */
+  dismissedContinuityItemIdsRef: MutableRefObject<Set<string>>;
 }) {
   const [isRunningConsistencyReview, setIsRunningConsistencyReview] = useState(false);
   const announceStatus = useStatusAnnouncement();
   const documentsRef = useRef(documents);
-  const dismissedContinuityItemIdsRef = useRef(new Set<string>());
   const [lastConsistencyReviewAt, setLastConsistencyReviewAt] = useState<number | null>(
     null
   );
@@ -212,77 +187,51 @@ export function useConsistencyReviewRuns({
     });
   }, [documents, setConsistencyReviewItems]);
 
-  const refreshDeferredReview = useCallback(
-    async (doc: WritingDocument) => {
+  /** Reviews one scene and replaces its items in the queue. */
+  const reviewAndShowScene = useCallback(
+    async (doc: WritingDocument, source: 'workspace-save' | 'workspace-autosave' | 'import') => {
       const {validation, issueAnnotations} = await worldEngine.reviewText({
         projectId: doc.projectId,
         text: htmlToPlainText(doc.content),
-        source: getReviewSourceForDocument(doc),
+        source,
         knownEntities: knownConsistencyEntities,
         actionCues: resolvedActionCues
       });
-      const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
-        validation.issues,
-        issueAnnotations
-      );
       const presentedIssues = filterDismissedUnknownIssues(
         doc.id,
         downgradeUnknownIssuesToWarnings(validation.issues)
       );
-      const contradictionItems = findCanonContradictions({
-        documents: [doc],
+      const {issueItems, continuityItems} = reviewScene({
+        scene: doc,
         sceneOrderDocuments: documentsRef.current,
-        entities,
-        characters,
-        canonicalFacts,
-        knownEntities: knownConsistencyEntities
-      });
-      const stateContinuityItems = findStateContinuityReviewItems({
-        documents: [doc],
-        sceneOrderDocuments: documentsRef.current,
-        knownEntities: knownConsistencyEntities,
-        stateSubjects,
-        actorResolutions,
-        ruleset,
-        stateMutationEvents,
-        places: placeNameIndex,
-        placeNamesKeptAsText
+        issues: validation.issues,
+        issueAnnotations,
+        presentedIssues,
+        context: continuityContext,
+        isDismissed: (id) => dismissedContinuityItemIdsRef.current.has(id)
       });
       setGuardrailIssues(presentedIssues);
       setConsistencyReviewItems((prev) => [
         ...prev.filter((item) => survivesSceneRereview(item, doc)),
-        ...presentedIssues.map((issue) => ({
-          id: makeReviewItemId(doc.id, issue),
-          sceneId: doc.id,
-          sceneTitle: doc.title || 'Untitled scene',
-          issue,
-          reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
-        })),
-        ...contradictionItems.filter(
-          (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
-        ),
-        ...stateContinuityItems.filter(
-          (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
-        )
+        ...issueItems,
+        ...continuityItems
       ]);
     },
     [
       setConsistencyReviewItems,
       setGuardrailIssues,
       filterDismissedUnknownIssues,
-      canonicalFacts,
-      stateSubjects,
-      characters,
-      entities,
+      continuityContext,
+      dismissedContinuityItemIdsRef,
       knownConsistencyEntities,
-      actorResolutions,
       resolvedActionCues,
-      ruleset,
-      stateMutationEvents,
-      placeNameIndex,
-      placeNamesKeptAsText,
       worldEngine
     ]
+  );
+
+  const refreshDeferredReview = useCallback(
+    (doc: WritingDocument) => reviewAndShowScene(doc, getReviewSourceForDocument(doc)),
+    [reviewAndShowScene]
   );
 
   const refreshActiveDraftReview = useCallback(
@@ -290,80 +239,13 @@ export function useConsistencyReviewRuns({
       setIsRunningConsistencyReview(true);
       announceStatus('Refreshing consistency review.');
       try {
-        const {validation, issueAnnotations} = await worldEngine.reviewText({
-          projectId: doc.projectId,
-          text: htmlToPlainText(doc.content),
-          source: 'workspace-autosave',
-          knownEntities: knownConsistencyEntities,
-          actionCues: resolvedActionCues
-        });
-        const presentedIssues = filterDismissedUnknownIssues(
-          doc.id,
-          downgradeUnknownIssuesToWarnings(validation.issues)
-        );
-        const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
-          validation.issues,
-          issueAnnotations
-        );
-        const contradictionItems = findCanonContradictions({
-          documents: [doc],
-          sceneOrderDocuments: documentsRef.current,
-          entities,
-          characters,
-          canonicalFacts,
-          knownEntities: knownConsistencyEntities
-        });
-        const stateContinuityItems = findStateContinuityReviewItems({
-          documents: [doc],
-          sceneOrderDocuments: documentsRef.current,
-          knownEntities: knownConsistencyEntities,
-          stateSubjects,
-          actorResolutions,
-          ruleset,
-          stateMutationEvents,
-          places: placeNameIndex,
-          placeNamesKeptAsText
-        });
-        setGuardrailIssues(presentedIssues);
-        setConsistencyReviewItems((prev) => [
-          ...prev.filter((item) => survivesSceneRereview(item, doc)),
-          ...presentedIssues.map((issue) => ({
-            id: makeReviewItemId(doc.id, issue),
-            sceneId: doc.id,
-            sceneTitle: doc.title || 'Untitled scene',
-            issue,
-            reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
-          })),
-          ...contradictionItems.filter(
-            (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
-          ),
-          ...stateContinuityItems.filter(
-            (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
-          )
-        ]);
+        await reviewAndShowScene(doc, 'workspace-autosave');
         announceStatus('Consistency review refreshed.');
       } finally {
         setIsRunningConsistencyReview(false);
       }
     },
-    [
-      setConsistencyReviewItems,
-      setGuardrailIssues,
-      announceStatus,
-      filterDismissedUnknownIssues,
-      canonicalFacts,
-      stateSubjects,
-      characters,
-      entities,
-      knownConsistencyEntities,
-      actorResolutions,
-      resolvedActionCues,
-      ruleset,
-      stateMutationEvents,
-      placeNameIndex,
-      placeNamesKeptAsText,
-      worldEngine
-    ]
+    [announceStatus, reviewAndShowScene]
   );
 
   const handleRunConsistencyReview = useCallback(async () => {
@@ -426,40 +308,21 @@ export function useConsistencyReviewRuns({
             reviewedAt
           });
         }
-        const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
-          issues,
-          issueAnnotations
+        items.push(
+          ...buildSceneIssueItems({
+            scene: doc,
+            issues,
+            issueAnnotations,
+            presentedIssues: filterDismissedUnknownIssues(doc.id, issues)
+          })
         );
-        const presentedIssues = filterDismissedUnknownIssues(doc.id, issues);
-        presentedIssues.forEach((issue) => {
-          items.push({
-            id: makeReviewItemId(doc.id, issue),
-            sceneId: doc.id,
-            sceneTitle: doc.title || 'Untitled scene',
-            issue,
-            reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
-          });
-        });
       }
 
-      const contradictionItems = findCanonContradictions({
-        documents,
-        entities,
-        characters,
-        canonicalFacts,
-        knownEntities: knownConsistencyEntities
+      // Across all scenes at once, so it is not a per-scene reviewScene call.
+      const continuityItems = findContinuityItems({
+        scenes: documents,
+        context: continuityContext
       });
-      const stateContinuityItems = findStateContinuityReviewItems({
-        documents,
-        knownEntities: knownConsistencyEntities,
-        stateSubjects,
-        actorResolutions,
-        ruleset,
-        stateMutationEvents,
-        places: placeNameIndex,
-        placeNamesKeptAsText
-      });
-      const continuityItems = [...contradictionItems, ...stateContinuityItems];
       const combinedItems = [...items, ...continuityItems];
 
       // Model-assisted items come from explicit checks, not this run: keep the live ones.
@@ -520,21 +383,14 @@ export function useConsistencyReviewRuns({
     announceStatus,
     activeProject,
     addSystemHistory,
-    canonicalFacts,
-    stateSubjects,
-    characters,
+    continuityContext,
+    dismissedContinuityItemIdsRef,
     documents,
-    entities,
-    actorResolutions,
     worldEngineStatus,
     filterDismissedUnknownIssues,
     knownConsistencyEntities,
     resolvedActionCues,
-    ruleset,
     setFeedback,
-    stateMutationEvents,
-    placeNameIndex,
-    placeNamesKeptAsText,
     worldEngine
   ]);
 
@@ -558,7 +414,7 @@ export function useConsistencyReviewRuns({
         console.warn('Could not persist the dismissed review item.', error);
       });
     }
-  }, [setConsistencyReviewItems, consistencyReviewItems]);
+  }, [setConsistencyReviewItems, consistencyReviewItems, dismissedContinuityItemIdsRef]);
 
   /**
    * Adds a confirmed canon check's items for a scene, replacing that scene's
