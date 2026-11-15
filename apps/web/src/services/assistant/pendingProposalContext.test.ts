@@ -26,6 +26,17 @@ describe('pending proposal context', () => {
     expect(chunks[0].content).toContain('Proposed from "Harbor rumors", quoting: "a spy all along". Not accepted.');
   });
 
+  it('says when the quoted evidence comes from a note saved from an AI session', () => {
+    const [chunk] = buildPendingProposalChunks(
+      [proposal()],
+      new Map([['note-1', 'Harbor rumors']]),
+      new Set(['note-1'])
+    );
+    expect(chunk.content).toContain(
+      'Proposed from "Harbor rumors" (saved from an AI session, may be model-written), quoting: "a spy all along".'
+    );
+  });
+
   it('keeps only the newest proposals', () => {
     const many = Array.from({length: PENDING_PROPOSAL_CONTEXT_LIMIT + 3}, (_, index) =>
       proposal({id: `p${index}`, updatedAt: index})

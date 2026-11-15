@@ -419,6 +419,9 @@ describe('World Canvas', () => {
         'contain.text',
         'From World Canvas brainstorm — Factions and institutions (Tension)'
       );
+      // A kept suggestion is model text; the note says so where the author reads and reviews it.
+      cy.contains('Parts of it may have been written by a model, not by you.').should('be.visible');
+      cy.contains('article', 'The Compact profits').should('contain.text', 'From an AI session');
     });
 
     describe('on a local model', () => {

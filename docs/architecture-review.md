@@ -146,9 +146,21 @@ request/response bodies, and local file paths and must never transmit itself.
 
 ## Canon and Lore Boundary
 
-Lore Documents preserve author-written source material. Extraction may produce
-entity and fact proposals with evidence and confidence. Accepted proposals may
-create or update canon through app-owned services.
+Lore Documents preserve source material the author wrote or chose to keep.
+Extraction may produce entity and fact proposals with evidence and confidence.
+Accepted proposals may create or update canon through app-owned services.
+
+A Source Note saved from an AI session (an assistant or coach reply, a kept
+World Canvas brainstorm item, or a character created from a description)
+records `source.type: 'ai-session'` and can hold model-written text. The
+shared reader is `services/lore/sourceNoteOrigin.ts`: the Source Notes list,
+editor, and extraction review show "From an AI session", and every prompt
+that names or quotes such a note adds "saved from an AI session, may be
+model-written" (retrieved context, pending-proposal context, and the Canon
+Decisions consultation). Extraction never reads the "Suggested details from
+the character lab (not canon)" block: from that heading to the end of the note
+no fact or record is proposed. A new writer of model text into a Source Note
+must set the same source type.
 
 Normal assistant context should distinguish:
 

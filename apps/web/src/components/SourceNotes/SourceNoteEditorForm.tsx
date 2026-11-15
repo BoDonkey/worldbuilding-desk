@@ -3,6 +3,11 @@ import type {LoreDocument, LoreDocumentLink} from '../../entityTypes';
 import type {LinkDraft, SourceNoteEditorState} from '../../hooks/useSourceNoteEditor';
 import type {SourceNotesData} from '../../hooks/useSourceNotesData';
 import {SourceNoteContentField} from './SourceNoteContentField';
+import {
+  AI_SESSION_NOTE_BADGE,
+  AI_SESSION_NOTE_EXPLANATION,
+  isAiSessionSourceNote
+} from '../../services/lore/sourceNoteOrigin';
 import styles from '../../styles/LoreRoute.module.css';
 
 const RELATIONSHIP_OPTIONS: Array<{
@@ -93,6 +98,12 @@ export function SourceNoteEditorForm({
           ) : null}
         </div>
       </div>
+
+      {editingDocument && isAiSessionSourceNote(editingDocument) ? (
+        <p className={styles.originNotice}>
+          <span className={styles.originBadge}>{AI_SESSION_NOTE_BADGE}</span> {AI_SESSION_NOTE_EXPLANATION}
+        </p>
+      ) : null}
 
       <label className={styles.fieldLabel}>
         Title

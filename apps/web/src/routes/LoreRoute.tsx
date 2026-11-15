@@ -170,7 +170,7 @@ function LoreRoute() {
             onExtract={(document) => void review.handleExtractFacts(document)}
           />
 
-          {editor.editingDocument ? <SourceNoteExtractionReview review={review} /> : null}
+          {editor.editingDocument ? <SourceNoteExtractionReview review={review} document={editor.editingDocument} /> : null}
         </div>
 
       </div>

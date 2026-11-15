@@ -46,6 +46,7 @@ export function migrateWorldCanvasDocument(value: unknown): WorldCanvasDocument 
   return {schemaVersion: 2, id: legacy.id, projectId: legacy.projectId, premise: legacy.premise ?? '', ...(legacy.coreIdeaSourceNoteId ? {coreIdeaSourceNoteId: legacy.coreIdeaSourceNoteId} : {}), ...(legacy.coreIdeaEntityId ? {coreIdeaEntityId: legacy.coreIdeaEntityId} : {}), lenses, openThreads, createdAt, updatedAt};
 }
 
+export const WORLD_CANVAS_BRAINSTORM_SESSION_ID = 'world-canvas-brainstorm';
 const buildManualSourceNote = (params: {projectId: string; titleSource: string; content: string; kind: LoreDocumentKind}): LoreDocument => {
   const now = Date.now();
   return {id: uuid(), projectId: params.projectId, title: deriveSourceNoteTitle(params.titleSource), kind: params.kind, format: 'plain_text', content: params.content, summary: summarizeContent(params.content), source: {type: 'manual'}, status: 'active', createdAt: now, updatedAt: now};
@@ -70,7 +71,12 @@ export function buildSourceNoteFromBrainstormItem(params: {projectId: string; le
   const text = params.text.trim();
   if (!text) throw new Error('This brainstorm item is empty, so there is nothing to keep.');
   const focus = params.lensKind ? definitionFor(params.lensKind).label : 'Core Idea';
-  return buildManualSourceNote({projectId: params.projectId, titleSource: text, content: `From World Canvas brainstorm — ${focus} (${params.kindLabel})\n\n${text}`, kind: params.lensKind ? WORLD_CANVAS_LENS_NOTE_KINDS[params.lensKind] : 'general_lore'});
+  // The text is a model suggestion the author chose to keep, so the note says where it came from.
+  // A brainstorm has no session record; the fixed id names the feature.
+  return {
+    ...buildManualSourceNote({projectId: params.projectId, titleSource: text, content: `From World Canvas brainstorm — ${focus} (${params.kindLabel})\n\n${text}`, kind: params.lensKind ? WORLD_CANVAS_LENS_NOTE_KINDS[params.lensKind] : 'general_lore'}),
+    source: {type: 'ai-session', sessionId: WORLD_CANVAS_BRAINSTORM_SESSION_ID}
+  };
 }
 
 export interface ResolvedCanvasLink {id: string; label: string; missing: boolean}

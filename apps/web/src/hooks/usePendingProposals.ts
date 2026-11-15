@@ -2,10 +2,13 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import type {LoreFactProposal} from '../entityTypes';
 import {getLoreDocumentsByProject, getLoreFactProposalsByProject} from '../services/storage';
 import {describeError} from '../services/errors';
+import {isAiSessionSourceNote} from '../services/lore/sourceNoteOrigin';
 
 export interface PendingProposalContext {
   proposals: LoreFactProposal[];
   sourceTitleById: Map<string, string>;
+  /** Source Notes saved from an AI session; a prompt says so beside their evidence. */
+  aiSessionNoteIds: ReadonlySet<string>;
 }
 
 /**
@@ -53,7 +56,8 @@ export function usePendingProposals(
             projectId,
             context: {
               proposals: proposals.filter((proposal) => proposal.status === 'proposed'),
-              sourceTitleById: new Map(documents.map((document) => [document.id, document.title]))
+              sourceTitleById: new Map(documents.map((document) => [document.id, document.title])),
+              aiSessionNoteIds: new Set(documents.filter(isAiSessionSourceNote).map((document) => document.id))
             }
           });
         })

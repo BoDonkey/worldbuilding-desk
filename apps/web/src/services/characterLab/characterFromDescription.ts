@@ -17,6 +17,7 @@ import {
 import type {ConsistencyAlias} from '../storage';
 import {convertPlainTextToRichHtml} from '../worldBible/worldBibleEntityHelpers';
 import {normalizeNameExact} from '../names/nameMatching';
+import {SUGGESTED_DETAILS_HEADING} from '../lore/sourceNoteOrigin';
 
 export const CHARACTER_PROFILE_FACT_TYPES = [
   'alias',
@@ -304,7 +305,7 @@ export interface CharacterFromDescriptionRecords {
   proposals: LoreFactProposal[];
 }
 
-export const SUGGESTED_DETAILS_HEADING = 'Suggested details from the character lab (not canon):';
+export {SUGGESTED_DETAILS_HEADING};
 
 /**
  * Builds the records an explicit author accept creates: a draft World Bible

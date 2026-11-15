@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {
-  LENS_DEFINITIONS, addAnotherSketch, addOpenThread, buildSourceNoteFromCoreIdea,
+  LENS_DEFINITIONS, addAnotherSketch, addOpenThread, buildSourceNoteFromBrainstormItem, buildSourceNoteFromCoreIdea,
   buildSourceNoteFromOpenThread, buildSourceNoteFromSketch, collapseLens,
   createEmptyWorldCanvas, getActiveSketch, linkSketchEntity, linkSketchSourceNote,
   migrateWorldCanvasDocument, openLens, resolveCanvasLinks, routeSketchToOpenThread,
@@ -81,6 +81,14 @@ describe('worldCanvasService', () => {
     expect(core.content).toBe('From World Canvas — Core Idea\n\nA city powered by borrowed memories.');
     expect(sketchNote.content).toBe('From World Canvas — Factions and institutions\n\nThe Cinder Compact');
     expect(threadNote.content).toBe('From World Canvas — Open Thread (Factions and institutions)\n\nWho funds the Compact?');
+  });
+
+  it('marks a kept brainstorm item as from an AI session and the author\'s own snapshots as manual', () => {
+    const kept = buildSourceNoteFromBrainstormItem({projectId: 'project-1', lensKind: 'factions', kindLabel: 'Idea', text: ' A guild of ferrymen '});
+    expect(kept.source).toEqual({type: 'ai-session', sessionId: 'world-canvas-brainstorm'});
+    expect(kept.content).toBe('From World Canvas brainstorm — Factions and institutions (Idea)\n\nA guild of ferrymen');
+    const canvas = {...createEmptyWorldCanvas('project-1'), premise: 'A city powered by borrowed memories.'};
+    expect(buildSourceNoteFromCoreIdea(canvas).source).toEqual({type: 'manual'});
   });
 
   it('resolves stale links visibly', () => {

@@ -1,5 +1,6 @@
 import type {CanonicalFactValue, LoreFactProposal} from '../../entityTypes';
 import type {LLMContextChunk} from '../llm/types';
+import {AI_SESSION_CONTEXT_QUALIFIER} from '../lore/sourceNoteOrigin';
 
 /**
  * Pending Source Note fact proposals, offered to the project Q&A only when
@@ -28,7 +29,9 @@ const describeProposal = (proposal: LoreFactProposal): string =>
 
 export function buildPendingProposalChunks(
   proposals: LoreFactProposal[],
-  sourceTitleById: Map<string, string> = new Map()
+  sourceTitleById: Map<string, string> = new Map(),
+  /** Source Notes saved from an AI session: their quoted evidence may be model-written. */
+  aiSessionNoteIds: ReadonlySet<string> = new Set()
 ): LLMContextChunk[] {
   return proposals
     .filter(isPending)
@@ -36,10 +39,11 @@ export function buildPendingProposalChunks(
     .slice(0, PENDING_PROPOSAL_CONTEXT_LIMIT)
     .map((proposal) => {
       const sourceTitle = sourceTitleById.get(proposal.loreDocumentId) ?? 'a Source Note';
+      const origin = aiSessionNoteIds.has(proposal.loreDocumentId) ? ` (${AI_SESSION_CONTEXT_QUALIFIER})` : '';
       return {
         source: `${PENDING_PROPOSAL_LABEL} - ${describeProposal(proposal)}`,
         content:
-          `${describeProposal(proposal)}. Proposed from "${sourceTitle}", quoting: ` +
+          `${describeProposal(proposal)}. Proposed from "${sourceTitle}"${origin}, quoting: ` +
           `"${proposal.evidence.text.trim()}". Not accepted.`,
         relevance: 0.5
       };

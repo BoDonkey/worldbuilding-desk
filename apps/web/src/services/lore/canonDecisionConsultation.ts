@@ -7,6 +7,7 @@ import type {
   LoreFactProposal,
   WorldEntity
 } from '../../entityTypes';
+import {describeSourceNoteForPrompt} from './sourceNoteOrigin';
 
 const formatFactValue = (value: CanonicalFact['value'] | LoreFactProposal['value']): string =>
   typeof value === 'string' ? value : `${value.label}: ${value.value}`;
@@ -86,7 +87,7 @@ export function buildCanonDecisionConsultationPrompt(
       `Proposed entity:\n` +
       `- Name: ${entityProposal.name}\n` +
       `- Kind: ${entityProposal.entityKind}\n` +
-      `- Source lore document: ${sourceDocument?.title ?? 'Unknown'}\n` +
+      `- Source lore document: ${sourceDocument ? describeSourceNoteForPrompt(sourceDocument) : 'Unknown'}\n` +
       `- Evidence excerpt: ${entityProposal.evidence.text}\n\n` +
       `Existing candidate match:\n` +
       `- Name: ${targetName}\n` +
@@ -114,7 +115,7 @@ export function buildCanonDecisionConsultationPrompt(
       `\nProposed fact:\n` +
       `- Fact type: ${factProposal.factType}\n` +
       `- Proposed value: ${formatFactValue(factProposal.value)}\n` +
-      `- Source lore document: ${sourceDocument?.title ?? 'Unknown'}\n` +
+      `- Source lore document: ${sourceDocument ? describeSourceNoteForPrompt(sourceDocument) : 'Unknown'}\n` +
       `- Evidence excerpt: ${factProposal.evidence.text}\n\n` +
       `Current accepted canon:\n` +
       `- Fact type: ${canonicalFact.factType}\n` +
