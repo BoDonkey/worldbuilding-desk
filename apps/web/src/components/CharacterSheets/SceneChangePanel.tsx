@@ -1,9 +1,9 @@
 import type {CharacterSheet, StoredRuleset} from '../../entityTypes';
-import {hashString} from '../../services/characters/characterSheetDefaults';
 import type {CharacterSheetSceneChanges} from '../../hooks/useCharacterSheetSceneChanges';
 import {MutationForm} from './MutationForm';
 import {SceneChangeHistory} from './SceneChangeHistory';
 import styles from '../../styles/CharacterSheetsRoute.module.css';
+import {hashString} from '../../utils/hashString';
 
 interface SceneChangePanelProps {
   sceneChanges: CharacterSheetSceneChanges;

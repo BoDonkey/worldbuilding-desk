@@ -2,6 +2,7 @@ import {act, renderHook, waitFor} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import type {LoreDocument, LoreFactProposal} from '../entityTypes';
 import {usePendingProposals} from './usePendingProposals';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 const storage = vi.hoisted(() => ({
   getLoreFactProposalsByProject: vi.fn(),
@@ -75,7 +76,7 @@ describe('usePendingProposals', () => {
     const {result} = renderHook(() => usePendingProposals('project-1', true));
 
     act(() => {
-      window.dispatchEvent(new CustomEvent('wbd:lore-fact-records-changed'));
+      window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.loreFact));
     });
     await act(async () => second.resolve([proposal('newer')]));
     await act(async () => first.resolve([proposal('older')]));

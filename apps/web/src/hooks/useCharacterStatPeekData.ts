@@ -29,12 +29,13 @@ import {
 } from '../services/storage';
 import {loadStateMutationEventsInSceneOrder} from '../services/state/stateSceneOrder';
 import type {ActorResolution} from '../services/characters/characterIdentity';
-import {DEFAULT_PARTY_SYNERGY_RULES, deriveCharacterRuntimeModifiers, getPartySynergySuggestions} from '../services/compendium';
+import {buildProjectRuntimeModifiers} from '../services/compendium';
 import {
   buildCharacterSnapshot,
   type CharacterSnapshotPosition
 } from '../services/state/characterSnapshot';
 import {buildCharacterPeekTargets} from '../services/state/characterPeek';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 const EMPTY_DOCUMENTS: WritingDocument[] = [];
 const EMPTY_CARDS: ChapterCard[] = [];
@@ -56,13 +57,13 @@ interface StatPeekProjectData {
 }
 
 const RELOAD_EVENTS = [
-  'wbd:character-sheet-records-changed',
-  'wbd:character-records-changed',
-  'wbd:entity-records-changed',
-  'wbd:alias-records-changed',
-  'wbd:state-mutation-events-changed',
-  'wbd:compendium-records-changed',
-  'wbd:writing-records-changed'
+  RECORDS_CHANGED.characterSheet,
+  RECORDS_CHANGED.character,
+  RECORDS_CHANGED.entity,
+  RECORDS_CHANGED.alias,
+  RECORDS_CHANGED.stateMutationEvents,
+  RECORDS_CHANGED.compendium,
+  RECORDS_CHANGED.writing
 ];
 
 /**
@@ -158,14 +159,10 @@ export function useCharacterStatPeekData(
     (sheetId: string, position: CharacterSnapshotPosition) => {
       const sheet = current?.sheets.find((candidate) => candidate.id === sheetId);
       if (!current || !sheet) return null;
-      // Same derivation as the Workspace and Sheets routes.
-      const runtimeModifiers = deriveCharacterRuntimeModifiers({
+      const runtimeModifiers = buildProjectRuntimeModifiers({
+        characters: current.characters,
         settlementState: current.settlementState,
-        settlementModules: current.settlementModules,
-        activePartySynergies: getPartySynergySuggestions({
-          characters: current.characters,
-          rules: DEFAULT_PARTY_SYNERGY_RULES
-        })
+        settlementModules: current.settlementModules
       });
       return buildCharacterSnapshot({
         sheet,

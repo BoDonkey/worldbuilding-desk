@@ -10,7 +10,8 @@ import {resolveReusableItem, type ItemStateAuthoringWritePlan} from '../state/it
 import {sortWritingDocuments} from '../storage';
 import {isItemCategory} from '../worldBible/worldBibleSummary';
 import {findStateSubject, stateSubjectAccepts, type StateSubject} from '../state/stateSubjects';
-import {hashSceneContent, type PendingInventoryCapture, type RosterPlanResult} from './sceneRosterMutationTypes';
+import type {PendingInventoryCapture, RosterPlanResult} from './sceneRosterMutationTypes';
+import {hashString} from '../../utils/hashString';
 interface CaptureContext {
   activeProject: Project | null;
   selectedDocument: WritingDocument | null;
@@ -63,7 +64,7 @@ export function planSelectionInventoryCapture({
     return {error: 'Use the consumption proposal to record this item use.'};
   }
   if (pendingInventoryCapture.sceneId !== selectedDocument.id ||
-    pendingInventoryCapture.sourceHash !== hashSceneContent(content)) {
+    pendingInventoryCapture.sourceHash !== hashString(content)) {
     return {error: 'The source prose changed. Close this proposal and reopen it from the current text.'};
   }
   const subject = findStateSubject(input.actorId, stateSubjects);
@@ -129,7 +130,7 @@ export function planSelectionInventoryCapture({
     label: `Picks up ${input.itemName}`,
     sourceType: 'manual',
     sourceRevision: selectedDocument.updatedAt,
-    sourceHash: hashSceneContent(selectedDocument.content),
+    sourceHash: hashString(selectedDocument.content),
     status: 'accepted',
     commands: [
       {
@@ -193,7 +194,7 @@ export function planSelectionConsumptionCapture({
     pendingInventoryCapture.action !== 'consume')
     return null;
   if (pendingInventoryCapture.sceneId !== selectedDocument.id ||
-    pendingInventoryCapture.sourceHash !== hashSceneContent(content)) {
+    pendingInventoryCapture.sourceHash !== hashString(content)) {
     return {error: 'The source prose changed. Close this proposal and reopen it from the current text.'};
   }
   const subject = findStateSubject(input.actorId, stateSubjects);
@@ -283,7 +284,7 @@ export function planSelectionConsumptionCapture({
     label: `Consumes ${input.itemName}`,
     sourceType: 'manual',
     sourceRevision: selectedDocument.updatedAt,
-    sourceHash: hashSceneContent(selectedDocument.content),
+    sourceHash: hashString(selectedDocument.content),
     status: 'accepted',
     commands,
     consumableEffect: definitionId

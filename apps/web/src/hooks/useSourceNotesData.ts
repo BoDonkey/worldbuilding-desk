@@ -24,14 +24,15 @@ import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getShodhService} from '../services/shodh/getShodhService';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 const RELOAD_EVENTS = [
-  'wbd:lore-records-changed',
-  'wbd:lore-fact-records-changed',
-  'wbd:character-records-changed',
-  'wbd:entity-records-changed',
-  'wbd:alias-records-changed',
-  'wbd:writing-records-changed'
+  RECORDS_CHANGED.lore,
+  RECORDS_CHANGED.loreFact,
+  RECORDS_CHANGED.character,
+  RECORDS_CHANGED.entity,
+  RECORDS_CHANGED.alias,
+  RECORDS_CHANGED.writing
 ] as const;
 
 function groupByDocument<T>(

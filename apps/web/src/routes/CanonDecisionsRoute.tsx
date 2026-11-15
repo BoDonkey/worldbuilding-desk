@@ -65,6 +65,7 @@ import {useConsultationBudget} from '../hooks/useConsultationBudget';
 import {useModelRun} from '../hooks/useModelRun';
 import {resolveResponseTokenLimit} from '../services/llm/modelRun';
 import {readAISwitches} from '../services/llm/aiSwitches';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 const PROVIDER_LABELS = {
   anthropic: 'Claude',
@@ -191,19 +192,19 @@ function CanonDecisionsRoute() {
     const handleChanged = () => {
       void refresh();
     };
-    window.addEventListener('wbd:lore-fact-records-changed', handleChanged);
-    window.addEventListener('wbd:lore-records-changed', handleChanged);
-    window.addEventListener('wbd:entity-records-changed', handleChanged);
-    window.addEventListener('wbd:character-records-changed', handleChanged);
-    window.addEventListener('wbd:alias-records-changed', handleChanged);
-    window.addEventListener('wbd:canon-decision-records-changed', handleChanged);
+    window.addEventListener(RECORDS_CHANGED.loreFact, handleChanged);
+    window.addEventListener(RECORDS_CHANGED.lore, handleChanged);
+    window.addEventListener(RECORDS_CHANGED.entity, handleChanged);
+    window.addEventListener(RECORDS_CHANGED.character, handleChanged);
+    window.addEventListener(RECORDS_CHANGED.alias, handleChanged);
+    window.addEventListener(RECORDS_CHANGED.canonDecision, handleChanged);
     return () => {
-      window.removeEventListener('wbd:lore-fact-records-changed', handleChanged);
-      window.removeEventListener('wbd:lore-records-changed', handleChanged);
-      window.removeEventListener('wbd:entity-records-changed', handleChanged);
-      window.removeEventListener('wbd:character-records-changed', handleChanged);
-      window.removeEventListener('wbd:alias-records-changed', handleChanged);
-      window.removeEventListener('wbd:canon-decision-records-changed', handleChanged);
+      window.removeEventListener(RECORDS_CHANGED.loreFact, handleChanged);
+      window.removeEventListener(RECORDS_CHANGED.lore, handleChanged);
+      window.removeEventListener(RECORDS_CHANGED.entity, handleChanged);
+      window.removeEventListener(RECORDS_CHANGED.character, handleChanged);
+      window.removeEventListener(RECORDS_CHANGED.alias, handleChanged);
+      window.removeEventListener(RECORDS_CHANGED.canonDecision, handleChanged);
     };
   }, [refresh]);
 

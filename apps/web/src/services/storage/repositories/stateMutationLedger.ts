@@ -3,6 +3,7 @@ import {compareStateMutationEvents} from '@worldbuilding-desk/rules-engine';
 import {openDb, STATE_MUTATION_EVENT_STORE_NAME} from '../db';
 import {getAllByProject, readProjectRecords} from '../projectIndex';
 import {requestToPromise} from '../idbRequest';
+import {RECORDS_CHANGED} from '../../recordEvents';
 
 /**
  * The state change ledger. It stores events as given. Validation, place
@@ -17,7 +18,7 @@ export async function saveStateMutationEvents(events: StateMutationEvent[]): Pro
   const tx = db.transaction(STATE_MUTATION_EVENT_STORE_NAME, 'readwrite');
   const store = tx.objectStore(STATE_MUTATION_EVENT_STORE_NAME);
   await Promise.all(events.map((event) => requestToPromise(store.put(event))));
-  window.dispatchEvent(new CustomEvent('wbd:state-mutation-events-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.stateMutationEvents));
 }
 
 export async function getStateMutationEventById(
@@ -64,7 +65,7 @@ export async function invalidateStateMutationEventsFromScene(params: {
       )
     )
   );
-  window.dispatchEvent(new CustomEvent('wbd:state-mutation-events-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.stateMutationEvents));
   return matching.length;
 }
 
@@ -91,7 +92,7 @@ export async function invalidateStateMutationEventById(params: {
     invalidationReason: params.reason
   };
   await requestToPromise(store.put(updated));
-  window.dispatchEvent(new CustomEvent('wbd:state-mutation-events-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.stateMutationEvents));
   return updated;
 }
 
@@ -116,5 +117,5 @@ export async function replaceSceneStateMutationEvents(params: {
       event.status !== 'invalidated'
   );
   await Promise.all(params.plan(matching).map((event) => requestToPromise(store.put(event))));
-  window.dispatchEvent(new CustomEvent('wbd:state-mutation-events-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.stateMutationEvents));
 }

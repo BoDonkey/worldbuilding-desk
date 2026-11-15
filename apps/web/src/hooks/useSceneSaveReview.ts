@@ -25,7 +25,8 @@ import {
   type ConsistencyReviewItem
 } from '../services/consistency/reviewReadiness';
 import {survivesSceneRereview} from '../services/consistency/modelCanonCheck';
-import {downgradeUnknownIssuesToWarnings, hashString} from '../services/consistency/sceneReviewHelpers';
+import {downgradeUnknownIssuesToWarnings} from '../services/consistency/sceneReviewHelpers';
+import {hashString} from '../utils/hashString';
 
 /**
  * Saving a scene: review it (strict saves can refuse), derive its state

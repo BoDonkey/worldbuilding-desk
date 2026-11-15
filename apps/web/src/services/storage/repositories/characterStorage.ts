@@ -2,10 +2,11 @@ import type { Character } from '../../../entityTypes';
 import { openDb, CHARACTER_STORE_NAME } from '../db';
 import {readProjectRecords} from '../projectIndex';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
+import {RECORDS_CHANGED} from '../../recordEvents';
 
 function emitCharacterRecordsChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('wbd:character-records-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.character));
 }
 
 export async function getCharactersByProject(projectId: string): Promise<Character[]> {

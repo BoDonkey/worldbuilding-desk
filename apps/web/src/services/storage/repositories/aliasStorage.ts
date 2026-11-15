@@ -4,6 +4,7 @@ import {readProjectRecords} from '../projectIndex';
 import {createCharacterLinkResolver, isCharacterCategory} from '../../characters/characterIdentity';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
 import {normalizeNameExact} from '../../names/nameMatching';
+import {RECORDS_CHANGED} from '../../recordEvents';
 
 export interface ConsistencyAlias {
   id: string;
@@ -77,7 +78,7 @@ export function resolveCharacterAliasEntityMigrations(params: {
 
 function emitAliasRecordsChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('wbd:alias-records-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.alias));
 }
 
 export async function getAliasesByProject(projectId: string): Promise<ConsistencyAlias[]> {

@@ -10,6 +10,7 @@ import type {CharacterReplayState} from './stateReplay';
 import {assertStateChangeValid} from './stateChangeValidation';
 import {saveItemStateAuthoringPlan} from '../storage';
 import {normalizeNameExact} from '../names/nameMatching';
+import {RECORDS_CHANGED} from '../recordEvents';
 
 export interface ReusableItemResolution {
   normalizedName: string;
@@ -124,11 +125,11 @@ export async function applyItemStateAuthoringPlan(params: {
 
   if (typeof window !== 'undefined') {
     if (plan.entityToSave) {
-      window.dispatchEvent(new CustomEvent('wbd:entity-records-changed'));
+      window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.entity));
     }
     if (plan.compendiumEntryToSave) {
-      window.dispatchEvent(new CustomEvent('wbd:compendium-records-changed'));
+      window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.compendium));
     }
-    window.dispatchEvent(new CustomEvent('wbd:state-mutation-events-changed'));
+    window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.stateMutationEvents));
   }
 }

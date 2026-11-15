@@ -1,4 +1,5 @@
 import type {EntityCategory, WorldEntity} from '../../entityTypes';
+import {htmlTextContent} from '../../utils/textHelpers';
 
 export const ALTERNATIVE_NAMES_KEY = 'alternativeNames';
 
@@ -83,16 +84,7 @@ export const extractPlainTextFromRichText = (value: string): string => {
     return trimmed;
   }
 
-  if (typeof DOMParser === 'undefined') {
-    return trimmed.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  }
-
-  const parser = new DOMParser();
-  const decoded = parser.parseFromString(
-    `<!doctype html><body>${trimmed}`,
-    'text/html'
-  ).body.textContent;
-  return decoded?.replace(/\s+/g, ' ').trim() ?? '';
+  return htmlTextContent(trimmed).replace(/\s+/g, ' ').trim();
 };
 
 const normalizeSummarySegment = (value: string): string =>

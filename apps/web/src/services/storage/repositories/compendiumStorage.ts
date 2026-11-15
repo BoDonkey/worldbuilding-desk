@@ -18,6 +18,7 @@ import {
 } from '../db';
 import {getAllByProject, readProjectRecords} from '../projectIndex';
 import {requestToPromise} from '../idbRequest';
+import {RECORDS_CHANGED} from '../../recordEvents';
 
 /*
  * Compendium entries, milestones, recipes, progress, and action logs in
@@ -26,7 +27,7 @@ import {requestToPromise} from '../idbRequest';
 
 function emitCompendiumRecordsChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('wbd:compendium-records-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.compendium));
 }
 
 type RecordActionParams = {

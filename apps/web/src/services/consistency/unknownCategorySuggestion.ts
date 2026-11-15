@@ -1,6 +1,7 @@
 import type {EntityCategory} from '../../entityTypes';
 import type {GuardrailIssue} from './types';
 import {normalizeCanonText} from './textMatcher';
+import {LOCATION_CATEGORY_HINTS} from '../worldBible/locationCategory';
 
 /**
  * Which World Bible type an unknown name in review most likely belongs to.
@@ -178,7 +179,7 @@ const CATEGORY_SEMANTIC_SLUG_HINTS: Record<
   string[]
 > = {
   character: ['character', 'npc', 'person', 'people'],
-  location: ['location', 'place', 'city', 'town', 'region', 'landmark'],
+  location: [...LOCATION_CATEGORY_HINTS],
   item: ['item', 'object', 'gear', 'equipment', 'tool', 'weapon'],
   creature: ['creature', 'monster', 'beast', 'enemy', 'mob', 'species'],
   faction: ['faction', 'guild', 'clan', 'house', 'group', 'order'],

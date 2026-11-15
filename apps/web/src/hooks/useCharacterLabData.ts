@@ -40,7 +40,7 @@ import {
 import {loadStateMutationEventsInSceneOrder} from '../services/state/stateSceneOrder';
 import {getProjectCapabilities} from '../projectMode';
 import {isCharacterCategory, type ActorResolution} from '../services/characters/characterIdentity';
-import {DEFAULT_PARTY_SYNERGY_RULES, deriveCharacterRuntimeModifiers, getPartySynergySuggestions} from '../services/compendium';
+import {buildProjectRuntimeModifiers} from '../services/compendium';
 import {
   buildCharacterVoiceContext,
   findCharacterNameCollisions,
@@ -55,6 +55,7 @@ import {getRAGService} from '../services/rag/getRAGService';
 import {saveCharacterCardImport} from '../services/characterCards/characterCardStorage';
 import type {CharacterCardImportRecords} from '../services/characterCards/characterCardImport';
 import {buildCharacterCardV2, type CharacterCardV2} from '../services/characterCards/characterCardExport';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 interface CharacterLabProjectData {
   projectId: string;
@@ -86,13 +87,13 @@ const EMPTY_CARDS: ChapterCard[] = [];
 const EMPTY_THREADS: WorldCanvasOpenThread[] = [];
 
 const RELOAD_EVENTS = [
-  'wbd:character-sheet-records-changed',
-  'wbd:character-records-changed',
-  'wbd:entity-records-changed',
-  'wbd:alias-records-changed',
-  'wbd:state-mutation-events-changed',
-  'wbd:compendium-records-changed',
-  'wbd:writing-records-changed'
+  RECORDS_CHANGED.characterSheet,
+  RECORDS_CHANGED.character,
+  RECORDS_CHANGED.entity,
+  RECORDS_CHANGED.alias,
+  RECORDS_CHANGED.stateMutationEvents,
+  RECORDS_CHANGED.compendium,
+  RECORDS_CHANGED.writing
 ];
 
 /**
@@ -197,14 +198,10 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
   const buildContext = useCallback(
     (entityId: string, position: CharacterVoicePosition): CharacterLabContextResult | null => {
       if (!current) return null;
-      // Same runtime-modifier derivation as the Workspace, Sheets, and stat peek.
-      const runtimeModifiers = deriveCharacterRuntimeModifiers({
+      const runtimeModifiers = buildProjectRuntimeModifiers({
+        characters: current.characters,
         settlementState: current.settlementState,
-        settlementModules: current.settlementModules,
-        activePartySynergies: getPartySynergySuggestions({
-          characters: current.characters,
-          rules: DEFAULT_PARTY_SYNERGY_RULES
-        })
+        settlementModules: current.settlementModules
       });
       try {
         return {

@@ -3,6 +3,7 @@ import type {LoreFactProposal} from '../entityTypes';
 import {getLoreDocumentsByProject, getLoreFactProposalsByProject} from '../services/storage';
 import {describeError} from '../services/errors';
 import {isAiSessionSourceNote} from '../services/lore/sourceNoteOrigin';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 export interface PendingProposalContext {
   proposals: LoreFactProposal[];
@@ -71,13 +72,13 @@ export function usePendingProposals(
         });
     };
     load();
-    window.addEventListener('wbd:lore-fact-records-changed', load);
-    window.addEventListener('wbd:lore-records-changed', load);
+    window.addEventListener(RECORDS_CHANGED.loreFact, load);
+    window.addEventListener(RECORDS_CHANGED.lore, load);
     return () => {
       // Any read still in flight belongs to a project or setting that is gone.
       generation.current += 1;
-      window.removeEventListener('wbd:lore-fact-records-changed', load);
-      window.removeEventListener('wbd:lore-records-changed', load);
+      window.removeEventListener(RECORDS_CHANGED.loreFact, load);
+      window.removeEventListener(RECORDS_CHANGED.lore, load);
     };
   }, [enabled, projectId, retryCount]);
 

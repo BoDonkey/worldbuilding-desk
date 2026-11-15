@@ -1,4 +1,5 @@
 import type {WritingDocument} from '../entityTypes';
+import {htmlTextContent} from './textHelpers';
 import {buildZip} from './zip';
 
 function sanitizeFileNamePart(value: string): string {
@@ -25,12 +26,6 @@ function downloadBlob(fileName: string, data: Uint8Array, type: string): void {
   URL.revokeObjectURL(url);
 }
 
-function decodeHtml(html: string): string {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(`<!doctype html><body>${html}`, 'text/html');
-  return doc.body.textContent ?? '';
-}
-
 function htmlToPlainTextWithParagraphs(html: string): string {
   const normalized = html
     .replace(/<br\s*\/?>/gi, '\n')
@@ -39,7 +34,7 @@ function htmlToPlainTextWithParagraphs(html: string): string {
     .replace(/<\/li>/gi, '\n')
     .replace(/<\/(div|blockquote)>/gi, '\n\n')
     .replace(/<[^>]+>/g, '');
-  return decodeHtml(normalized).replace(/\r\n/g, '\n').trim();
+  return htmlTextContent(normalized).replace(/\r\n/g, '\n').trim();
 }
 
 function sceneTextBlocks(scene: WritingDocument): string[] {

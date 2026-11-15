@@ -3,7 +3,7 @@ import {buildPositionedChangeBefore, planPositionedChange, planRosterInvalidatio
 import {resolveRosterAnchors} from './sceneRosterAnchors';
 import {anchor, character, corpus, event, scene, sheet, snapshot, subject, subjectsFor} from './sceneRosterPlanFixtures.testSupport';
 import {textSnapshotFromPlainText} from '../state/stateMutationAnchor';
-import {hashSceneContent} from './sceneRosterMutationTypes';
+import {hashString} from '../../utils/hashString';
 
 const context = {
   input: {label: 'Drinks Pale Draught', commands: event.commands}, projectId: 'corpus',
@@ -17,7 +17,7 @@ describe('positioned scene changes', () => {
     const input = {...context, stateMutationEvents: [event, {...event, sceneId: 'other', sceneSequence: 99}]};
     const original = structuredClone(input);
     expect(planPositionedChange(input)?.value).toMatchObject({id: 'new', createdAt: 100, sceneSequence: 5,
-      scenePosition: 30, sceneAnchor: anchor, sourceHash: hashSceneContent(scene.content), sourceRevision: 2,
+      scenePosition: 30, sceneAnchor: anchor, sourceHash: hashString(scene.content), sourceRevision: 2,
       commands: [{...event.commands[0], actorId: 'sera'}], status: 'accepted', sourceType: 'manual'});
     expect(input).toEqual(original);
     expect(planPositionedChange({...context, documents: []})).toBeNull();
@@ -36,7 +36,7 @@ describe('positioned scene changes', () => {
   it('reanchors with updated evidence while retaining the existing status and commands', () => {
     const invalidated = {...event, status: 'invalidated' as const, invalidatedAt: 3, invalidationReason: 'old'};
     const input = {event: invalidated, selectedDocument: scene, content: scene.content, sceneCursorPosition: 30, sceneCursorAnchor: anchor};
-    expect(planRosterReanchor(input).value).toEqual({...invalidated, scenePosition: 30, sceneAnchor: anchor, sourceRevision: 2, sourceHash: hashSceneContent(scene.content), invalidatedAt: undefined, invalidationReason: undefined});
+    expect(planRosterReanchor(input).value).toEqual({...invalidated, scenePosition: 30, sceneAnchor: anchor, sourceRevision: 2, sourceHash: hashString(scene.content), invalidatedAt: undefined, invalidationReason: undefined});
     expect(planRosterReanchor({...input, content: 'unsaved'}).error).toContain('Save the scene');
     expect(planRosterReanchor({...input, sceneCursorAnchor: {before: '', after: ''}}).error).toContain('intended scene text');
     expect(planRosterInvalidation(event.id)).toEqual({eventId: event.id, reason: 'Invalidated from the scene roster timeline.'});

@@ -3,6 +3,7 @@ import {htmlToPlainText} from '../../utils/textHelpers';
 import type {ProjectReviewRun, StoredSceneReview} from '../storage';
 import type {ConsistencyReviewItem} from './reviewReadiness';
 import type {KnownEntityRef} from './types';
+import {hashString} from '../../utils/hashString';
 
 /**
  * Pure helpers for persisted, incremental project review (slice 4.25).
@@ -12,24 +13,16 @@ import type {KnownEntityRef} from './types';
  * canon may have changed without any scene changing.
  */
 
-export const hashReviewString = (value: string): string => {
-  let hash = 5381;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 33) ^ value.charCodeAt(index);
-  }
-  return `h${(hash >>> 0).toString(16)}`;
-};
-
 export const hashSceneContent = (
   doc: Pick<WritingDocument, 'content' | 'consistencyReviewMode'>
-): string => hashReviewString(`${doc.consistencyReviewMode ?? 'active'}|${htmlToPlainText(doc.content)}`);
+): string => hashString(`${doc.consistencyReviewMode ?? 'active'}|${htmlToPlainText(doc.content)}`);
 
 export const hashReviewInputs = (params: {
   knownEntities: KnownEntityRef[];
   actionCues: string[];
   engineLabel: string;
 }): string =>
-  hashReviewString(
+  hashString(
     JSON.stringify({
       engine: params.engineLabel,
       cues: [...params.actionCues].sort(),

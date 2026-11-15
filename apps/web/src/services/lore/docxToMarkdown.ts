@@ -3,9 +3,9 @@ import {
   headingLevelFromOutline,
   parseDocxParagraphStyles,
   readAttribute,
-  readZipEntryText,
   resolveStyleHeadingLevel
 } from '../worldBible/docxImport';
+import {readZipEntryText} from '../../utils/unzip';
 import type {DocxParagraphStyle} from '../worldBible/docxImport';
 
 interface XmlElement {
@@ -297,13 +297,13 @@ export const docxXmlToMarkdown = (
 
 export const parseDocxFileToMarkdown = async (file: File): Promise<string> => {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const documentXml = await readZipEntryText(bytes, 'word/document.xml');
+  const documentXml = await readZipEntryText(bytes, 'word/document.xml', 'DOCX');
   if (documentXml === null) {
     throw new Error('Could not read DOCX structure.');
   }
   const [stylesXml, numberingXml] = await Promise.all([
-    readZipEntryText(bytes, 'word/styles.xml').catch(() => null),
-    readZipEntryText(bytes, 'word/numbering.xml').catch(() => null)
+    readZipEntryText(bytes, 'word/styles.xml', 'DOCX').catch(() => null),
+    readZipEntryText(bytes, 'word/numbering.xml', 'DOCX').catch(() => null)
   ]);
   return docxXmlToMarkdown(documentXml, stylesXml ?? '', numberingXml ?? '');
 };

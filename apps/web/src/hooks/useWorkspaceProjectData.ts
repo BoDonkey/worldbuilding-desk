@@ -51,6 +51,7 @@ import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {Project} from '../entityTypes';
 import {useAppStore} from '../store/appStore';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 
 interface UseWorkspaceProjectDataParams {
   activeProject: Project | null;
@@ -417,8 +418,8 @@ export function useWorkspaceProjectData({
     const refresh = () => {
       void getCompendiumEntriesByProject(activeProject.id).then(setCompendiumEntries);
     };
-    window.addEventListener('wbd:compendium-records-changed', refresh);
-    return () => window.removeEventListener('wbd:compendium-records-changed', refresh);
+    window.addEventListener(RECORDS_CHANGED.compendium, refresh);
+    return () => window.removeEventListener(RECORDS_CHANGED.compendium, refresh);
   }, [activeProject]);
 
   useEffect(() => {
@@ -428,9 +429,9 @@ export function useWorkspaceProjectData({
         setStateMutationEvents(events);
       });
     };
-    window.addEventListener('wbd:state-mutation-events-changed', refresh);
+    window.addEventListener(RECORDS_CHANGED.stateMutationEvents, refresh);
     return () => {
-      window.removeEventListener('wbd:state-mutation-events-changed', refresh);
+      window.removeEventListener(RECORDS_CHANGED.stateMutationEvents, refresh);
     };
   }, [activeProject]);
 
@@ -441,9 +442,9 @@ export function useWorkspaceProjectData({
         setCanonicalFacts(facts);
       });
     };
-    window.addEventListener('wbd:lore-fact-records-changed', refresh);
+    window.addEventListener(RECORDS_CHANGED.loreFact, refresh);
     return () => {
-      window.removeEventListener('wbd:lore-fact-records-changed', refresh);
+      window.removeEventListener(RECORDS_CHANGED.loreFact, refresh);
     };
   }, [activeProject]);
 
@@ -470,13 +471,13 @@ export function useWorkspaceProjectData({
         });
       });
     };
-    window.addEventListener('wbd:alias-records-changed', refresh);
-    window.addEventListener('wbd:entity-records-changed', refresh);
-    window.addEventListener('wbd:character-records-changed', refresh);
+    window.addEventListener(RECORDS_CHANGED.alias, refresh);
+    window.addEventListener(RECORDS_CHANGED.entity, refresh);
+    window.addEventListener(RECORDS_CHANGED.character, refresh);
     return () => {
-      window.removeEventListener('wbd:alias-records-changed', refresh);
-      window.removeEventListener('wbd:entity-records-changed', refresh);
-      window.removeEventListener('wbd:character-records-changed', refresh);
+      window.removeEventListener(RECORDS_CHANGED.alias, refresh);
+      window.removeEventListener(RECORDS_CHANGED.entity, refresh);
+      window.removeEventListener(RECORDS_CHANGED.character, refresh);
     };
   }, [activeProject]);
 

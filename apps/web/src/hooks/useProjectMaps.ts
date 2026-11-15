@@ -3,10 +3,10 @@ import type {MapImage, UnitConversion, WorldEntity, WorldMap} from '../entityTyp
 import {
   deleteMap,
   getMapsByProject,
-  MAPS_CHANGED_EVENT,
   saveEntity,
   saveMap
 } from '../services/storage';
+import {RECORDS_CHANGED} from '../services/recordEvents';
 import {withPlacement} from '../services/worldBible/mapSurface';
 import {
   mapsById,
@@ -41,10 +41,10 @@ export function useProjectMaps() {
       });
     };
     load();
-    window.addEventListener(MAPS_CHANGED_EVENT, load);
+    window.addEventListener(RECORDS_CHANGED.maps, load);
     return () => {
       cancelled = true;
-      window.removeEventListener(MAPS_CHANGED_EVENT, load);
+      window.removeEventListener(RECORDS_CHANGED.maps, load);
     };
   }, [projectId]);
 

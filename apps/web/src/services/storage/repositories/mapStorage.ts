@@ -2,6 +2,7 @@ import type {WorldMap} from '../../../entityTypes';
 import {MAP_STORE_NAME, openDb} from '../db';
 import {transactionToPromise} from '../idbRequest';
 import {readProjectRecords} from '../projectIndex';
+import {RECORDS_CHANGED} from '../../recordEvents';
 
 /**
  * Maps of the world (slice 4.79). Validation lives in
@@ -10,11 +11,9 @@ import {readProjectRecords} from '../projectIndex';
  * read, as links to deleted records are.
  */
 
-export const MAPS_CHANGED_EVENT = 'wbd:maps-changed';
-
 function emitMapsChanged(projectId: string): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(MAPS_CHANGED_EVENT, {detail: {projectId}}));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.maps, {detail: {projectId}}));
 }
 
 export async function getMapsByProject(projectId: string): Promise<WorldMap[]> {

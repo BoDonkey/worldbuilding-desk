@@ -2,10 +2,11 @@ import type { WorldEntity } from '../../../entityTypes';
 import { openDb, ENTITY_STORE_NAME } from '../db';
 import {readProjectRecords} from '../projectIndex';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
+import {RECORDS_CHANGED} from '../../recordEvents';
 
 function emitEntityRecordsChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('wbd:entity-records-changed'));
+  window.dispatchEvent(new CustomEvent(RECORDS_CHANGED.entity));
 }
 
 export async function getEntitiesByProject(projectId: string): Promise<WorldEntity[]> {
