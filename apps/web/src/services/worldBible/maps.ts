@@ -65,7 +65,7 @@ export interface MapInput {
 
 /**
  * The map as it should save, or an error message the author can act on.
- * `existing` keeps the image reference and creation time.
+ * `existing` keeps the image and creation time.
  */
 export const normalizeMapInput = (params: {
   input: MapInput;
@@ -101,7 +101,7 @@ export const normalizeMapInput = (params: {
       id,
       projectId: params.projectId,
       name,
-      ...(existing?.imageRef ? {imageRef: existing.imageRef} : {}),
+      ...(existing?.image ? {image: existing.image} : {}),
       distanceUnit,
       scale: input.scale,
       ...(parentPlacement ? {parentPlacement} : {}),

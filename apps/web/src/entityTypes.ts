@@ -521,8 +521,8 @@ export interface WorldMap {
   id: string;
   projectId: string;
   name: string;
-  /** The map image. Set by the map surface (4.80); unused before that. */
-  imageRef?: string;
+  /** The background image the author imported (slice 4.80). Map units are its pixels. */
+  image?: MapImage;
   /** What distances on this map are measured in: miles, leagues, feet. */
   distanceUnit: string;
   /** How many distance units one map unit covers: 0.5 means one map unit is half a mile. */
@@ -531,6 +531,20 @@ export interface WorldMap {
   parentPlacement?: PlacePlacement;
   createdAt: number;
   updatedAt: number;
+}
+
+/**
+ * A map background made elsewhere (Inkarnate, a scan), stored inline as a data
+ * URL so backups, vaults, and project copies carry it with the map record.
+ * One map unit is one pixel of the image.
+ */
+export interface MapImage {
+  dataUrl: string;
+  mimeType: string;
+  width: number;
+  height: number;
+  byteLength: number;
+  fileName?: string;
 }
 
 /** "1 league = 3 miles": one `from` is `factor` of `to`. Set by the author. */

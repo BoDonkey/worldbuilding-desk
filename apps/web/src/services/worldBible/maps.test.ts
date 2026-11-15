@@ -50,14 +50,14 @@ describe('normalizeMapInput', () => {
   });
 
   it('refuses a parent that would make a cycle, and keeps the creation time and image on edit', () => {
-    const withImage = mapsById([...maps.values(), {...map('coast'), imageRef: 'img-1'}]);
+    const withImage = mapsById([...maps.values(), {...map('coast'), image: {dataUrl: 'data:image/png;base64,AA==', mimeType: 'image/png', width: 10, height: 10, byteLength: 1}}]);
     const cycle = normalizeMapInput({
       input: {...base, id: 'world', name: 'World', parentPlacement: {mapId: 'city', x: 1, y: 1}},
       projectId: 'p', maps: withImage, now: 9
     });
     expect(cycle).toMatchObject({error: expect.stringMatching(/already sits/)});
     const edited = normalizeMapInput({input: {...base, id: 'coast'}, projectId: 'p', maps: withImage, now: 9});
-    expect(edited).toMatchObject({map: {id: 'coast', imageRef: 'img-1', createdAt: 1, updatedAt: 9}});
+    expect(edited).toMatchObject({map: {id: 'coast', image: {width: 10}, createdAt: 1, updatedAt: 9}});
   });
 });
 

@@ -64,7 +64,7 @@ export interface PortableMarkdownDraft {
 
 const textEncoder = new TextEncoder();
 
-const sanitizePathPart = (value: string): string =>
+export const sanitizePathPart = (value: string): string =>
   value
     .trim()
     .toLowerCase()
@@ -345,10 +345,25 @@ const buildCategoryCsv = (params: {
 const csvTable = (headings: string[], rows: unknown[][]): string =>
   [headings, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
 
-/** One row per map: unit, scale, and where it sits on a larger map. */
-const buildMapsCsv = (maps: MapsById): string =>
+const MAP_IMAGE_EXTENSIONS: Record<string, string> = {
+  'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif'
+};
+
+/** A map image's bytes from its stored data URL, or null if it cannot be read. */
+const mapImageBytes = (dataUrl: string): Uint8Array | null => {
+  const match = dataUrl.match(/^data:[^;,]+;base64,(.*)$/);
+  if (!match) return null;
+  try {
+    return Uint8Array.from(atob(match[1]), (char) => char.charCodeAt(0));
+  } catch {
+    return null;
+  }
+};
+
+/** One row per map: unit, scale, where it sits on a larger map, and its image file. */
+const buildMapsCsv = (maps: MapsById, imagePaths: ReadonlyMap<string, string>): string =>
   csvTable(
-    ['name', 'distance_unit', 'scale', 'sits_on', 'x', 'y'],
+    ['name', 'distance_unit', 'scale', 'sits_on', 'x', 'y', 'image'],
     [...maps.values()]
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((map) => {
@@ -359,12 +374,13 @@ const buildMapsCsv = (maps: MapsById): string =>
           map.scale,
           parent?.name ?? '',
           parent ? map.parentPlacement!.x : '',
-          parent ? map.parentPlacement!.y : ''
+          parent ? map.parentPlacement!.y : '',
+          imagePaths.get(map.id) ?? ''
         ];
       })
   );
 
-export const PORTABLE_SCHEMA_README = `# SagaSpine portable data\n\nSchema: worldbuilding-desk/portable/${PORTABLE_DATA_SCHEMA_VERSION}\n\nThis ZIP is the human-readable interchange format. The project backup ZIP remains the full-fidelity restore format.\n\n- \`world-bible/<category>/*.md\`: one record per Markdown file. YAML frontmatter contains category, aliases, links, a JSON-compatible \`fields\` map, and for places a \`place\` map (\`inside\`: the parent place's name; \`connections\`: the connections stored on that record, each with \`to\`, \`kind\`, optional \`oneWay\`, \`distance\`, and \`travelTimes\`; \`placements\`: the place's point on each map, as \`map\`, \`x\`, \`y\`). Accepted facts are repeated in the Markdown body so another tool can read them without parsing application data.\n- \`world-bible/*.csv\`: one UTF-8 CSV per category. Multi-value cells use \` | \` inside a correctly quoted CSV cell.\n- \`maps/maps.csv\`: one row per map with its distance unit, scale (distance units per map unit), and the larger map it sits on with the point (\`x\`, \`y\`) where it sits. \`maps/unit-conversions.csv\`: the author's conversions, read as 1 \`from\` = \`factor\` \`to\`.\n- \`source-notes/*.md\`: one source note per Markdown file. Source Notes are evidence, not accepted canon.\n\nOn import, files are staged for review. World Bible files become incomplete drafts; Source Notes remain non-canon and use the normal extraction/review flow. Wikilinks are suggestions only and are ignored unless the author explicitly maps them.\n`;
+export const PORTABLE_SCHEMA_README = `# SagaSpine portable data\n\nSchema: worldbuilding-desk/portable/${PORTABLE_DATA_SCHEMA_VERSION}\n\nThis ZIP is the human-readable interchange format. The project backup ZIP remains the full-fidelity restore format.\n\n- \`world-bible/<category>/*.md\`: one record per Markdown file. YAML frontmatter contains category, aliases, links, a JSON-compatible \`fields\` map, and for places a \`place\` map (\`inside\`: the parent place's name; \`connections\`: the connections stored on that record, each with \`to\`, \`kind\`, optional \`oneWay\`, \`distance\`, and \`travelTimes\`; \`placements\`: the place's point on each map, as \`map\`, \`x\`, \`y\`). Accepted facts are repeated in the Markdown body so another tool can read them without parsing application data.\n- \`world-bible/*.csv\`: one UTF-8 CSV per category. Multi-value cells use \` | \` inside a correctly quoted CSV cell.\n- \`maps/maps.csv\`: one row per map with its distance unit, scale (distance units per map unit), and the larger map it sits on with the point (\`x\`, \`y\`) where it sits, and \`image\`: the map's background image file in the same folder, whose pixels are the map units placements use. \`maps/unit-conversions.csv\`: the author's conversions, read as 1 \`from\` = \`factor\` \`to\`.\n- \`source-notes/*.md\`: one source note per Markdown file. Source Notes are evidence, not accepted canon.\n\nOn import, files are staged for review. World Bible files become incomplete drafts; Source Notes remain non-canon and use the normal extraction/review flow. Wikilinks are suggestions only and are ignored unless the author explicitly maps them.\n`;
 
 export function buildPortableDataZip(params: {
   categories: EntityCategory[];
@@ -439,7 +455,15 @@ export function buildPortableDataZip(params: {
   });
 
   if (maps.size > 0) {
-    entries.push({fileName: uniquePath('maps/maps.csv'), fileData: textEncoder.encode(buildMapsCsv(maps))});
+    const imagePaths = new Map<string, string>();
+    [...maps.values()].sort((a, b) => a.name.localeCompare(b.name)).forEach((map) => {
+      const bytes = map.image ? mapImageBytes(map.image.dataUrl) : null;
+      if (!map.image || !bytes) return;
+      const fileName = uniquePath(`maps/${sanitizePathPart(map.name)}.${MAP_IMAGE_EXTENSIONS[map.image.mimeType] ?? 'img'}`);
+      entries.push({fileName, fileData: bytes});
+      imagePaths.set(map.id, fileName.slice('maps/'.length));
+    });
+    entries.push({fileName: uniquePath('maps/maps.csv'), fileData: textEncoder.encode(buildMapsCsv(maps, imagePaths))});
   }
   const conversions = normalizeUnitConversions(params.unitConversions);
   if (conversions.length > 0) {

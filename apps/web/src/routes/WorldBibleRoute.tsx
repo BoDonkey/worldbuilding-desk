@@ -488,7 +488,11 @@ function WorldBibleRoute() {
         />
       )}
       {isLocationCategory(activeCategory) && viewMode === 'category' && !isRecordEditorOpen && (
-        <MapsPanel categories={categories} entities={entities} />
+        <MapsPanel
+          categories={categories} entities={entities} aliases={aliases}
+          characterSheets={characterSheets} documents={writingDocuments}
+          stateMutationEvents={stateMutationEvents}
+        />
       )}
 
       <WorldBibleImportWorkspace

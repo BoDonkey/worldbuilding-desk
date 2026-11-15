@@ -8,9 +8,7 @@ import type {
 } from '../../entityTypes';
 import type {ConsistencyAlias} from '../../services/storage';
 import {sortWritingDocuments} from '../../services/storage';
-import {buildCharacterCategoryIds} from '../../services/consistency/reviewLinkOptions';
-import {buildStateSubjects} from '../../services/state/stateSubjects';
-import {buildPlaceNameIndex} from '../../services/worldBible/placePositions';
+import {usePlaceSubjects} from '../../hooks/usePlaceSubjects';
 import {
   characterPath,
   groupPositionsByPlace,
@@ -44,17 +42,7 @@ export function WhereIsEveryonePanel(props: WhereIsEveryonePanelProps) {
   const [toOrder, setToOrder] = useState(0);
 
   const scenes = useMemo(() => sortWritingDocuments(documents), [documents]);
-  const index = useMemo(
-    () => buildPlaceNameIndex({categories, entities, aliases}),
-    [aliases, categories, entities]
-  );
-  const subjects = useMemo(() => {
-    const characterCategoryIds = buildCharacterCategoryIds(categories);
-    return buildStateSubjects({
-      characterSheets,
-      characterEntities: entities.filter((entity) => characterCategoryIds.has(entity.categoryId))
-    });
-  }, [categories, characterSheets, entities]);
+  const {index, subjects} = usePlaceSubjects({categories, entities, aliases, characterSheets});
 
   const sceneOrder = sceneChoice === LATEST ? undefined : Number(sceneChoice);
   const groups = useMemo(
