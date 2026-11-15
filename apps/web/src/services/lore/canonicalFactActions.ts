@@ -30,6 +30,7 @@ import {
   type ConsistencyAlias
 } from '../storage';
 import {isCharacterCategory} from '../characters/characterIdentity';
+import type {RAGProvider} from '../rag/RAGService';
 import type {ShodhMemoryProvider} from '../shodh/ShodhMemoryService';
 import {
   formatCanonicalFactValidity,
@@ -66,6 +67,57 @@ export function buildCanonicalFactSummary(
   const validity = formatCanonicalFactValidity(fact, documents);
   return `${label} ${fact.factType.replace(/_/g, ' ')}: ${canonicalFactValueText(fact)}` +
     (validity ? ` (${validity})` : '');
+}
+
+/**
+ * The canonical fact an accepted proposal becomes (slice 3.43). Source Note
+ * review and Canon Decisions both build it here; `target` is the resolved
+ * canon record the fact is about.
+ */
+export function buildCanonicalFactFromProposal(params: {
+  projectId: string;
+  proposal: LoreFactProposal;
+  target: {targetType: CanonicalFact['targetType']; targetId: string; targetName?: string};
+  sourceLoreDocumentTitle?: string;
+  now?: number;
+}): CanonicalFact {
+  const {proposal, target} = params;
+  const now = params.now ?? Date.now();
+  return {
+    id: crypto.randomUUID(),
+    projectId: params.projectId,
+    targetType: target.targetType,
+    targetId: target.targetId,
+    targetName: target.targetName,
+    loreDocumentId: proposal.loreDocumentId,
+    sourceLoreDocumentTitle: params.sourceLoreDocumentTitle,
+    sourceProposalId: proposal.id,
+    factType: proposal.factType,
+    value: proposal.value,
+    evidenceText: proposal.evidence.text,
+    evidenceStart: proposal.evidence.start,
+    evidenceEnd: proposal.evidence.end,
+    acceptedAt: now,
+    updatedAt: now
+  };
+}
+
+/** Puts one canonical fact in the retrieval index, the one way every caller does it. */
+export async function indexCanonicalFact(
+  ragService: Pick<RAGProvider, 'indexDocument'>,
+  fact: CanonicalFact,
+  documents: WritingDocument[] = []
+): Promise<void> {
+  await ragService.indexDocument(
+    getCanonicalFactMemoryDocumentId(fact.id),
+    fact.targetName ?? fact.targetId,
+    buildCanonicalFactSummary(fact, documents),
+    'canon_fact',
+    {
+      tags: ['canon_fact', fact.factType, ...getCanonicalFactValidityTags(fact)],
+      entityIds: [fact.targetId]
+    }
+  );
 }
 
 export function prependUniqueCanonicalFact(

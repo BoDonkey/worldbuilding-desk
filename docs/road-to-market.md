@@ -370,7 +370,7 @@ messages).
 | 3.40 | One validated path for saving a state change (T2, B5) | 3 | S | Done `cd2948b` — local Cypress needed three runs: Electron renderer crashed twice in `post-merge-smoke.cy.ts` (passes alone) |
 | 3.41 | Local AI review through the request gate (T3) | 3 | S | Done `c27e1f8` |
 | 3.42 | AI-written Source Notes are labelled (T4) | 3 | S | Done `871f96d` |
-| 3.43 | Canon Decisions: actions out of the route (B1, D4, T5) | 3 | M | — |
+| 3.43 | Canon Decisions: actions out of the route (B1, D4, T5) | 3 | M | Done 0fb043c |
 | 3.44 | Assistant turn planning out of the component (B2) | 3 | M | — (after 3.39) |
 | 3.45 | One way to create a World Bible record (D3, B4, P1, P2) | 3 | M | — |
 | 3.46 | One name matcher (D5) | 3 | S | Done `6a7ccf9` |

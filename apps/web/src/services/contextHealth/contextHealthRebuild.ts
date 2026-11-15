@@ -8,17 +8,15 @@ import {
   getRulesetByProjectId
 } from '../storage';
 import type {
-  CanonicalFact,
   LoreDocumentLink,
   Project,
   StoredRuleset,
   WorldEntity
 } from '../../entityTypes';
 import {
-  buildCanonicalFactSummary,
-  captureCanonicalFactMemory
+  captureCanonicalFactMemory,
+  indexCanonicalFact
 } from '../lore/canonicalFactActions';
-import {getCanonicalFactValidityTags} from '../lore/canonicalFactValidity';
 import type {RAGProvider} from '../rag/RAGService';
 import type {ShodhMemoryProvider} from '../shodh/ShodhMemoryService';
 import {emitShodhMemoriesUpdated} from '../shodh/shodhEvents';
@@ -49,7 +47,6 @@ const buildRulesetContent = (ruleset: StoredRuleset) => {
   return `${ruleset.description ?? ''}\n${ruleText}`.trim();
 };
 
-const getFactTargetId = (fact: CanonicalFact) => fact.targetId;
 
 export async function rebuildProjectContextHealth(params: {
   project: Project;
@@ -134,16 +131,7 @@ export async function rebuildProjectContextHealth(params: {
   }
 
   for (const fact of canonicalFacts) {
-    await ragService.indexDocument(
-      `canon-fact:${fact.id}`,
-      fact.targetName ?? fact.targetId,
-      buildCanonicalFactSummary(fact, scenes),
-      'canon_fact',
-      {
-        tags: ['canon_fact', fact.factType, ...getCanonicalFactValidityTags(fact)],
-        entityIds: [getFactTargetId(fact)]
-      }
-    );
+    await indexCanonicalFact(ragService, fact, scenes);
     await captureCanonicalFactMemory(shodhService, fact, scenes);
     shodhMemories += 1;
   }
