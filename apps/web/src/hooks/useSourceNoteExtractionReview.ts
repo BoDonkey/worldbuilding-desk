@@ -20,13 +20,13 @@ import {extractLoreFactProposals} from '../services/lore/loreFactExtraction';
 import {extractLoreEntityProposals} from '../services/lore/loreEntityExtraction';
 import {
   acceptCanonicalFact,
-  buildCanonicalFactSummary,
+  buildCanonicalFactFromProposal,
   captureCanonicalFactMemory,
   deleteCanonicalFactMemory,
+  indexCanonicalFact,
   prependUniqueCanonicalFact,
   removeCanonicalFact
 } from '../services/lore/canonicalFactActions';
-import {getCanonicalFactValidityTags} from '../services/lore/canonicalFactValidity';
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import type {MemoryEntry} from '../services/shodh/ShodhMemoryService';
 import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
@@ -230,25 +230,13 @@ export function useSourceNoteExtractionReview(params: {
     setActingProposalId(proposal.id);
     setFeedback(null);
     const now = Date.now();
-    const fact: CanonicalFact = {
-      id: crypto.randomUUID(),
+    const fact = buildCanonicalFactFromProposal({
       projectId: activeProject.id,
-      targetType: target.targetType,
-      targetId: target.targetId,
-      targetName: target.targetName,
-      loreDocumentId: proposal.loreDocumentId,
-      sourceLoreDocumentTitle:
-        documents.find((document) => document.id === proposal.loreDocumentId)?.title ??
-        undefined,
-      sourceProposalId: proposal.id,
-      factType: proposal.factType,
-      value: proposal.value,
-      evidenceText: proposal.evidence.text,
-      evidenceStart: proposal.evidence.start,
-      evidenceEnd: proposal.evidence.end,
-      acceptedAt: now,
-      updatedAt: now
-    };
+      proposal,
+      target,
+      sourceLoreDocumentTitle: documents.find((document) => document.id === proposal.loreDocumentId)?.title,
+      now
+    });
 
     const nextProposal: LoreFactProposal = {
       ...proposal,
@@ -269,16 +257,7 @@ export function useSourceNoteExtractionReview(params: {
         emitShodhMemoriesUpdated(memories);
       }
       if (ragService) {
-        await ragService.indexDocument(
-          `canon-fact:${fact.id}`,
-          fact.targetName ?? fact.targetId,
-          buildCanonicalFactSummary(fact, sourceScenes),
-          'canon_fact',
-          {
-            tags: ['canon_fact', fact.factType, ...getCanonicalFactValidityTags(fact)],
-            entityIds: [fact.targetId]
-          }
-        );
+        await indexCanonicalFact(ragService, fact, sourceScenes);
       }
       await refreshContextHealth();
       setCanonicalFacts((current) => prependUniqueCanonicalFact(current, fact));

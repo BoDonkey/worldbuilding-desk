@@ -11,8 +11,6 @@ import type {
   WritingDocument,
   WorldEntity
 } from '../entityTypes';
-import {LLMService} from '../services/llm/LLMService';
-import {buildRagContextChunks} from '../services/llm/contextProvenance';
 import {
   getCharactersByProject,
   getEntitiesByProject,
@@ -21,59 +19,33 @@ import {
   getDocumentsByProject,
   getCanonicalFactsByProject,
   getLoreFactProposalsByProject,
-  saveLoreFactProposal,
   getLoreEntityProposalsByProject,
-  saveLoreEntityProposal,
   getCanonDecisionClustersByProject,
   replaceCanonDecisionClusters,
-  saveCanonDecisionCluster,
-  buildEntityDecisionSuppressionKey,
-  buildFactDecisionSuppressionKey,
-  getCanonDecisionSuppressionsByProject,
-  saveCanonDecisionSuppression
+  getCanonDecisionSuppressionsByProject
 } from '../services/storage';
 import {buildCanonDecisionClusters} from '../services/lore/canonDecisionClustering';
-import {buildCanonDecisionConsultationPrompt} from '../services/lore/canonDecisionConsultation';
+import {
+  findCanonDecisionMembers,
+  type CanonDecisionContext,
+  type CanonDecisionRecords
+} from '../services/lore/canonDecisionActions';
 import {
   CANON_DECISION_ACTION_LABELS,
   parseCanonDecisionRecommendation,
   type CanonDecisionRecommendedAction
 } from '../services/lore/canonDecisionRecommendation';
 import {AIProposalPreview} from '../components/common/AIProposalPreview';
-import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
-import {
-  supersedeCanonicalFact,
-  buildCanonicalFactSummary,
-  captureCanonicalFactMemory,
-} from '../services/lore/canonicalFactActions';
-import {
-  buildCanonicalFactSupersession,
-  getCanonicalFactValidityTags
-} from '../services/lore/canonicalFactValidity';
+import {buildCanonicalFactSummary} from '../services/lore/canonicalFactActions';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
-import {getShodhService} from '../services/shodh/getShodhService';
-import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
-import {
-} from '../services/editor';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/CanonDecisionsRoute.module.css';
-import {describeError} from '../services/errors';
 import {ConsultationBudgetNotice, ModelRunProgress, RouteFeedback} from '../components/common';
-import {useConsultationBudget} from '../hooks/useConsultationBudget';
-import {useModelRun} from '../hooks/useModelRun';
-import {resolveResponseTokenLimit} from '../services/llm/modelRun';
-import {readAISwitches} from '../services/llm/aiSwitches';
+import {useCanonDecisionActions} from '../hooks/useCanonDecisionActions';
+import {useCanonDecisionConsultation} from '../hooks/useCanonDecisionConsultation';
 import {RECORDS_CHANGED} from '../services/recordEvents';
-
-const PROVIDER_LABELS = {
-  anthropic: 'Claude',
-  openai: 'GPT',
-  gemini: 'Gemini',
-  ollama: 'Local Ollama',
-  'local-openai': 'Local server'
-} as const;
 
 function CanonDecisionsRoute() {
   const activeProject = useAppStore((state) => state.activeProject);
@@ -90,24 +62,6 @@ function CanonDecisionsRoute() {
     new Map()
   );
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
-  const [actingClusterId, setActingClusterId] = useState<string | null>(null);
-  const [consultingClusterId, setConsultingClusterId] = useState<string | null>(null);
-  const modelRun = useModelRun();
-  /** The cluster whose run the progress line describes (the latest one consulted). */
-  const [runClusterId, setRunClusterId] = useState<string | null>(null);
-  const [consultationByClusterId, setConsultationByClusterId] = useState<
-    Record<string, {content?: string; error?: string}>
-  >({});
-  const [dismissedRecommendationClusterIds, setDismissedRecommendationClusterIds] = useState<
-    Set<string>
-  >(new Set());
-  const [factEffectiveSceneByClusterId, setFactEffectiveSceneByClusterId] = useState<
-    Record<string, string>
-  >({});
-  const [feedback, setFeedback] = useState<{
-    tone: 'success' | 'error';
-    message: string;
-  } | null>(null);
 
   const refresh = useCallback(async () => {
     if (!activeProject) {
@@ -208,507 +162,43 @@ function CanonDecisionsRoute() {
     };
   }, [refresh]);
 
-  const documentsById = useMemo(
-    () => new Map(documents.map((document) => [document.id, document])),
-    [documents]
+  const records = useMemo<CanonDecisionRecords>(
+    () => ({
+      documentsById: new Map(documents.map((document) => [document.id, document])),
+      entityProposalsById: new Map(entityProposals.map((proposal) => [proposal.id, proposal])),
+      factProposalsById: new Map(factProposals.map((proposal) => [proposal.id, proposal])),
+      canonicalFactsById: new Map(canonicalFacts.map((fact) => [fact.id, fact])),
+      charactersById: new Map(characters.map((character) => [character.id, character])),
+      entitiesById: new Map(entities.map((entity) => [entity.id, entity])),
+      documentLinksById,
+      canonicalFacts,
+      scenes
+    }),
+    [documents, entityProposals, factProposals, canonicalFacts, characters, entities, documentLinksById, scenes]
   );
-  const entityProposalsById = useMemo(
-    () => new Map(entityProposals.map((proposal) => [proposal.id, proposal])),
-    [entityProposals]
+  const decisionContext = useMemo<CanonDecisionContext | null>(
+    () => (activeProject ? {project: activeProject, records, ragService} : null),
+    [activeProject, records, ragService]
   );
-  const factProposalsById = useMemo(
-    () => new Map(factProposals.map((proposal) => [proposal.id, proposal])),
-    [factProposals]
-  );
-  const canonicalFactsById = useMemo(
-    () => new Map(canonicalFacts.map((fact) => [fact.id, fact])),
-    [canonicalFacts]
-  );
-  const charactersById = useMemo(
-    () => new Map(characters.map((character) => [character.id, character])),
-    [characters]
-  );
-  const entitiesById = useMemo(
-    () => new Map(entities.map((entity) => [entity.id, entity])),
-    [entities]
-  );
-  const canonDecisionProviderMode =
-    projectSettings?.aiSettings?.inspectorSettings?.canonDecisionProviderMode ?? 'project-provider';
-  const effectiveAIProviderId =
-    canonDecisionProviderMode === 'local-ollama'
-      ? 'ollama'
-      : projectSettings?.aiSettings?.provider;
-  const aiProviderLabel = effectiveAIProviderId
-    ? PROVIDER_LABELS[effectiveAIProviderId]
-    : 'AI';
-  const aiConsultationEnabled = readAISwitches(projectSettings?.aiSettings).coaching;
-  // The settings a canon-decision request actually uses: the local-Ollama override and the
-  // low-cost model included. The budget classifies this route, so the exemption applies only when
-  // that exact model is verified local.
-  const consultationAISettings = useMemo(() => {
-    const aiSettings = projectSettings?.aiSettings;
-    if (!aiSettings || canonDecisionProviderMode !== 'local-ollama') return aiSettings;
-    const lowCostModel = aiSettings.inspectorSettings?.lowCostModel?.trim();
-    return {
-      ...aiSettings,
-      provider: 'ollama' as const,
-      configs: {
-        ...aiSettings.configs,
-        ollama: {
-          ...aiSettings.configs?.ollama,
-          ...(lowCostModel ? {model: lowCostModel} : {})
-        }
-      }
-    };
-  }, [projectSettings?.aiSettings, canonDecisionProviderMode]);
-  const budget = useConsultationBudget(
-    activeProject?.id ?? null,
-    projectSettings?.aiSettings?.inspectorSettings,
-    consultationAISettings
-  );
-
-  const resolveCluster = async (
-    cluster: CanonDecisionCluster,
-    resolution: CanonDecisionCluster['resolution'],
-    status: CanonDecisionCluster['status']
-  ) => {
-    await saveCanonDecisionCluster({
-      ...cluster,
-      resolution,
-      status,
-      updatedAt: Date.now()
-    });
-  };
-
-  const persistEntitySuppression = async (cluster: CanonDecisionCluster) => {
-    const proposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_entity_proposal');
-    const targetRef = cluster.memberRefs.find(
-      (ref) => ref.type === 'character' || ref.type === 'world_entity'
-    );
-    if (!proposalRef || !targetRef || !activeProject) return;
-    const proposal = entityProposalsById.get(proposalRef.id);
-    const targetName =
-      targetRef.type === 'character'
-        ? charactersById.get(targetRef.id)?.name
-        : entitiesById.get(targetRef.id)?.name;
-    if (!proposal || !targetName) return;
-    await saveCanonDecisionSuppression({
-      id: crypto.randomUUID(),
-      projectId: activeProject.id,
-      kind: 'entity_identity',
-      key: buildEntityDecisionSuppressionKey({
-        proposalName: proposal.name,
-        targetName
-      }),
-      resolution: 'keep_separate',
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    });
-  };
-
-  const persistAliasSuppression = async (cluster: CanonDecisionCluster) => {
-    const proposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_entity_proposal');
-    const targetRef = cluster.memberRefs.find(
-      (ref) => ref.type === 'character' || ref.type === 'world_entity'
-    );
-    if (!proposalRef || !targetRef || !activeProject) return;
-    const proposal = entityProposalsById.get(proposalRef.id);
-    const targetName =
-      targetRef.type === 'character'
-        ? charactersById.get(targetRef.id)?.name
-        : entitiesById.get(targetRef.id)?.name;
-    if (!proposal || !targetName) return;
-    await saveCanonDecisionSuppression({
-      id: crypto.randomUUID(),
-      projectId: activeProject.id,
-      kind: 'entity_identity',
-      key: buildEntityDecisionSuppressionKey({
-        proposalName: proposal.name,
-        targetName
-      }),
-      resolution: 'alias',
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    });
-  };
-
-  const persistFactSuppression = async (
-    cluster: CanonDecisionCluster,
-    resolution: 'reject' | 'accept_update' | 'keep_separate'
-  ) => {
-    const proposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_fact_proposal');
-    const canonicalRef = cluster.memberRefs.find((ref) => ref.type === 'canonical_fact');
-    if (!proposalRef || !canonicalRef || !activeProject) return;
-    const proposal = factProposalsById.get(proposalRef.id);
-    const canonicalFact = canonicalFactsById.get(canonicalRef.id);
-    if (!proposal || !canonicalFact || !proposal.targetType || !proposal.targetId) return;
-    await saveCanonDecisionSuppression({
-      id: crypto.randomUUID(),
-      projectId: activeProject.id,
-      kind: 'fact_conflict',
-      key: buildFactDecisionSuppressionKey({
-        targetType: proposal.targetType,
-        targetId: proposal.targetId,
-        factType: proposal.factType,
-        canonicalValue:
-          typeof canonicalFact.value === 'string'
-            ? canonicalFact.value
-            : `${canonicalFact.value.label}: ${canonicalFact.value.value}`,
-        proposalValue:
-          typeof proposal.value === 'string'
-            ? proposal.value
-            : `${proposal.value.label}: ${proposal.value.value}`
-      }),
-      resolution,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    });
-  };
-
-  const handleAliasEntity = async (cluster: CanonDecisionCluster) => {
-    const proposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_entity_proposal');
-    const targetRef = cluster.memberRefs.find(
-      (ref) => ref.type === 'character' || ref.type === 'world_entity'
-    );
-    if (!proposalRef || !targetRef || !activeProject) return;
-    const proposal = entityProposalsById.get(proposalRef.id);
-    if (!proposal) return;
-    setActingClusterId(cluster.id);
-    setFeedback(null);
-    try {
-      const nextProposal: LoreEntityProposal = {
-        ...proposal,
-        targetType: targetRef.type === 'character' ? 'character' : 'entity',
-        targetId: targetRef.id,
-        status: 'accepted',
-        updatedAt: Date.now()
-      };
-      // Canon links, the alias, and the proposal commit together; cluster bookkeeping follows.
-      await acceptLoreEntityProposal({
-        proposal: nextProposal,
-        existingLinks: documentLinksById.get(proposal.loreDocumentId) ?? [],
-        alias: {
-          targetId: targetRef.id,
-          targetType: targetRef.type === 'character' ? 'character' : 'entity',
-          alias: proposal.name
-        },
-        acceptedProposal: () => nextProposal
-      });
-      await persistAliasSuppression(cluster);
-      await resolveCluster(cluster, 'alias', 'resolved');
-      setFeedback({tone: 'success', message: `"${proposal.name}" aliased to existing canon.`});
-      await refresh();
-    } catch (error) {
-      const message = describeError(error, 'Unable to alias candidate.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setActingClusterId(null);
-    }
-  };
-
-  const handleAcceptNewEntity = async (cluster: CanonDecisionCluster) => {
-    const proposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_entity_proposal');
-    if (!proposalRef) return;
-    const proposal = entityProposalsById.get(proposalRef.id);
-    if (!proposal) return;
-    setActingClusterId(cluster.id);
-    setFeedback(null);
-    try {
-      await acceptLoreEntityProposal({
-        proposal: {
-          ...proposal,
-          targetType: undefined,
-          targetId: undefined
-        },
-        existingLinks: documentLinksById.get(proposal.loreDocumentId) ?? []
-      });
-      await resolveCluster(cluster, 'accept_new', 'resolved');
-      setFeedback({tone: 'success', message: `"${proposal.name}" created as new canon.`});
-      await refresh();
-    } catch (error) {
-      const message = describeError(error, 'Unable to accept new candidate.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setActingClusterId(null);
-    }
-  };
-
-  const handleAcceptFactUpdate = async (cluster: CanonDecisionCluster) => {
-    const proposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_fact_proposal');
-    const canonicalRef = cluster.memberRefs.find((ref) => ref.type === 'canonical_fact');
-    if (!proposalRef || !canonicalRef || !activeProject) return;
-    const proposal = factProposalsById.get(proposalRef.id);
-    const previousFact = canonicalFactsById.get(canonicalRef.id);
-    if (!proposal || !previousFact || !proposal.targetType || !proposal.targetId) return;
-    const asOfSceneId = factEffectiveSceneByClusterId[cluster.id];
-    if (!asOfSceneId) {
-      setFeedback({tone: 'error', message: 'Choose the scene where the new fact becomes true.'});
-      return;
-    }
-    setActingClusterId(cluster.id);
-    setFeedback(null);
-    try {
-      const sourceDocument = documentsById.get(proposal.loreDocumentId);
-      const unboundedNextFact: CanonicalFact = {
-        id: crypto.randomUUID(),
-        projectId: activeProject.id,
-        targetType: proposal.targetType,
-        targetId: proposal.targetId,
-        targetName: proposal.targetName,
-        loreDocumentId: proposal.loreDocumentId,
-        sourceLoreDocumentTitle: sourceDocument?.title,
-        sourceProposalId: proposal.id,
-        factType: proposal.factType,
-        value: proposal.value,
-        evidenceText: proposal.evidence.text,
-        evidenceStart: proposal.evidence.start,
-        evidenceEnd: proposal.evidence.end,
-        acceptedAt: Date.now(),
-        updatedAt: Date.now()
-      };
-      const supersession = buildCanonicalFactSupersession({
-        previousFact,
-        nextFact: unboundedNextFact,
-        asOfSceneId,
-        documents: scenes
-      });
-      const nextFact = supersession.nextFact;
-      // Both facts, the proposal, and the side-effect hand-over commit together.
-      await supersedeCanonicalFact({
-        projectId: activeProject.id,
-        previousFact: supersession.previousFact,
-        nextFact,
-        proposal: {...proposal, status: 'accepted', updatedAt: Date.now()},
-        remainingFacts: [...canonicalFacts.filter((fact) => fact.id !== previousFact.id), nextFact]
-      });
-      try {
-        const shodh = await getShodhService({
-          projectId: activeProject.id,
-          inheritFromParent: activeProject.inheritShodh,
-          parentProjectId: activeProject.parentProjectId
-        });
-        await captureCanonicalFactMemory(shodh, supersession.previousFact, scenes);
-        await captureCanonicalFactMemory(shodh, nextFact, scenes);
-        emitShodhMemoriesUpdated(await shodh.listMemories());
-      } catch (error) {
-        console.warn('Failed to refresh canonical fact memory', error);
-      }
-      if (ragService) {
-        await ragService.indexDocument(
-          `canon-fact:${supersession.previousFact.id}`,
-          supersession.previousFact.targetName ?? supersession.previousFact.targetId,
-          buildCanonicalFactSummary(supersession.previousFact, scenes),
-          'canon_fact',
-          {
-            tags: [
-              'canon_fact',
-              supersession.previousFact.factType,
-              ...getCanonicalFactValidityTags(supersession.previousFact)
-            ],
-            entityIds: [supersession.previousFact.targetId]
-          }
-        );
-        await ragService.indexDocument(
-          `canon-fact:${nextFact.id}`,
-          nextFact.targetName ?? nextFact.targetId,
-          buildCanonicalFactSummary(nextFact, scenes),
-          'canon_fact',
-          {
-            tags: ['canon_fact', nextFact.factType, ...getCanonicalFactValidityTags(nextFact)],
-            entityIds: [nextFact.targetId]
-          }
-        );
-      }
-      await resolveCluster(cluster, 'accept_update', 'resolved');
-      await persistFactSuppression(cluster, 'accept_update');
-      setFactEffectiveSceneByClusterId((current) => {
-        const next = {...current};
-        delete next[cluster.id];
-        return next;
-      });
-      const sceneTitle = scenes.find((scene) => scene.id === asOfSceneId)?.title ?? 'that scene';
-      setFeedback({tone: 'success', message: `Canon superseded as of ${sceneTitle}.`});
-      await refresh();
-    } catch (error) {
-      const message = describeError(error, 'Unable to update canonical fact.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setActingClusterId(null);
-    }
-  };
-
-  const handleKeepSeparate = async (cluster: CanonDecisionCluster) => {
-    setActingClusterId(cluster.id);
-    setFeedback(null);
-    try {
-      if (cluster.kind === 'entity_identity') {
-        await persistEntitySuppression(cluster);
-      }
-      if (cluster.kind === 'fact_conflict') {
-        await persistFactSuppression(cluster, 'keep_separate');
-      }
-      await resolveCluster(cluster, 'keep_separate', 'resolved');
-      setFeedback({tone: 'success', message: 'Cluster marked keep separate.'});
-      await refresh();
-    } catch (error) {
-      const message = describeError(error, 'Unable to update cluster.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setActingClusterId(null);
-    }
-  };
-
-  const handleReject = async (cluster: CanonDecisionCluster) => {
-    setActingClusterId(cluster.id);
-    setFeedback(null);
-    try {
-      const entityProposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_entity_proposal');
-      const factProposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_fact_proposal');
-      if (entityProposalRef) {
-        const proposal = entityProposalsById.get(entityProposalRef.id);
-        if (proposal) {
-          await saveLoreEntityProposal({...proposal, status: 'rejected', updatedAt: Date.now()});
-        }
-      }
-      if (factProposalRef) {
-        const proposal = factProposalsById.get(factProposalRef.id);
-        if (proposal) {
-          await saveLoreFactProposal({...proposal, status: 'rejected', updatedAt: Date.now()});
-        }
-      }
-      if (cluster.kind === 'fact_conflict') {
-        await persistFactSuppression(cluster, 'reject');
-      }
-      await resolveCluster(cluster, 'reject', 'resolved');
-      setFeedback({tone: 'success', message: 'Cluster rejected.'});
-      await refresh();
-    } catch (error) {
-      const message = describeError(error, 'Unable to reject cluster.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setActingClusterId(null);
-    }
-  };
-
-  const handleDefer = async (cluster: CanonDecisionCluster) => {
-    setActingClusterId(cluster.id);
-    setFeedback(null);
-    try {
-      await resolveCluster(cluster, 'defer', 'deferred');
-      setFeedback({tone: 'success', message: 'Cluster deferred.'});
-      await refresh();
-    } catch (error) {
-      const message = describeError(error, 'Unable to defer cluster.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setActingClusterId(null);
-    }
-  };
-
-  const handleConsultCluster = async (cluster: CanonDecisionCluster) => {
-    if (!activeProject) return;
-    if (!projectSettings?.aiSettings) {
-      setFeedback({tone: 'error', message: 'Configure an AI provider in Settings first.'});
-      return;
-    }
-    if (!aiConsultationEnabled) {
-      setFeedback({tone: 'error', message: 'AI coaching is off for this project. Turn it on in Settings → AI Settings.'});
-      return;
-    }
-    if (budget.blocked) {
-      setFeedback({
-        tone: 'error',
-        message: budget.blockedMessage ?? 'AI consultation budget reached for today.'
-      });
-      return;
-    }
-
-    const entityProposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_entity_proposal');
-    const factProposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_fact_proposal');
-    const canonicalFactRef = cluster.memberRefs.find((ref) => ref.type === 'canonical_fact');
-    const targetRef = cluster.memberRefs.find(
-      (ref) => ref.type === 'character' || ref.type === 'world_entity'
-    );
-    const entityProposal = entityProposalRef
-      ? entityProposalsById.get(entityProposalRef.id) ?? null
-      : null;
-    const factProposal = factProposalRef
-      ? factProposalsById.get(factProposalRef.id) ?? null
-      : null;
-    const canonicalFact = canonicalFactRef
-      ? canonicalFactsById.get(canonicalFactRef.id) ?? null
-      : null;
-    const targetCharacter =
-      targetRef?.type === 'character' ? charactersById.get(targetRef.id) ?? null : null;
-    const targetEntity =
-      targetRef?.type === 'world_entity' ? entitiesById.get(targetRef.id) ?? null : null;
-    const sourceDocumentId = entityProposal?.loreDocumentId ?? factProposal?.loreDocumentId;
-    const sourceDocument = sourceDocumentId ? documentsById.get(sourceDocumentId) ?? null : null;
-    const {searchQuery, systemPrompt, userPrompt} = buildCanonDecisionConsultationPrompt({
-      cluster,
-      entityProposal,
-      factProposal,
-      canonicalFact,
-      targetCharacter,
-      targetEntity,
-      sourceDocument
-    });
-
-    setConsultingClusterId(cluster.id);
-    setRunClusterId(cluster.id);
-    setConsultationByClusterId((prev) => ({
-      ...prev,
-      [cluster.id]: {content: ''}
-    }));
-    setDismissedRecommendationClusterIds((prev) => {
-      if (!prev.has(cluster.id)) return prev;
-      const next = new Set(prev);
-      next.delete(cluster.id);
-      return next;
-    });
-    setFeedback(null);
-
-    try {
-      const aiSettingsForConsultation = consultationAISettings ?? projectSettings.aiSettings;
-      const service = new LLMService(aiSettingsForConsultation);
-      budget.spend('canon-decision');
-
-      // The same trust labels the assistant uses, so a Source Note is not read as canon.
-      const ragChunks = ragService
-        ? await buildRagContextChunks(activeProject.id, await ragService.search(searchQuery, 3))
-        : [];
-
-      await modelRun.run(
-        service,
-        {
-          feature: 'canon-decision',
-          messages: [{role: 'user', content: userPrompt}],
-          systemPrompt,
-          context: ragChunks,
-          model: projectSettings.aiSettings.inspectorSettings?.lowCostModel?.trim() || undefined,
-          maxTokens: resolveResponseTokenLimit(
-            aiSettingsForConsultation.provider,
-            projectSettings.aiSettings.inspectorSettings?.maxResponseTokens
-          )
-        },
-        ({answer}) => {
-          setConsultationByClusterId((prev) => ({
-            ...prev,
-            [cluster.id]: {content: answer}
-          }));
-        }
-      );
-    } catch (error) {
-      const message =
-        describeError(error, 'AI consultation failed for this cluster.');
-      setConsultationByClusterId((prev) => ({
-        ...prev,
-        [cluster.id]: {error: message}
-      }));
-    } finally {
-      setConsultingClusterId(null);
-    }
-  };
+  const actions = useCanonDecisionActions({context: decisionContext, refresh});
+  const {actingClusterId, feedback, setFeedback, factEffectiveSceneByClusterId} = actions;
+  const consultation = useCanonDecisionConsultation({
+    activeProject,
+    projectSettings,
+    records,
+    ragService,
+    setFeedback
+  });
+  const {
+    modelRun,
+    budget,
+    aiProviderLabel,
+    aiConsultationEnabled,
+    consultingClusterId,
+    runClusterId,
+    consultationByClusterId,
+    dismissedRecommendationClusterIds
+  } = consultation;
 
   if (!activeProject) {
     return (
@@ -743,21 +233,13 @@ function CanonDecisionsRoute() {
       ) : (
         <div className={styles.clusterList}>
           {clusters.map((cluster) => {
-            const entityProposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_entity_proposal');
-            const factProposalRef = cluster.memberRefs.find((ref) => ref.type === 'lore_fact_proposal');
-            const canonicalFactRef = cluster.memberRefs.find((ref) => ref.type === 'canonical_fact');
-            const targetRef = cluster.memberRefs.find(
-              (ref) => ref.type === 'character' || ref.type === 'world_entity'
-            );
-            const entityProposal = entityProposalRef
-              ? entityProposalsById.get(entityProposalRef.id)
-              : null;
-            const factProposal = factProposalRef
-              ? factProposalsById.get(factProposalRef.id)
-              : null;
-            const canonicalFact = canonicalFactRef
-              ? canonicalFactsById.get(canonicalFactRef.id)
-              : null;
+            const {
+              entityProposal,
+              factProposal,
+              canonicalFact,
+              targetRef,
+              targetName: targetLabel
+            } = findCanonDecisionMembers(records, cluster);
             const recommendation =
               consultingClusterId !== cluster.id && !dismissedRecommendationClusterIds.has(cluster.id)
                 ? parseCanonDecisionRecommendation(
@@ -768,21 +250,16 @@ function CanonDecisionsRoute() {
             const recommendedActionHandlers: Partial<
               Record<CanonDecisionRecommendedAction, () => Promise<void>>
             > = {
-              alias: targetRef ? () => handleAliasEntity(cluster) : undefined,
-              accept_new: () => handleAcceptNewEntity(cluster),
-              accept_update: () => handleAcceptFactUpdate(cluster),
-              keep_separate: () => handleKeepSeparate(cluster),
-              reject: () => handleReject(cluster),
-              defer: () => handleDefer(cluster)
+              alias: targetRef ? () => actions.handleAliasEntity(cluster) : undefined,
+              accept_new: () => actions.handleAcceptNewEntity(cluster),
+              accept_update: () => actions.handleAcceptFactUpdate(cluster),
+              keep_separate: () => actions.handleKeepSeparate(cluster),
+              reject: () => actions.handleReject(cluster),
+              defer: () => actions.handleDefer(cluster)
             };
             const recommendedActionHandler = recommendation
               ? recommendedActionHandlers[recommendation.action]
               : undefined;
-            const targetLabel = targetRef
-              ? targetRef.type === 'character'
-                ? charactersById.get(targetRef.id)?.name
-                : entitiesById.get(targetRef.id)?.name
-              : null;
 
             return (
               <article key={cluster.id} className={styles.clusterCard}>
@@ -820,10 +297,7 @@ function CanonDecisionsRoute() {
                       <span>New fact becomes true as of</span>
                       <select
                         value={factEffectiveSceneByClusterId[cluster.id] ?? ''}
-                        onChange={(event) => setFactEffectiveSceneByClusterId((current) => ({
-                          ...current,
-                          [cluster.id]: event.target.value
-                        }))}
+                        onChange={(event) => actions.setFactEffectiveScene(cluster.id, event.target.value)}
                       >
                         <option value=''>Choose a scene</option>
                         {scenes.map((scene) => (
@@ -843,11 +317,7 @@ function CanonDecisionsRoute() {
                   <AIProposalPreview
                     title={`AI recommends: ${CANON_DECISION_ACTION_LABELS[recommendation.action]}`}
                     text={recommendation.rationale}
-                    onDismiss={() =>
-                      setDismissedRecommendationClusterIds(
-                        (prev) => new Set(prev).add(cluster.id)
-                      )
-                    }
+                    onDismiss={() => consultation.dismissRecommendation(cluster.id)}
                     onConfirm={recommendedActionHandler}
                   />
                 ) : null}
@@ -887,7 +357,7 @@ function CanonDecisionsRoute() {
                   {aiConsultationEnabled && (
                   <button
                     type='button'
-                    onClick={() => void handleConsultCluster(cluster)}
+                    onClick={() => void consultation.handleConsultCluster(cluster)}
                     disabled={
                       actingClusterId === cluster.id ||
                       consultingClusterId === cluster.id ||
@@ -906,7 +376,7 @@ function CanonDecisionsRoute() {
                       {targetRef ? (
                         <button
                           type='button'
-                          onClick={() => void handleAliasEntity(cluster)}
+                          onClick={() => void actions.handleAliasEntity(cluster)}
                           disabled={actingClusterId === cluster.id}
                         >
                           Alias To Existing
@@ -914,14 +384,14 @@ function CanonDecisionsRoute() {
                       ) : null}
                       <button
                         type='button'
-                        onClick={() => void handleAcceptNewEntity(cluster)}
+                        onClick={() => void actions.handleAcceptNewEntity(cluster)}
                         disabled={actingClusterId === cluster.id}
                       >
                         Accept New
                       </button>
                       <button
                         type='button'
-                        onClick={() => void handleKeepSeparate(cluster)}
+                        onClick={() => void actions.handleKeepSeparate(cluster)}
                         disabled={actingClusterId === cluster.id}
                       >
                         Keep Separate
@@ -933,7 +403,7 @@ function CanonDecisionsRoute() {
                     <>
                       <button
                         type='button'
-                        onClick={() => void handleAcceptFactUpdate(cluster)}
+                        onClick={() => void actions.handleAcceptFactUpdate(cluster)}
                         disabled={
                           actingClusterId === cluster.id ||
                           !factEffectiveSceneByClusterId[cluster.id]
@@ -943,7 +413,7 @@ function CanonDecisionsRoute() {
                       </button>
                       <button
                         type='button'
-                        onClick={() => void handleKeepSeparate(cluster)}
+                        onClick={() => void actions.handleKeepSeparate(cluster)}
                         disabled={actingClusterId === cluster.id}
                       >
                         Keep Separate
@@ -953,14 +423,14 @@ function CanonDecisionsRoute() {
 
                   <button
                     type='button'
-                    onClick={() => void handleReject(cluster)}
+                    onClick={() => void actions.handleReject(cluster)}
                     disabled={actingClusterId === cluster.id}
                   >
                     Reject
                   </button>
                   <button
                     type='button'
-                    onClick={() => void handleDefer(cluster)}
+                    onClick={() => void actions.handleDefer(cluster)}
                     disabled={actingClusterId === cluster.id}
                   >
                     Defer
