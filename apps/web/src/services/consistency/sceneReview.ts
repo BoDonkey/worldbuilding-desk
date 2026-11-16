@@ -114,7 +114,17 @@ export function reviewScene(params: {
   /** Continuity items the author dismissed this session. */
   isDismissed?: (itemId: string) => boolean;
 }): SceneReview {
-  const {scene, sceneOrderDocuments, context, isDismissed} = params;
+  const {scene, context, isDismissed} = params;
+  // 3.56: the checks read scene text from the order, so the scene under
+  // review must be the draft, not its saved copy. A scene never saved is
+  // added so it is reviewed at all.
+  const sceneOrderDocuments = params.sceneOrderDocuments.some(
+    (document) => document.id === scene.id
+  )
+    ? params.sceneOrderDocuments.map((document) =>
+        document.id === scene.id ? scene : document
+      )
+    : [...params.sceneOrderDocuments, scene];
   const continuityItems = findContinuityItems({
     scenes: [scene],
     sceneOrderDocuments,

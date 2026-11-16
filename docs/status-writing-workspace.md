@@ -481,7 +481,10 @@
   keeps the scene's continuity items; before 3.53 it dropped them until a
   later refresh happened to run, which for a deferred scene whose save was
   not committed was never. A clean strict save still clears the scene's name
-  items.
+  items. Both checks read the draft text (3.56): the draft takes its saved
+  copy's place in the scene order, and a scene that was never saved is added
+  to it. Before 3.56, state continuity read the last saved text, so the
+  draft refreshes showed stale state findings and a new scene got none.
 
 - Project review also checks movement (slice 4.78). **Move with no route**
   flags an accepted move between two place records that no connection or
