@@ -376,7 +376,7 @@ messages).
 | 3.46 | One name matcher (D5) | 3 | S | Done `6a7ccf9` |
 | 3.47 | Shared model-run hook for AI features (B3) | 3 | M | — (after 3.43; relates to 4.82) |
 | 3.48 | Projects: backup import as its own hook and panel (S2) | 3 | M | — |
-| 3.49 | World Bible imports: split the two pipelines (S2) | 3 | M | — (after 3.45) |
+| 3.49 | World Bible imports: split the two pipelines (S2) | 3 | M | Done 6b51ce7 |
 | 3.50 | Seam maps for the four baseline files (S1, plan only) | 3 | S | — |
 | 3.51 | Dead code sweep (X1–X4) | 3 | S | Done `6d3a69c` — rules-engine factory helpers kept as public API (author, 2026-11-15) |
 | 3.52 | One ZIP and DOCX reader; shared text helpers (D6, D7) | 3 | S | Done ea157de |
