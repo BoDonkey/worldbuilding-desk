@@ -383,7 +383,7 @@ messages).
 | 3.53 | Scene review in one function (D2) | 3 | S | Done `0ef00a6` |
 | 3.54 | Rules wizard on theme tokens (Y1, Y2) | 3 | M | — |
 | 3.55 | Architecture doc catch-up (B6, P3) | 3 | XS | — |
-| 3.56 | State continuity reviews the draft, not the saved scene | 3 | S | — (found in 3.53) |
+| 3.56 | State continuity reviews the draft, not the saved scene | 3 | S | WIP |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
