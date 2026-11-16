@@ -183,6 +183,7 @@ export async function aliasEntityToExisting(
   await acceptLoreEntityProposal({
     proposal: nextProposal,
     existingLinks: context.records.documentLinksById.get(proposal.loreDocumentId) ?? [],
+    indexing: {ragService: context.ragService, shodhService: null},
     alias: {targetId: targetRef.id, targetType, alias: proposal.name},
     acceptedProposal: () => nextProposal
   });
@@ -199,7 +200,8 @@ export async function acceptNewEntity(
 ): Promise<string> {
   await acceptLoreEntityProposal({
     proposal: {...proposal, targetType: undefined, targetId: undefined},
-    existingLinks: context.records.documentLinksById.get(proposal.loreDocumentId) ?? []
+    existingLinks: context.records.documentLinksById.get(proposal.loreDocumentId) ?? [],
+    indexing: {ragService: context.ragService, shodhService: null}
   });
   await resolveCluster(cluster, 'accept_new', 'resolved');
   return `"${proposal.name}" created as new canon.`;

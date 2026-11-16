@@ -286,7 +286,8 @@ export function useSourceNoteExtractionReview(params: {
       // Canon, links, and the proposal's accepted status commit together.
       const acceptedTarget = await acceptLoreEntityProposal({
         proposal,
-        existingLinks
+        existingLinks,
+        indexing: {ragService, shodhService}
       });
       const document = documents.find((entry) => entry.id === proposal.loreDocumentId);
       if (activeProject && document) {

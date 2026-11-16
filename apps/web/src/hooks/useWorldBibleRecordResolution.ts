@@ -1,5 +1,4 @@
 import {useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction} from 'react';
-import {saveEntity} from '../services/storage';
 import type {
   EntityCategory,
   Project,
@@ -8,7 +7,7 @@ import type {
 } from '../entityTypes';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
-import {indexWorldBibleEntity} from '../services/worldBible/indexWorldBibleEntity';
+import {saveWorldBibleRecord} from '../services/worldBible/worldBibleRecordSave';
 import type {WorldBibleRecordDraft} from '../components/WorldBible/record/useWorldBibleRecordDraft';
 import {
   buildCanonicalAliasList,
@@ -226,13 +225,13 @@ export function useWorldBibleRecordResolution({
     setMovingEntityCategoryId(selectedEntity.id);
     setFeedback(null);
     try {
-      const nextEntity: WorldEntity = {
-        ...selectedEntity,
-        categoryId: targetCategory.id,
-        updatedAt: Date.now()
-      };
-      await saveEntity(nextEntity);
-      await indexWorldBibleEntity(nextEntity, targetCategory.slug, {ragService, shodhService});
+      const {entity: nextEntity} = await saveWorldBibleRecord({
+        entity: {...selectedEntity, categoryId: targetCategory.id, updatedAt: Date.now()},
+        category: targetCategory,
+        categories,
+        entities,
+        indexing: {ragService, shodhService}
+      });
       if (shodhService) await refreshMemories();
       setEntities((current) =>
         current.map((entity) =>
@@ -254,6 +253,7 @@ export function useWorldBibleRecordResolution({
     }
   }, [
     categories,
+    entities,
     handleEdit,
     moveCategoryTargetId,
     ragService,

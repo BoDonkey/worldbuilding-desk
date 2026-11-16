@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState, type ChangeEvent} from 'react';
+import {useRef, useState} from 'react';
 import type {
   CanonicalFact,
   EntityCategory,
@@ -7,41 +7,16 @@ import type {
   Project,
   WorldEntity
 } from '../../entityTypes';
-import {
-  saveEntity,
-  replaceLoreDocumentLinks,
-  saveLoreDocument,
-  type ConsistencyAlias
-} from '../../services/storage';
-import {summarizeContent} from '../../services/lore/sourceNoteCapture';
-import {
-  downloadPortableDataZip,
-  parsePortableMarkdownFiles,
-  type PortableMarkdownDraft
-} from '../../services/portability/portableData';
-import {
-  ALTERNATIVE_NAMES_KEY,
-  buildWorldBibleEntityContent,
-  getPreferredImportField,
-  normalizeRichTextValue,
-  parseAlternativeNames
-} from '../../services/worldBible/worldBibleEntityHelpers';
-import {markdownToRichHtml} from '../../hooks/useWorldBibleImports';
+import type {ConsistencyAlias} from '../../services/storage';
+import {downloadPortableDataZip} from '../../services/portability/portableData';
+import type {PortableImportDraft, WikiLinkAction} from '../../services/portability/portableImport';
 import {describeError} from '../../services/errors';
 import type {RAGProvider} from '../../services/rag/RAGService';
 import type {ShodhMemoryProvider} from '../../services/shodh/ShodhMemoryService';
 import shared from './worldBibleShared.module.css';
 import styles from './WorldBibleImportDrafts.module.css';
-import {normalizeNameExact} from '../../services/names/nameMatching';
 import {useProjectMaps} from '../../hooks/useProjectMaps';
-
-type WikiLinkAction = 'ignore' | 'link' | 'alias';
-
-interface PortableImportDraft extends PortableMarkdownDraft {
-  include: boolean;
-  categoryId: string;
-  wikiLinkActions: Record<string, WikiLinkAction>;
-}
+import {usePortableDataImport} from '../../hooks/usePortableDataImport';
 
 interface PortableDataPanelProps {
   project: Project;
@@ -57,110 +32,29 @@ interface PortableDataPanelProps {
   onFeedback: (feedback: {tone: 'success' | 'error'; message: string}) => void;
 }
 
-const findCategoryId = (
-  draft: PortableMarkdownDraft,
-  categories: EntityCategory[]
-): string => {
-  const category = categories.find(
-    (candidate) =>
-      normalizeNameExact(candidate.slug) === normalizeNameExact(draft.frontmatter.categorySlug ?? '') ||
-      normalizeNameExact(candidate.name) === normalizeNameExact(draft.frontmatter.category ?? '')
-  );
-  return category?.id ?? categories[0]?.id ?? '';
-};
-
-const matchEntity = (
-  name: string,
-  entities: WorldEntity[],
-  aliases: ConsistencyAlias[]
-): WorldEntity | null => {
-  const key = normalizeNameExact(name);
-  const direct = entities.find((entity) => normalizeNameExact(entity.name) === key);
-  if (direct) return direct;
-  const alias = aliases.find(
-    (candidate) => candidate.targetType === 'entity' && normalizeNameExact(candidate.alias) === key
-  );
-  return alias ? entities.find((entity) => entity.id === alias.targetId) ?? null : null;
-};
-
-const validLoreKind = (value: unknown): LoreDocument['kind'] => {
-  const allowed: LoreDocument['kind'][] = [
-    'character_dossier',
-    'place_history',
-    'faction_notes',
-    'item_history',
-    'myth',
-    'timeline',
-    'general_lore'
-  ];
-  return typeof value === 'string' && allowed.includes(value as LoreDocument['kind'])
-    ? value as LoreDocument['kind']
-    : 'general_lore';
-};
-
 export function PortableDataPanel(props: PortableDataPanelProps) {
   const folderInputRef = useRef<HTMLInputElement | null>(null);
-  const categoriesRef = useRef(props.categories);
-  const [drafts, setDrafts] = useState<PortableImportDraft[]>([]);
-  const [isReading, setIsReading] = useState(false);
-  const [isApplying, setIsApplying] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const {maps, conversions} = useProjectMaps();
-
-  useEffect(() => {
-    categoriesRef.current = props.categories;
-    if (props.categories.length === 0) return;
-    setDrafts((current) => current.map((draft) => {
-      if (props.categories.some((category) => category.id === draft.categoryId)) {
-        return draft;
-      }
-      return {...draft, categoryId: findCategoryId(draft, props.categories)};
-    }));
-  }, [props.categories]);
-
-  const matchedEntities = useMemo(() => {
-    const matches = new Map<string, WorldEntity>();
-    drafts.forEach((draft) => {
-      draft.wikilinks.forEach((name) => {
-        const match = matchEntity(name, props.entities, props.aliases);
-        if (match) matches.set(`${draft.id}:${name}`, match);
-      });
-    });
-    return matches;
-  }, [drafts, props.aliases, props.entities]);
-
-  const waitingForCategories =
-    !props.categoriesLoaded &&
-    drafts.some((draft) => draft.include && draft.destination === 'world-bible');
-
-  const updateDraft = (id: string, updates: Partial<PortableImportDraft>) => {
-    setDrafts((current) => current.map((draft) => draft.id === id ? {...draft, ...updates} : draft));
-  };
-
-  const handleFolder = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = '';
-    if (files.length === 0) return;
-    setIsReading(true);
-    try {
-      const parsed = await parsePortableMarkdownFiles(files);
-      const next = parsed.map<PortableImportDraft>((draft) => ({
-        ...draft,
-        include: !/^(?:readme|license|changelog)$/i.test(draft.title),
-        categoryId: findCategoryId(draft, props.categories),
-        wikiLinkActions: Object.fromEntries(draft.wikilinks.map((link) => [link, 'ignore']))
-      }));
-      setDrafts(next);
-      props.onFeedback({
-        tone: 'success',
-        message: `Staged ${next.length} Markdown file${next.length === 1 ? '' : 's'} for review. Nothing has been saved yet.`
-      });
-    } catch (error) {
-      props.onFeedback({tone: 'error', message: describeError(error, 'Unable to read Markdown folder.')});
-    } finally {
-      setIsReading(false);
-    }
-  };
+  const {
+    drafts,
+    isReading,
+    isApplying,
+    matchedEntities,
+    waitingForCategories,
+    updateDraft,
+    clearDrafts,
+    handleFolder,
+    handleApply
+  } = usePortableDataImport({
+    project: props.project,
+    categories: props.categories,
+    categoriesLoaded: props.categoriesLoaded,
+    entities: props.entities,
+    aliases: props.aliases,
+    indexing: {ragService: props.ragService, shodhService: props.shodhService},
+    onFeedback: props.onFeedback
+  });
 
   const handleExport = () => {
     setIsExporting(true);
@@ -184,145 +78,6 @@ export function PortableDataPanel(props: PortableDataPanelProps) {
       props.onFeedback({tone: 'error', message: describeError(error, 'Unable to export portable data.')});
     } finally {
       setIsExporting(false);
-    }
-  };
-
-  const handleApply = async () => {
-    const selected = drafts.filter((draft) => draft.include);
-    if (selected.length === 0) {
-      props.onFeedback({tone: 'error', message: 'Select at least one Markdown file to import.'});
-      return;
-    }
-    setIsApplying(true);
-    let sourceNoteCount = 0;
-    let worldBibleCount = 0;
-    try {
-      for (const draft of selected) {
-        const now = Date.now();
-        const chosenLinks = draft.wikilinks
-          .filter((name) => draft.wikiLinkActions[name] === 'link')
-          .map((name) => matchedEntities.get(`${draft.id}:${name}`))
-          .filter((entity): entity is WorldEntity => Boolean(entity));
-        if (draft.destination === 'source-note') {
-          const documentId = crypto.randomUUID();
-          const document: LoreDocument = {
-            id: documentId,
-            projectId: props.project.id,
-            title: draft.title.trim(),
-            kind: validLoreKind(draft.frontmatter.kind),
-            format: 'markdown',
-            content: draft.content.trim(),
-            summary: summarizeContent(draft.content),
-            source: {type: 'import', fileName: draft.relativePath, mimeType: 'text/markdown'},
-            status: 'active',
-            createdAt: now,
-            updatedAt: now
-          };
-          await saveLoreDocument(document);
-          await replaceLoreDocumentLinks({
-            loreDocumentId: documentId,
-            links: chosenLinks.map((entity, index) => ({
-              id: crypto.randomUUID(),
-              projectId: props.project.id,
-              loreDocumentId: documentId,
-              targetType: 'entity' as const,
-              targetId: entity.id,
-              relationship: index === 0 ? 'primary_subject' as const : 'mentions' as const,
-              createdAt: now
-            }))
-          });
-          await props.ragService?.indexDocument(
-            `lore:${document.id}`,
-            document.title,
-            document.content,
-            'lore',
-            {
-              tags: [document.kind, 'lore'],
-              entityIds: chosenLinks.map((entity) => entity.id)
-            }
-          );
-          sourceNoteCount += 1;
-          continue;
-        }
-
-        const currentCategories = categoriesRef.current;
-        const resolvedCategoryId = currentCategories.some(
-          (candidate) => candidate.id === draft.categoryId
-        )
-          ? draft.categoryId
-          : findCategoryId(draft, currentCategories);
-        const category = currentCategories.find(
-          (candidate) => candidate.id === resolvedCategoryId
-        );
-        if (!category) throw new Error(`Choose a category for "${draft.title}".`);
-        const fields: Record<string, unknown> = {};
-        const importedFields = draft.frontmatter.fields;
-        if (importedFields && typeof importedFields === 'object') {
-          category.fieldSchema.forEach((field) => {
-            const value = importedFields[field.key];
-            if (value === undefined || value === null || value === '') return;
-            fields[field.key] = field.type === 'textarea'
-              ? normalizeRichTextValue(String(value))
-              : value;
-          });
-        }
-        const preferredField = getPreferredImportField(category);
-        if (preferredField && !fields[preferredField.key]) {
-          fields[preferredField.key] = preferredField.type === 'textarea'
-            ? markdownToRichHtml(draft.content)
-            : draft.content.trim();
-        }
-        const frontmatterAliases = Array.isArray(draft.frontmatter.aliases)
-          ? draft.frontmatter.aliases
-          : [];
-        const selectedAliases = draft.wikilinks.filter(
-          (name) => draft.wikiLinkActions[name] === 'alias'
-        );
-        const combinedAliases = parseAlternativeNames(
-          [...frontmatterAliases, ...selectedAliases].join(', ')
-        );
-        if (combinedAliases.length > 0) {
-          fields[ALTERNATIVE_NAMES_KEY] = combinedAliases.join(', ');
-        }
-        const entity: WorldEntity = {
-          id: crypto.randomUUID(),
-          projectId: props.project.id,
-          categoryId: category.id,
-          name: draft.title.trim(),
-          fields,
-          isNew: true,
-          needsCompletion: true,
-          links: Array.from(new Set(chosenLinks.map((entity) => entity.id))),
-          createdAt: now,
-          updatedAt: now
-        };
-        await saveEntity(entity);
-        const indexedContent = buildWorldBibleEntityContent(entity);
-        await props.ragService?.indexDocument(
-          entity.id,
-          entity.name,
-          indexedContent,
-          'worldbible',
-          {tags: [category.slug], entityIds: [entity.id]}
-        );
-        await props.shodhService?.captureAutoMemory({
-          projectId: entity.projectId,
-          documentId: entity.id,
-          title: entity.name,
-          content: indexedContent,
-          tags: ['worldbible', category.slug]
-        });
-        worldBibleCount += 1;
-      }
-      setDrafts([]);
-      props.onFeedback({
-        tone: 'success',
-        message: `Imported ${sourceNoteCount} Source Note${sourceNoteCount === 1 ? '' : 's'} and ${worldBibleCount} World Bible draft${worldBibleCount === 1 ? '' : 's'}. Review drafts and extract Source Note candidates before accepting canon.`
-      });
-    } catch (error) {
-      props.onFeedback({tone: 'error', message: describeError(error, 'Unable to import Markdown folder.')});
-    } finally {
-      setIsApplying(false);
     }
   };
 
@@ -469,7 +224,7 @@ export function PortableDataPanel(props: PortableDataPanelProps) {
             >
               {isApplying ? 'Importing...' : 'Import Selected'}
             </button>
-            <button type='button' onClick={() => setDrafts([])} disabled={isApplying}>Clear</button>
+            <button type='button' onClick={clearDrafts} disabled={isApplying}>Clear</button>
           </div>
         </>
       )}

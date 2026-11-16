@@ -405,6 +405,10 @@ export const useWorkspaceConsistency = ({
     setFeedback
   });
 
+  const worldBibleIndexing = useMemo(
+    () => ({ragService, shodhService}),
+    [ragService, shodhService]
+  );
   const resolution = useUnknownEntityResolution({
     activeProject,
     categories,
@@ -421,7 +425,8 @@ export const useWorkspaceConsistency = ({
     unknownGuardrailIssues,
     highlightableReviewIssues,
     removeReviewSurface,
-    getSuggestedUnknownCategoryId
+    getSuggestedUnknownCategoryId,
+    indexing: worldBibleIndexing
   });
 
   const dismissal = useUnknownEntityDismissal({

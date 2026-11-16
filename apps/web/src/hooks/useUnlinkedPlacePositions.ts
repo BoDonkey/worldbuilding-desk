@@ -6,11 +6,7 @@ import type {
   StateMutationEvent,
   WorldEntity
 } from '../entityTypes';
-import {
-  saveEntity,
-  saveStateMutationEvents,
-  type ConsistencyAlias
-} from '../services/storage';
+import {saveStateMutationEvents, type ConsistencyAlias} from '../services/storage';
 import {isLocationCategory} from '../services/worldBible/worldBibleEntityPlans';
 import {
   buildPlaceNameIndex,
@@ -19,6 +15,10 @@ import {
   type UnlinkedPlaceName
 } from '../services/worldBible/placePositions';
 import {describeError} from '../services/errors';
+import {
+  saveWorldBibleRecord,
+  type WorldBibleIndexing
+} from '../services/worldBible/worldBibleRecordSave';
 
 interface FeedbackState {
   tone: 'success' | 'error';
@@ -39,10 +39,12 @@ export function useUnlinkedPlacePositions(params: {
   aliases: ConsistencyAlias[];
   stateMutationEvents: StateMutationEvent[];
   setFeedback: (feedback: FeedbackState | null) => void;
+  /** A place created here is indexed for search and memory. */
+  indexing: WorldBibleIndexing;
 }) {
   const {
     activeProject, projectSettings, saveProjectSettings, categories, entities, aliases,
-    stateMutationEvents, setFeedback
+    stateMutationEvents, setFeedback, indexing
   } = params;
   const [resolvingKey, setResolvingKey] = useState<string | null>(null);
   const index = useMemo(
@@ -112,7 +114,7 @@ export function useUnlinkedPlacePositions(params: {
           createdAt: now,
           updatedAt: now
         };
-        await saveEntity(place);
+        await saveWorldBibleRecord({entity: place, category, categories, entities, indexing});
         await saveStateMutationEvents(linkPlaceName({
           events: stateMutationEvents,
           key: item.key,
@@ -121,7 +123,7 @@ export function useUnlinkedPlacePositions(params: {
         }));
         return `Created the place "${item.name}" and linked its positions to it.`;
       }, 'Unable to create this place.'),
-    [activeProject, categories, index.places, run, stateMutationEvents]
+    [activeProject, categories, entities, index.places, indexing, run, stateMutationEvents]
   );
 
   const keepAsText = useCallback(

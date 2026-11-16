@@ -195,6 +195,14 @@ export const normalizePlaceData = (
   return result.parentId || result.connections || result.placements ? result : undefined;
 };
 
+/** `entity` carrying `place`, or no place field at all when `place` is undefined. */
+export const withPlaceData = (entity: WorldEntity, place: PlaceData | undefined): WorldEntity => {
+  if (place) return {...entity, place};
+  const next = {...entity};
+  delete next.place;
+  return next;
+};
+
 const isCoordinate = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
