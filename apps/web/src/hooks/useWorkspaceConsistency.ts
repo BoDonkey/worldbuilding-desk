@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useMemo, useRef, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import type {
   CanonicalFact,
@@ -34,6 +34,7 @@ import {
   type ReviewReadiness
 } from '../services/consistency/reviewReadiness';
 import {canonicalizeUnknownSurface} from '../services/consistency/sceneReviewHelpers';
+import type {SceneContinuityContext} from '../services/consistency/sceneReview';
 import {
   useConsistencyReviewRuns,
   type ConsistencyFeedback,
@@ -249,6 +250,34 @@ export const useWorkspaceConsistency = ({
     []
   );
 
+  const continuityContext = useMemo<SceneContinuityContext>(
+    () => ({
+      entities,
+      characters,
+      canonicalFacts,
+      knownEntities: knownConsistencyEntities,
+      stateSubjects,
+      actorResolutions,
+      ruleset,
+      stateMutationEvents,
+      places: placeNameIndex,
+      placeNamesKeptAsText: projectSettings?.placeNamesKeptAsText
+    }),
+    [
+      entities,
+      characters,
+      canonicalFacts,
+      knownConsistencyEntities,
+      stateSubjects,
+      actorResolutions,
+      ruleset,
+      stateMutationEvents,
+      placeNameIndex,
+      projectSettings?.placeNamesKeptAsText
+    ]
+  );
+  const dismissedContinuityItemIdsRef = useRef(new Set<string>());
+
   const persistDoc = useSceneSaveReview({
     documents,
     setDocuments,
@@ -268,7 +297,9 @@ export const useWorkspaceConsistency = ({
     knownConsistencyEntities,
     filterDismissedUnknownIssues,
     setGuardrailIssues,
-    setConsistencyReviewItems
+    setConsistencyReviewItems,
+    continuityContext,
+    dismissedContinuityItemIdsRef
   });
 
   const {
@@ -283,15 +314,7 @@ export const useWorkspaceConsistency = ({
   } = useConsistencyReviewRuns({
     activeProject,
     documents,
-    entities,
-    characters,
-    canonicalFacts,
-    stateSubjects,
-    actorResolutions,
-    ruleset,
-    stateMutationEvents,
-    placeNameIndex,
-    placeNamesKeptAsText: projectSettings?.placeNamesKeptAsText,
+    continuityContext,
     resolvedActionCues,
     worldEngine,
     setFeedback,
@@ -300,7 +323,8 @@ export const useWorkspaceConsistency = ({
     filterDismissedUnknownIssues,
     setGuardrailIssues,
     consistencyReviewItems,
-    setConsistencyReviewItems
+    setConsistencyReviewItems,
+    dismissedContinuityItemIdsRef
   });
 
   const unknownGuardrailIssues = useMemo(

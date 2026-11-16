@@ -380,9 +380,10 @@ messages).
 | 3.50 | Seam maps for the four baseline files (S1, plan only) | 3 | S | — |
 | 3.51 | Dead code sweep (X1–X4) | 3 | S | Done `6d3a69c` — rules-engine factory helpers kept as public API (author, 2026-11-15) |
 | 3.52 | One ZIP and DOCX reader; shared text helpers (D6, D7) | 3 | S | Done ea157de |
-| 3.53 | Scene review in one function (D2) | 3 | S | — |
+| 3.53 | Scene review in one function (D2) | 3 | S | Done `0ef00a6` |
 | 3.54 | Rules wizard on theme tokens (Y1, Y2) | 3 | M | — |
 | 3.55 | Architecture doc catch-up (B6, P3) | 3 | XS | — |
+| 3.56 | State continuity reviews the draft, not the saved scene | 3 | S | — (found in 3.53) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -827,6 +828,14 @@ Workspace data store; see Backlog) and P5 (no finding).
 - **3.55 Architecture doc catch-up.** B6, P3. IPC channel list, the CSP
   paragraph and risk 7, and the ledger invariant reworded to say which
   fields of an accepted change are fixed and which may be updated.
+- **3.56 State continuity reviews the draft, not the saved scene.** Found
+  in 3.53. `findStateContinuityReviewItems` reads scene text from
+  `sceneOrderDocuments`, so the draft refreshes show state findings for the
+  last saved version, and a scene that was never saved gets none. Canon
+  contradictions already read the draft. Fix in `reviewScene`: put the
+  scene under review into the scene order in place of its saved copy (or
+  append it). Behavior change, with tests for an edited draft and a new
+  scene.
 
 ### Phase 4 — Places, positions, and maps (before beta)
 

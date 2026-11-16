@@ -473,6 +473,16 @@
   backups: snapshots carry accepted canon, not review output, and a restored
   project simply runs review again.
 
+- One scene review builds the items for a single scene
+  (`services/consistency/sceneReview.ts`, 3.53): name issues plus accepted
+  canon contradictions and state-continuity findings, minus continuity items
+  dismissed this session. The draft refreshes and the scene save both use it,
+  and the project review uses its parts across all scenes. A scene save now
+  keeps the scene's continuity items; before 3.53 it dropped them until a
+  later refresh happened to run, which for a deferred scene whose save was
+  not committed was never. A clean strict save still clears the scene's name
+  items.
+
 - Project review also checks movement (slice 4.78). **Move with no route**
   flags an accepted move between two place records that no connection or
   route links, when no sentence naming the character carries a travel word
