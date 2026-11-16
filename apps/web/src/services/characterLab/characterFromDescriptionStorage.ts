@@ -5,7 +5,7 @@ import {
   saveLoreFactProposal
 } from '../storage';
 import type {RAGProvider} from '../rag/RAGService';
-import {buildWorldBibleEntityContent} from '../worldBible/worldBibleEntityHelpers';
+import {indexWorldBibleRecords} from '../worldBible/worldBibleRecordSave';
 import type {CharacterFromDescriptionRecords} from './characterFromDescription';
 
 /**
@@ -29,12 +29,9 @@ export async function saveCharacterFromDescription(
   const {ragService} = params;
   if (!ragService) return;
   if (records.entity) {
-    await ragService.indexDocument(
-      records.entity.id,
-      records.entity.name,
-      buildWorldBibleEntityContent(records.entity),
-      'worldbible',
-      {tags: params.categorySlug ? [params.categorySlug] : [], entityIds: [records.entity.id]}
+    await indexWorldBibleRecords(
+      [{entity: records.entity, categorySlug: params.categorySlug ?? ''}],
+      {ragService, shodhService: null}
     );
   }
   await ragService.indexDocument(`lore:${records.note.id}`, records.note.title, records.note.content, 'lore', {

@@ -50,7 +50,6 @@ import {
   downloadWorldBibleJsonSample,
   downloadWorldBibleJsonTemplate
 } from '../services/worldBible/worldBibleJsonTemplates';
-import {indexWorldBibleEntity} from '../services/worldBible/indexWorldBibleEntity';
 import {useWorldBibleProjectData} from '../hooks/useWorldBibleProjectData';
 import {useWorldBibleSelectedEntity} from '../hooks/useWorldBibleSelectedEntity';
 import {useCharacterIdentityResolutionQueue} from '../hooks/useCharacterIdentityResolutionQueue';
@@ -127,9 +126,13 @@ function WorldBibleRoute() {
     activeProject, projectSettings, saveProjectSettings, categories, entities,
     characters, characterSheets, report: characterIdentityReport, setFeedback
   });
+  const worldBibleIndexing = useMemo(
+    () => ({ragService, shodhService}),
+    [ragService, shodhService]
+  );
   const placePositionReview = useUnlinkedPlacePositions({
     activeProject, projectSettings, saveProjectSettings, categories, entities, aliases,
-    stateMutationEvents, setFeedback
+    stateMutationEvents, setFeedback, indexing: worldBibleIndexing
   });
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -163,8 +166,7 @@ function WorldBibleRoute() {
     setCategories,
     setEntities,
     setFeedback,
-    onEntitySaved: (entity, category) =>
-      indexWorldBibleEntity(entity, category.slug, {ragService, shodhService}),
+    indexing: worldBibleIndexing,
     onEntitiesChanged: refreshMemories
   });
   const {isImportingEntities, importDrafts, isImportingJson, updateImportDraft} = worldBibleImports;

@@ -1,15 +1,9 @@
 import {useCallback, useState} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
-import {
-  saveEntity,
-  deleteEntity,
-  deleteAliasesForEntity,
-  replaceAliasesForEntity,
-  type ConsistencyAlias
-} from '../services/storage';
+import {saveEntity, type ConsistencyAlias} from '../services/storage';
 import type {EntityCategory, Project, WorldEntity} from '../entityTypes';
 import {buildEntityMergePlan, getAliasConversionPlan} from '../services/worldBible/worldBibleCanonicalization';
-import {getCategorySlug} from '../services/worldBible/worldBibleEntityPlans';
+import {saveWorldBibleMerge} from '../services/worldBible/worldBibleMerge';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
 import type {ConfirmRequest} from './useConfirmDialog';
@@ -31,7 +25,6 @@ interface UseWorldBibleMergeActionsParams {
   alternativeNamesKey: string;
   normalizeName: (value: string) => string;
   parseAlternativeNames: (value: string) => string[];
-  buildEntityContent: (entity: WorldEntity) => string;
   ragService: RAGProvider | null;
   shodhService: ShodhMemoryProvider | null;
   refreshMemories: () => Promise<void>;
@@ -44,6 +37,18 @@ interface UseWorldBibleMergeActionsParams {
   resetForm: () => void;
   openNextReviewItem: (currentEntityId: string) => boolean;
 }
+
+/** `records` without the merged-away record, with the saved ones in place. */
+const replaceMergedRecords = (
+  records: WorldEntity[],
+  sourceId: string,
+  saved: WorldEntity[]
+): WorldEntity[] => {
+  const byId = new Map(saved.map((entity) => [entity.id, entity]));
+  return records
+    .filter((entity) => entity.id !== sourceId)
+    .map((entity) => byId.get(entity.id) ?? entity);
+};
 
 /**
  * Merging duplicate World Bible records and converting a duplicate into an
@@ -60,7 +65,6 @@ export const useWorldBibleMergeActions = ({
   alternativeNamesKey,
   normalizeName,
   parseAlternativeNames,
-  buildEntityContent,
   ragService,
   shodhService,
   refreshMemories,
@@ -79,55 +83,24 @@ export const useWorldBibleMergeActions = ({
   /** Persists a merge plan: the merged target, its aliases, and removal of the source everywhere. */
   const commitMerge = useCallback(
     async (params: {
-      projectId: string;
       source: WorldEntity;
       target: WorldEntity;
       mergedEntity: WorldEntity;
       mergedAliasTexts: string[];
       successMessage: string;
     }) => {
-      const {projectId, source, target, mergedEntity, mergedAliasTexts, successMessage} = params;
-      await saveEntity(mergedEntity);
-      const mergedAliases = await replaceAliasesForEntity({
-        projectId,
-        entityId: target.id,
-        aliases: mergedAliasTexts
+      const {source, target, successMessage} = params;
+      const {entity: mergedEntity, aliases: mergedAliases, repointed} = await saveWorldBibleMerge({
+        source,
+        merged: params.mergedEntity,
+        aliases: params.mergedAliasTexts,
+        categories,
+        entities,
+        indexing: {ragService, shodhService}
       });
-      await deleteAliasesForEntity(projectId, source.id);
-      await deleteEntity(source.id);
+      if (shodhService) await refreshMemories();
 
-      // The merged record keeps the target's category.
-      const targetCategorySlug = getCategorySlug(categories, mergedEntity.categoryId);
-      if (ragService) {
-        await ragService.indexDocument(
-          mergedEntity.id,
-          mergedEntity.name,
-          buildEntityContent(mergedEntity),
-          'worldbible',
-          {
-            tags: [targetCategorySlug].filter(Boolean),
-            entityIds: [mergedEntity.id]
-          }
-        );
-        await ragService.deleteDocument(source.id);
-      }
-      if (shodhService) {
-        await shodhService.captureAutoMemory({
-          projectId,
-          documentId: mergedEntity.id,
-          title: mergedEntity.name,
-          content: buildEntityContent(mergedEntity),
-          tags: ['worldbible', targetCategorySlug].filter(Boolean)
-        });
-        await shodhService.deleteMemoriesForDocument(source.id);
-        await refreshMemories();
-      }
-
-      setEntities((prev) =>
-        prev
-          .filter((entity) => entity.id !== source.id)
-          .map((entity) => (entity.id === target.id ? mergedEntity : entity))
-      );
+      setEntities((prev) => replaceMergedRecords(prev, source.id, [mergedEntity, ...repointed]));
       setAliases((prev) => [
         ...prev.filter((alias) => alias.targetId !== source.id && alias.targetId !== target.id),
         ...mergedAliases
@@ -136,7 +109,7 @@ export const useWorldBibleMergeActions = ({
       handleEdit(mergedEntity, 'aliases');
       setFeedback({tone: 'success', message: successMessage});
     },
-    [buildEntityContent, categories, handleEdit, ragService, refreshMemories, setAliases, setEntities, setFeedback, setViewMode, shodhService]
+    [categories, entities, handleEdit, ragService, refreshMemories, setAliases, setEntities, setFeedback, setViewMode, shodhService]
   );
 
   const handleMergeEntityIntoMatch = useCallback(
@@ -178,7 +151,6 @@ export const useWorldBibleMergeActions = ({
               ) || undefined
             });
             await commitMerge({
-              projectId: activeProject.id,
               source,
               target,
               mergedEntity,
@@ -249,7 +221,6 @@ export const useWorldBibleMergeActions = ({
               aliasesReviewedAt: now
             });
             await commitMerge({
-              projectId: activeProject.id,
               source,
               target,
               mergedEntity,
@@ -327,65 +298,35 @@ export const useWorldBibleMergeActions = ({
 
           try {
             const now = Date.now();
-            const targetCategorySlug = getCategorySlug(categories, target.categoryId);
-            const nextTarget: WorldEntity = {
-              ...target,
-              links: plan.mergedLinks,
-              isNew: false,
-              needsCompletion: false,
-              aliasesReviewedAt: now,
-              updatedAt: now
-            };
-
-            await saveEntity(nextTarget);
-            const savedAliases = await replaceAliasesForEntity({
-              projectId: activeProject.id,
-              entityId: target.id,
-              aliases: plan.transferAliases
+            const merge = await saveWorldBibleMerge({
+              source,
+              merged: {
+                ...target,
+                links: plan.mergedLinks,
+                isNew: false,
+                needsCompletion: false,
+                aliasesReviewedAt: now,
+                updatedAt: now
+              },
+              aliases: plan.transferAliases,
+              categories,
+              entities,
+              indexing: {ragService, shodhService}
             });
+            const savedAliases = merge.aliases;
             const reviewedTarget: WorldEntity = {
-              ...nextTarget,
+              ...merge.entity,
               aliasesReviewedAt: Math.max(
-                nextTarget.aliasesReviewedAt ?? 0,
+                merge.entity.aliasesReviewedAt ?? 0,
                 ...savedAliases.map((alias) => alias.updatedAt ?? alias.createdAt)
               )
             };
-            if (reviewedTarget.aliasesReviewedAt !== nextTarget.aliasesReviewedAt) {
+            if (reviewedTarget.aliasesReviewedAt !== merge.entity.aliasesReviewedAt) {
               await saveEntity(reviewedTarget);
             }
-            await deleteAliasesForEntity(activeProject.id, source.id);
-            await deleteEntity(source.id);
+            if (shodhService) await refreshMemories();
 
-            if (ragService) {
-              await ragService.indexDocument(
-                nextTarget.id,
-                nextTarget.name,
-                buildEntityContent(reviewedTarget),
-                'worldbible',
-                {
-                  tags: [targetCategorySlug].filter(Boolean),
-                  entityIds: [nextTarget.id]
-                }
-              );
-              await ragService.deleteDocument(source.id);
-            }
-            if (shodhService) {
-              await shodhService.captureAutoMemory({
-                projectId: activeProject.id,
-                documentId: nextTarget.id,
-                title: nextTarget.name,
-                content: buildEntityContent(reviewedTarget),
-                tags: ['worldbible', targetCategorySlug].filter(Boolean)
-              });
-              await shodhService.deleteMemoriesForDocument(source.id);
-              await refreshMemories();
-            }
-
-            setEntities((prev) =>
-              prev
-                .filter((entity) => entity.id !== source.id)
-                .map((entity) => (entity.id === target.id ? reviewedTarget : entity))
-            );
+            setEntities((prev) => replaceMergedRecords(prev, source.id, [reviewedTarget, ...merge.repointed]));
             setAliases((prev) => [
               ...prev.filter(
                 (alias) => alias.targetId !== source.id && alias.targetId !== target.id
@@ -419,7 +360,6 @@ export const useWorldBibleMergeActions = ({
       activeProject,
       aliasMapByEntityId,
       alternativeNamesKey,
-      buildEntityContent,
       categories,
       editingId,
       entities,

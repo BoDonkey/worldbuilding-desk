@@ -63,7 +63,7 @@ export interface EntityDraftInput {
   name: string;
   fieldValues: Record<string, string>;
   systemNegativeSpace?: WorldEntity['systemNegativeSpace'];
-  /** Normalized place data for a location record; other records keep what they had. */
+  /** Place data for a location record (the save applies the place rules); other records keep what they had. */
   place?: PlaceData;
   /** Aliases currently indexed for this record. */
   indexedAliases: string[];

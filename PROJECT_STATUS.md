@@ -125,8 +125,22 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   `place` frontmatter map, **Inside** and **Connections** sections, and
   `inside` / `connections` CSV columns for location categories. Project
   storage schema 10 and backup snapshot schema 12 (both additive). References
-  to deleted or merged-away places are ignored when read, as record links
-  are.
+  to deleted places are ignored when read, as record links are. Merging one
+  place into another (or converting it into an alias) moves every reference
+  to the kept place (3.45): places inside it, connections to it, and linked
+  positions. The kept place also gains the merged place's connections, its
+  map points on maps it was not on, and its parent if it had none. A merge
+  that would make a cycle is refused before anything is written.
+- Every World Bible record save goes through one service
+  (`services/worldBible/worldBibleRecordSave.ts`, 3.45): place rules, the
+  save, aliases, and search and memory indexing. So a record created from an
+  unknown name in the Workspace, from **Create place**, from an accepted
+  entity proposal, or by any import is searchable at once. Before 3.45 those
+  first three waited for an index rebuild. Indexing failures no longer fail
+  the save; search catches up on its next rebuild. Accepting a proposal from
+  Canon Decisions indexes for search only (that route has no memory
+  service). Portable Markdown import now stores a file's aliases in the alias
+  store too, except aliases another record already answers to.
 - Positions refer to place records (slice 4.77). A move (`location_set`)
   keeps its written name and links to a place record when the name or an
   alias matches exactly one place; otherwise it stays text. Location fields

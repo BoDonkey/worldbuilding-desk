@@ -4,7 +4,6 @@ import {
   saveEntity,
   deleteEntity,
   deleteAliasesForEntity,
-  replaceAliasesForEntity,
   type ConsistencyAlias
 } from '../services/storage';
 import type {
@@ -22,7 +21,6 @@ import {
   pickNextReviewItem,
   planEntityDraft
 } from '../services/worldBible/worldBibleEntityPlans';
-import {normalizePlaceData, placesById} from '../services/worldBible/places';
 import {useWorldBibleMergeActions} from './useWorldBibleMergeActions';
 import {useWorldBibleLinkActions} from './useWorldBibleLinkActions';
 import type {RAGProvider} from '../services/rag/RAGService';
@@ -31,7 +29,7 @@ import type {
 } from '../services/shodh/ShodhMemoryService';
 import type {ConfirmRequest} from './useConfirmDialog';
 import {describeError} from '../services/errors';
-import {indexWorldBibleEntity} from '../services/worldBible/indexWorldBibleEntity';
+import {saveWorldBibleRecord} from '../services/worldBible/worldBibleRecordSave';
 
 type FeedbackState = {
   tone: 'success' | 'error';
@@ -158,10 +156,9 @@ export const useWorldBibleEntityActions = ({
         const now = Date.now();
         const id = editingId ?? crypto.randomUUID();
         const existing = entities.find((record) => record.id === id);
-        const savedPlace = isLocationCategory(activeCategory)
-          ? normalizePlaceData(id, place, placesById(categories, entities))
-          : existing?.place;
-        const {entity, aliases: aliasesToSave} = planEntityDraft({
+        // The place rules run in saveWorldBibleRecord.
+        const draftPlace = isLocationCategory(activeCategory) ? place : existing?.place;
+        const {entity: draftEntity, aliases: aliasesToSave} = planEntityDraft({
           id,
           now,
           projectId: activeProject.id,
@@ -170,7 +167,7 @@ export const useWorldBibleEntityActions = ({
           name,
           fieldValues,
           systemNegativeSpace,
-          place: savedPlace,
+          place: draftPlace,
           indexedAliases: aliasMapByEntityId.get(id) ?? [],
           reviewingFromQueue: Boolean(viewMode === 'review' && selectedEntityQueueItem),
           alternativeNamesKey,
@@ -179,13 +176,14 @@ export const useWorldBibleEntityActions = ({
           formatAlternativeNames
         });
 
-        await saveEntity(entity);
-        const savedAliases = await replaceAliasesForEntity({
-          projectId: activeProject.id,
-          entityId: entity.id,
-          aliases: aliasesToSave
+        const {entity, aliases: savedAliases} = await saveWorldBibleRecord({
+          entity: draftEntity,
+          category: activeCategory,
+          categories,
+          entities,
+          aliases: aliasesToSave,
+          indexing: {ragService, shodhService}
         });
-        await indexWorldBibleEntity(entity, activeCategory.slug, {ragService, shodhService});
         if (shodhService) await refreshMemories();
 
         setEntities((prev) => {
@@ -352,7 +350,6 @@ export const useWorldBibleEntityActions = ({
     alternativeNamesKey,
     normalizeName,
     parseAlternativeNames,
-    buildEntityContent,
     ragService,
     shodhService,
     refreshMemories,

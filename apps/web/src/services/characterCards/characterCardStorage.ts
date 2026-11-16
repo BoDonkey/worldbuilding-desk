@@ -8,7 +8,7 @@ import {
   runProjectWriteTransaction
 } from '../storage';
 import type {RAGProvider} from '../rag/RAGService';
-import {buildWorldBibleEntityContent} from '../worldBible/worldBibleEntityHelpers';
+import {indexWorldBibleRecords} from '../worldBible/worldBibleRecordSave';
 import type {CharacterCardImportRecords} from './characterCardImport';
 
 /**
@@ -35,12 +35,9 @@ export async function saveCharacterCardImport(
   const targetId = records.links[0]?.targetId;
   try {
     if (records.entity) {
-      await ragService.indexDocument(
-        records.entity.id,
-        records.entity.name,
-        buildWorldBibleEntityContent(records.entity),
-        'worldbible',
-        {tags: params.categorySlug ? [params.categorySlug] : [], entityIds: [records.entity.id]}
+      await indexWorldBibleRecords(
+        [{entity: records.entity, categorySlug: params.categorySlug ?? ''}],
+        {ragService, shodhService: null}
       );
     }
     for (const note of notes) {

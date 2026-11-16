@@ -20,7 +20,7 @@ export async function indexWorldBibleEntity(
       content,
       'worldbible',
       {
-        tags: [categorySlug],
+        tags: [categorySlug].filter(Boolean),
         entityIds: [entity.id]
       }
     );
@@ -31,7 +31,7 @@ export async function indexWorldBibleEntity(
       documentId: entity.id,
       title: entity.name,
       content,
-      tags: ['worldbible', categorySlug]
+      tags: ['worldbible', categorySlug].filter(Boolean)
     });
   }
 }

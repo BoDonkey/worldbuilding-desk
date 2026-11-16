@@ -35,7 +35,8 @@ const renderImports = () => {
         entities: [] as WorldEntity[],
         setCategories,
         setEntities: vi.fn(),
-        setFeedback: vi.fn()
+        setFeedback: vi.fn(),
+        indexing: {ragService: null, shodhService: null}
       }),
     {initialProps: {currentCategories: categories}}
   );

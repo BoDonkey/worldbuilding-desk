@@ -10,7 +10,6 @@ import type {
 import {
   getCategoriesByProject,
   initializeDefaultCategories,
-  saveEntity,
   saveAlias,
   type ConsistencyAlias
 } from '../services/storage';
@@ -29,6 +28,10 @@ import {
   findCloseCharacterEntityMatch
 } from '../services/consistency/sceneReviewHelpers';
 import {describeError} from '../services/errors';
+import {
+  saveWorldBibleRecord,
+  type WorldBibleIndexing
+} from '../services/worldBible/worldBibleRecordSave';
 import type {ConsistencyFeedback} from './useConsistencyReviewRuns';
 
 export interface ResolverNotice {
@@ -78,7 +81,8 @@ export function useUnknownEntityResolution({
   unknownGuardrailIssues,
   highlightableReviewIssues,
   removeReviewSurface,
-  getSuggestedUnknownCategoryId
+  getSuggestedUnknownCategoryId,
+  indexing
 }: {
   activeProject: Project | null;
   categories: EntityCategory[];
@@ -89,6 +93,8 @@ export function useUnknownEntityResolution({
   setAliases: Dispatch<SetStateAction<ConsistencyAlias[]>>;
   ruleset: StoredRuleset | null;
   setFeedback: ConsistencyFeedback;
+  /** A record created from an unknown name is indexed for search and memory. */
+  indexing: WorldBibleIndexing;
   characterCategoryIds: Set<string>;
   characterLoreEntityIdByCharacterId: Map<string, string>;
   consistencyReviewItems: ConsistencyReviewItem[];
@@ -260,7 +266,13 @@ export function useUnknownEntityResolution({
               updatedAt: now
             } satisfies WorldEntity);
           if (!linkedCharacterEntity) {
-            await saveEntity(characterEntity);
+            await saveWorldBibleRecord({
+              entity: characterEntity,
+              category: chosenCategory,
+              categories: availableCategories,
+              entities,
+              indexing
+            });
             setEntities((prev) => [...prev, characterEntity]);
           }
           const aliasTexts = acceptedAliases ?? buildCharacterCaptureAliasList({
@@ -297,7 +309,13 @@ export function useUnknownEntityResolution({
             createdAt: now,
             updatedAt: now
           };
-          await saveEntity(entity);
+          await saveWorldBibleRecord({
+            entity,
+            category: chosenCategory,
+            categories: availableCategories,
+            entities,
+            indexing
+          });
           await attachAliasTexts({
             projectId: activeProject.id,
             targetId: entity.id,
@@ -346,6 +364,7 @@ export function useUnknownEntityResolution({
       categories,
       entities,
       getSuggestedUnknownCategoryId,
+      indexing,
       removeReviewSurface,
       setCategories,
       setEntities,

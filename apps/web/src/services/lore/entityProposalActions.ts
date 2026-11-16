@@ -28,6 +28,10 @@ import {
   putLoreEntityProposalInTransaction
 } from '../storage';
 import {planCharacterCanonIntake} from '../characters/characterIntakeService';
+import {
+  indexWorldBibleRecords,
+  type WorldBibleIndexing
+} from '../worldBible/worldBibleRecordSave';
 
 const CATEGORY_CONFIG: Record<
   Exclude<LoreEntityKind, 'character'>,
@@ -106,14 +110,16 @@ interface AcceptedEntityTarget {
  *
  * `acceptedProposal` is the proposal record to store (default: the proposal
  * marked accepted with the resolved target). `alias` records an alias for the
- * resolved canon in the same commit. Derived indexes are the caller's job,
- * after this resolves.
+ * resolved canon in the same commit. A record it creates is indexed for
+ * search and memory after the commit (3.45) when `indexing` is given; other
+ * derived indexes are the caller's job, after this resolves.
  */
 export async function acceptLoreEntityProposal(params: {
   proposal: LoreEntityProposal;
   existingLinks: LoreDocumentLink[];
   alias?: {targetType: 'character' | 'entity'; targetId: string; alias: string};
   acceptedProposal?: (target: AcceptedEntityTarget) => LoreEntityProposal;
+  indexing?: WorldBibleIndexing;
 }): Promise<AcceptedEntityTarget> {
   const {proposal} = params;
   const projectId = proposal.projectId;
@@ -222,5 +228,15 @@ export async function acceptLoreEntityProposal(params: {
       await putLoreEntityProposalInTransaction(tx, proposalRecord);
     }
   );
+  if (params.indexing && entitiesToPut.length > 0) {
+    const allCategories = [...categories, ...categoriesToPut];
+    await indexWorldBibleRecords(
+      entitiesToPut.map((entity) => ({
+        entity,
+        categorySlug: allCategories.find((category) => category.id === entity.categoryId)?.slug ?? ''
+      })),
+      params.indexing
+    );
+  }
   return target;
 }

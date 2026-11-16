@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
+import type {RAGProvider} from '../rag/RAGService';
 import type {Character, LoreDocumentLink, LoreEntityProposal} from '../../entityTypes';
 import {CHARACTER_STORE_NAME} from '../storage/db';
 import {
@@ -105,6 +106,24 @@ describe('acceptLoreEntityProposal', () => {
       expect.objectContaining({targetId: 'other'}),
       expect.objectContaining({targetId: result.targetId, relationship: 'primary_subject'})
     ]));
+  });
+
+  it('indexes the record it creates for search after the commit (3.45)', async () => {
+    const projectId = newProjectId();
+    const indexDocument = vi.fn().mockResolvedValue(undefined);
+    const result = await acceptLoreEntityProposal({
+      proposal: proposal(projectId, {entityKind: 'location', name: 'Salt Door'}),
+      existingLinks: [],
+      indexing: {ragService: {indexDocument} as unknown as RAGProvider, shodhService: null}
+    });
+
+    expect(indexDocument).toHaveBeenCalledWith(
+      result.targetId,
+      'Salt Door',
+      expect.any(String),
+      'worldbible',
+      {tags: ['locations'], entityIds: [result.targetId]}
+    );
   });
 
   it('records an alias in the same commit', async () => {

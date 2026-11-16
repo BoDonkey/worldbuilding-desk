@@ -1,7 +1,11 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {ChangeEvent, Dispatch, SetStateAction} from 'react';
 import type {EntityCategory, WorldEntity} from '../entityTypes';
-import {saveEntity, saveCategory} from '../services/storage';
+import {saveCategory} from '../services/storage';
+import {
+  saveWorldBibleRecord,
+  type WorldBibleIndexing
+} from '../services/worldBible/worldBibleRecordSave';
 import {
   convertPlainTextToRichHtml,
   normalizeRichTextValue
@@ -113,7 +117,8 @@ interface UseWorldBibleImportsParams {
   setCategories: Dispatch<SetStateAction<EntityCategory[]>>;
   setEntities: Dispatch<SetStateAction<WorldEntity[]>>;
   setFeedback: Dispatch<SetStateAction<FeedbackState>>;
-  onEntitySaved?: (entity: WorldEntity, category: EntityCategory) => Promise<void>;
+  /** Imported records are indexed for search and memory as they save. */
+  indexing: WorldBibleIndexing;
   onEntitiesChanged?: () => Promise<void>;
 }
 
@@ -217,7 +222,7 @@ export const useWorldBibleImports = ({
   setCategories,
   setEntities,
   setFeedback,
-  onEntitySaved,
+  indexing,
   onEntitiesChanged
 }: UseWorldBibleImportsParams) => {
   const [isImportingEntities, setIsImportingEntities] = useState(false);
@@ -744,8 +749,13 @@ export const useWorldBibleImports = ({
                 updatedAt: now
               };
 
-          await saveEntity(entity);
-          await onEntitySaved?.(entity, importCategory);
+          await saveWorldBibleRecord({
+            entity,
+            category: importCategory,
+            categories: Array.from(categoryById.values()),
+            entities: nextEntities,
+            indexing
+          });
           if (!firstImportedEntity) {
             firstImportedEntity = entity;
           }
@@ -809,7 +819,7 @@ export const useWorldBibleImports = ({
     entities,
     importDrafts,
     onEntitiesChanged,
-    onEntitySaved,
+    indexing,
     setCategories,
     setEntities,
     setFeedback
@@ -887,8 +897,13 @@ export const useWorldBibleImports = ({
                 updatedAt: now
               };
 
-          await saveEntity(entity);
-          await onEntitySaved?.(entity, activeJsonCategory);
+          await saveWorldBibleRecord({
+            entity,
+            category: activeJsonCategory,
+            categories,
+            entities: nextEntities,
+            indexing
+          });
 
           if (existing) {
             const idx = nextEntities.findIndex((item) => item.id === existing.id);
@@ -923,11 +938,12 @@ export const useWorldBibleImports = ({
   }, [
     activeJsonCategory,
     activeProjectId,
+    categories,
     clearJsonImportSession,
     entities,
     jsonImportSession,
     onEntitiesChanged,
-    onEntitySaved,
+    indexing,
     preparedJsonRows,
     setEntities,
     setFeedback,
