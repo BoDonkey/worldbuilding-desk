@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import type {ChangeEvent, Dispatch, SetStateAction} from 'react';
 import type {EntityCategory, WorldEntity} from '../entityTypes';
 import {saveCategory} from '../services/storage';
@@ -6,10 +6,7 @@ import {
   saveWorldBibleRecord,
   type WorldBibleIndexing
 } from '../services/worldBible/worldBibleRecordSave';
-import {
-  convertPlainTextToRichHtml,
-  normalizeRichTextValue
-} from '../services/worldBible/worldBibleEntityHelpers';
+import {convertPlainTextToRichHtml} from '../services/worldBible/worldBibleEntityHelpers';
 import {describeError} from '../services/errors';
 import {parseDocxFile} from '../services/worldBible/docxImport';
 import {
@@ -41,12 +38,13 @@ export type {
   WorldBibleImportSectionAction,
   WorldBibleImportSectionDraft
 } from '../services/worldBible/worldBibleImportParsing';
-export {
-  detectImportDocumentName,
-  detectImportSections,
-  mapImportedTextToFields,
-  markdownToRichHtml
-} from '../services/worldBible/worldBibleImportParsing';
+
+/**
+ * World Bible document import (split from useWorldBibleImports, 3.49):
+ * Markdown, text, and DOCX files or pasted text become drafts the author
+ * reviews (category, mode, detected sections), then saves through
+ * `saveWorldBibleRecord`. Behavior unchanged.
+ */
 
 export type ImportMode = 'create' | 'upsert';
 
@@ -71,45 +69,12 @@ export interface WorldBibleImportDraft {
   importError?: string;
 }
 
-
-interface JsonImportRowInput {
-  rowIndex: number;
-  record: Record<string, unknown>;
-}
-
-export interface JsonImportSession {
-  fileName: string;
-  rows: JsonImportRowInput[];
-  keys: string[];
-  categoryId: string;
-  mode: ImportMode;
-  nameKey: string;
-  fieldMap: Record<string, string>;
-}
-
-export type JsonImportConflictResolution = ImportMode | 'skip';
-
-interface JsonImportConflict {
-  kind: 'existing' | 'batch-duplicate';
-  message: string;
-}
-
-export interface JsonImportPreparedRow {
-  rowIndex: number;
-  name: string;
-  fields: Record<string, string>;
-  errors: string[];
-  existingEntityId?: string;
-  conflict?: JsonImportConflict;
-  resolution: JsonImportConflictResolution;
-}
-
 type FeedbackState = {
   tone: 'success' | 'error';
   message: string;
 } | null;
 
-interface UseWorldBibleImportsParams {
+interface UseWorldBibleDocumentImportParams {
   activeProjectId: string | null;
   activeCategory: EntityCategory | null;
   categories: EntityCategory[];
@@ -121,28 +86,6 @@ interface UseWorldBibleImportsParams {
   indexing: WorldBibleIndexing;
   onEntitiesChanged?: () => Promise<void>;
 }
-
-
-
-const valueToString = (value: unknown): string => {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => valueToString(item)).filter(Boolean).join(', ');
-  }
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return '';
-    }
-  }
-  return '';
-};
-
 
 const ensureSectionFields = async (
   category: EntityCategory,
@@ -214,7 +157,7 @@ const buildStructuredImportDraft = (
   };
 };
 
-export const useWorldBibleImports = ({
+export const useWorldBibleDocumentImport = ({
   activeProjectId,
   activeCategory,
   categories,
@@ -224,117 +167,14 @@ export const useWorldBibleImports = ({
   setFeedback,
   indexing,
   onEntitiesChanged
-}: UseWorldBibleImportsParams) => {
+}: UseWorldBibleDocumentImportParams) => {
   const [isImportingEntities, setIsImportingEntities] = useState(false);
   const [isApplyingImports, setIsApplyingImports] = useState(false);
   const [importDrafts, setImportDrafts] = useState<WorldBibleImportDraft[]>([]);
-  const [isImportingJson, setIsImportingJson] = useState(false);
-  const [isApplyingJsonImport, setIsApplyingJsonImport] = useState(false);
-  const [jsonImportSession, setJsonImportSession] = useState<JsonImportSession | null>(
-    null
-  );
-  const [jsonImportConflictResolutions, setJsonImportConflictResolutions] = useState<
-    Record<number, JsonImportConflictResolution>
-  >({});
 
   useEffect(() => {
-    if (!activeProjectId) {
-      setImportDrafts([]);
-      setJsonImportSession(null);
-      setJsonImportConflictResolutions({});
-    }
+    if (!activeProjectId) setImportDrafts([]);
   }, [activeProjectId]);
-
-  const activeJsonCategory = useMemo(
-    () =>
-      jsonImportSession
-        ? categories.find((category) => category.id === jsonImportSession.categoryId) ?? null
-        : null,
-    [categories, jsonImportSession]
-  );
-
-  const preparedJsonRows = useMemo<JsonImportPreparedRow[]>(() => {
-    if (!jsonImportSession || !activeJsonCategory) return [];
-    const existingByName = new Map(
-      entities
-        .filter((entity) => entity.categoryId === jsonImportSession.categoryId)
-        .map((entity) => [entity.name.trim().toLowerCase(), entity])
-    );
-    const duplicateNameCounts = new Map<string, number>();
-    jsonImportSession.rows.forEach((row) => {
-      const nameRaw = valueToString(row.record[jsonImportSession.nameKey]);
-      const normalized = nameRaw.trim().toLowerCase();
-      if (!normalized) return;
-      duplicateNameCounts.set(normalized, (duplicateNameCounts.get(normalized) ?? 0) + 1);
-    });
-
-    return jsonImportSession.rows.map((row) => {
-      const errors: string[] = [];
-      const nameRaw = valueToString(row.record[jsonImportSession.nameKey]);
-      const name = nameRaw.trim();
-      if (!name) {
-        errors.push('Missing name value.');
-      }
-
-      const fields: Record<string, string> = {};
-      for (const field of activeJsonCategory.fieldSchema) {
-        const mappedKey = jsonImportSession.fieldMap[field.key];
-        if (!mappedKey) {
-          if (field.required) {
-            errors.push(`Required field "${field.label}" is not mapped.`);
-          }
-          continue;
-        }
-        const value = valueToString(row.record[mappedKey]);
-        if (field.required && !value) {
-          errors.push(`Required field "${field.label}" is empty.`);
-        }
-        if (value) {
-          fields[field.key] = value;
-        }
-      }
-      const normalizedName = name.trim().toLowerCase();
-      const existingEntity = normalizedName
-        ? existingByName.get(normalizedName)
-        : undefined;
-      const hasBatchDuplicate = normalizedName
-        ? (duplicateNameCounts.get(normalizedName) ?? 0) > 1
-        : false;
-      const conflict =
-        jsonImportSession.mode === 'create' && existingEntity
-          ? {
-              kind: 'existing' as const,
-              message: `Matches existing ${activeJsonCategory.name.slice(0, -1).toLowerCase()} "${existingEntity.name}". Choose whether to create a duplicate, update it, or skip this row.`
-            }
-          : hasBatchDuplicate
-            ? {
-                kind: 'batch-duplicate' as const,
-                message:
-                  'Another JSON row uses this same name in the selected category. Choose whether to create, update by name, or skip this row.'
-              }
-            : undefined;
-      const resolution =
-        jsonImportConflictResolutions[row.rowIndex] ??
-        (conflict ? ('skip' as const) : jsonImportSession.mode);
-      return {
-        rowIndex: row.rowIndex,
-        name,
-        fields,
-        errors,
-        existingEntityId: existingEntity?.id,
-        conflict,
-        resolution
-      };
-    });
-  }, [activeJsonCategory, entities, jsonImportConflictResolutions, jsonImportSession]);
-
-  const jsonImportValidCount = preparedJsonRows.filter(
-    (row) => row.errors.length === 0
-  ).length;
-  const jsonImportConflictCount = preparedJsonRows.filter((row) => row.conflict).length;
-  const unresolvedJsonConflictCount = preparedJsonRows.filter(
-    (row) => row.conflict && !jsonImportConflictResolutions[row.rowIndex]
-  ).length;
 
   const handleImportEntities = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     if (!activeProjectId || !activeCategory) return;
@@ -524,136 +364,8 @@ export const useWorldBibleImports = ({
     });
   }, [categories]);
 
-  const handleJsonImportFile = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
-    if (!activeProjectId || !activeCategory) return;
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsImportingJson(true);
-    setFeedback(null);
-    try {
-      const raw = await file.text();
-      const parsed = JSON.parse(raw) as unknown;
-      const recordsSource = Array.isArray(parsed)
-        ? parsed
-        : typeof parsed === 'object' && parsed !== null
-          ? ((parsed as Record<string, unknown>).entries ??
-            (parsed as Record<string, unknown>).items ??
-            (parsed as Record<string, unknown>).rows)
-          : null;
-
-      if (!Array.isArray(recordsSource)) {
-        throw new Error(
-          'JSON must be an array of objects or an object with entries/items/rows.'
-        );
-      }
-
-      const rows: JsonImportRowInput[] = [];
-      const keySet = new Set<string>();
-      recordsSource.forEach((item, index) => {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) return;
-        const record = item as Record<string, unknown>;
-        Object.keys(record).forEach((key) => keySet.add(key));
-        rows.push({
-          rowIndex: index + 1,
-          record
-        });
-      });
-
-      if (rows.length === 0) {
-        throw new Error('No object rows found in JSON.');
-      }
-
-      const keys = Array.from(keySet).sort();
-      const defaultNameKey = keys.includes('name') ? 'name' : (keys[0] ?? '');
-      const defaultFieldMap: Record<string, string> = {};
-      activeCategory.fieldSchema.forEach((field) => {
-        defaultFieldMap[field.key] = keys.includes(field.key) ? field.key : '';
-      });
-
-      setJsonImportSession({
-        fileName: file.name,
-        rows,
-        keys,
-        categoryId: activeCategory.id,
-        mode: 'create',
-        nameKey: defaultNameKey,
-        fieldMap: defaultFieldMap
-      });
-      setJsonImportConflictResolutions({});
-      setFeedback({
-        tone: 'success',
-        message: `Loaded ${rows.length} JSON row(s). Map fields and apply when ready.`
-      });
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to parse JSON import file.');
-      setFeedback({tone: 'error', message});
-      setJsonImportSession(null);
-      setJsonImportConflictResolutions({});
-    } finally {
-      setIsImportingJson(false);
-      event.target.value = '';
-    }
-  }, [activeCategory, activeProjectId, setFeedback]);
-
-  const handleJsonCategoryChange = useCallback((categoryId: string) => {
-    const category = categories.find((item) => item.id === categoryId);
-    setJsonImportSession((prev) => {
-      if (!prev) return prev;
-      const nextFieldMap: Record<string, string> = {};
-      if (category) {
-        category.fieldSchema.forEach((field) => {
-          nextFieldMap[field.key] = prev.keys.includes(field.key) ? field.key : '';
-        });
-      }
-      return {
-        ...prev,
-        categoryId,
-        fieldMap: nextFieldMap
-      };
-    });
-    setJsonImportConflictResolutions({});
-  }, [categories]);
-
-  const handleJsonFieldMapChange = useCallback((fieldKey: string, sourceKey: string) => {
-    setJsonImportSession((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        fieldMap: {
-          ...prev.fieldMap,
-          [fieldKey]: sourceKey
-        }
-      };
-    });
-  }, []);
-
-  const handleJsonConflictResolutionChange = useCallback(
-    (rowIndex: number, resolution: JsonImportConflictResolution) => {
-      setJsonImportConflictResolutions((prev) => ({
-        ...prev,
-        [rowIndex]: resolution
-      }));
-    },
-    []
-  );
-
-  const handleJsonNameKeyChange = useCallback((nameKey: string) => {
-    setJsonImportSession((prev) => (prev ? {...prev, nameKey} : prev));
-  }, []);
-
-  const handleJsonModeChange = useCallback((mode: ImportMode) => {
-    setJsonImportSession((prev) => (prev ? {...prev, mode} : prev));
-  }, []);
-
   const clearImportDrafts = useCallback(() => {
     setImportDrafts([]);
-  }, []);
-
-  const clearJsonImportSession = useCallback(() => {
-    setJsonImportSession(null);
-    setJsonImportConflictResolutions({});
   }, []);
 
   const applyImportDrafts = useCallback(async (options?: ApplyImportDraftOptions) => {
@@ -825,157 +537,15 @@ export const useWorldBibleImports = ({
     setFeedback
   ]);
 
-  const applyJsonImport = useCallback(async () => {
-    if (!activeProjectId || !jsonImportSession || !activeJsonCategory) return;
-    const validRows = preparedJsonRows.filter((row) => row.errors.length === 0);
-    if (validRows.length === 0) {
-      setFeedback({
-        tone: 'error',
-        message: 'No valid JSON rows to import. Fix mapping/validation first.'
-      });
-      return;
-    }
-    if (unresolvedJsonConflictCount > 0) {
-      setFeedback({
-        tone: 'error',
-        message: `Review ${unresolvedJsonConflictCount} conflicting JSON row(s) before importing.`
-      });
-      return;
-    }
-
-    setIsApplyingJsonImport(true);
-    setFeedback(null);
-    const nextEntities = [...entities];
-    let createdCount = 0;
-    let updatedCount = 0;
-    let failedCount = 0;
-    let skippedCount = 0;
-
-    try {
-      for (const row of validRows) {
-        try {
-          if (row.resolution === 'skip') {
-            skippedCount += 1;
-            continue;
-          }
-          const now = Date.now();
-          const normalizedName = row.name.trim().toLowerCase();
-          const existing =
-            row.resolution === 'upsert'
-              ? nextEntities.find(
-                  (entity) =>
-                    entity.categoryId === jsonImportSession.categoryId &&
-                    entity.name.trim().toLowerCase() === normalizedName
-                )
-              : undefined;
-          const normalizedRowFields = {...row.fields};
-          activeJsonCategory.fieldSchema.forEach((field) => {
-            if (field.type !== 'textarea') return;
-            const rawValue = normalizedRowFields[field.key];
-            normalizedRowFields[field.key] =
-              typeof rawValue === 'string' ? normalizeRichTextValue(rawValue) : '<p></p>';
-          });
-
-          const entity: WorldEntity = existing
-            ? {
-                ...existing,
-                fields: {
-                  ...existing.fields,
-                  ...normalizedRowFields
-                },
-                updatedAt: now
-              }
-            : {
-                id: crypto.randomUUID(),
-                projectId: activeProjectId,
-                categoryId: jsonImportSession.categoryId,
-                name: row.name,
-                fields: normalizedRowFields,
-                needsCompletion: false,
-                links: [],
-                createdAt: now,
-                updatedAt: now
-              };
-
-          await saveWorldBibleRecord({
-            entity,
-            category: activeJsonCategory,
-            categories,
-            entities: nextEntities,
-            indexing
-          });
-
-          if (existing) {
-            const idx = nextEntities.findIndex((item) => item.id === existing.id);
-            if (idx !== -1) nextEntities[idx] = entity;
-            updatedCount += 1;
-          } else {
-            nextEntities.push(entity);
-            createdCount += 1;
-          }
-        } catch {
-          failedCount += 1;
-        }
-      }
-
-      setEntities(nextEntities);
-      await onEntitiesChanged?.();
-      setFeedback({
-        tone: failedCount > 0 ? 'error' : 'success',
-        message:
-          `JSON import created ${createdCount} entr${
-            createdCount === 1 ? 'y' : 'ies'
-          } and updated ${updatedCount}.` +
-          (skippedCount > 0 ? ` Skipped ${skippedCount}.` : '') +
-          (failedCount > 0 ? ` ${failedCount} failed.` : '')
-      });
-      if (failedCount === 0) {
-        clearJsonImportSession();
-      }
-    } finally {
-      setIsApplyingJsonImport(false);
-    }
-  }, [
-    activeJsonCategory,
-    activeProjectId,
-    categories,
-    clearJsonImportSession,
-    entities,
-    jsonImportSession,
-    onEntitiesChanged,
-    indexing,
-    preparedJsonRows,
-    setEntities,
-    setFeedback,
-    unresolvedJsonConflictCount
-  ]);
-
   return {
     isImportingEntities,
     isApplyingImports,
     importDrafts,
     clearImportDrafts,
-    isImportingJson,
-    isApplyingJsonImport,
-    jsonImportSession,
-    jsonImportConflictResolutions,
-    activeJsonCategory,
-    preparedJsonRows,
-    jsonImportValidCount,
-    jsonImportConflictCount,
-    unresolvedJsonConflictCount,
     handleImportEntities,
     preparePastedImportDraft,
     updateImportDraft,
     updateImportSectionDestination,
-    applyImportDrafts,
-    applyJsonImport,
-    handleJsonImportFile,
-    handleJsonCategoryChange,
-    handleJsonNameKeyChange,
-    handleJsonModeChange,
-    handleJsonFieldMapChange,
-    handleJsonConflictResolutionChange,
-    clearJsonImportSession
+    applyImportDrafts
   };
 };

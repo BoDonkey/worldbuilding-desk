@@ -32,7 +32,7 @@ commit hash. Refactor slices are strictly behavior-preserving.
   not a line count, so meet the limit with a real seam or not at all:
   - **What counts as a seam.** A hook, service, or component that names one
     feature or concern a reader would search for (for example
-    `useWorldBibleImports`, `WorkspaceCharacterLabSection`), keeps its own
+    `useWorldBibleDocumentImport`, `WorkspaceCharacterLabSection`), keeps its own
     state or logic, and lives in the same folder as the file it came from.
     Removing duplicated code also counts.
   - **What does not.** A single button, a few lines of JSX, or a wrapper

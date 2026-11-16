@@ -33,9 +33,8 @@ import {
 import shared from '../components/WorldBible/worldBibleShared.module.css';
 import styles from '../styles/WorldBibleRoute.module.css';
 import {useWorldBibleReview} from '../hooks/useWorldBibleReview';
-import {
-  useWorldBibleImports
-} from '../hooks/useWorldBibleImports';
+import {useWorldBibleDocumentImport} from '../hooks/useWorldBibleDocumentImport';
+import {useWorldBibleJsonImport} from '../hooks/useWorldBibleJsonImport';
 import {useWorldBibleEntityActions} from '../hooks/useWorldBibleEntityActions';
 import {useWorldBibleLocationFocus} from '../hooks/useWorldBibleLocationFocus';
 import {useWorldBibleCategoryNavigation} from '../hooks/useWorldBibleCategoryNavigation';
@@ -158,18 +157,20 @@ function WorldBibleRoute() {
     categories, categoryById, aliasMapByEntityId, activeCategory, writingDocuments
   });
   const {editingId, name, setName, fieldValues, setFieldValues} = draft;
-  const worldBibleImports = useWorldBibleImports({
+  const importParams = {
     activeProjectId: activeProject?.id ?? null,
     activeCategory: activeCategory ?? null,
     categories,
     entities,
-    setCategories,
     setEntities,
     setFeedback,
     indexing: worldBibleIndexing,
     onEntitiesChanged: refreshMemories
-  });
-  const {isImportingEntities, importDrafts, isImportingJson, updateImportDraft} = worldBibleImports;
+  };
+  const documentImport = useWorldBibleDocumentImport({...importParams, setCategories});
+  const jsonImport = useWorldBibleJsonImport(importParams);
+  const {isImportingEntities, importDrafts, updateImportDraft} = documentImport;
+  const {isImportingJson} = jsonImport;
   const currentEntityMemories = editingId
     ? memories.filter((memory) => memory.documentId === editingId)
     : [];
@@ -500,7 +501,7 @@ function WorldBibleRoute() {
       <WorldBibleImportWorkspace
         activeProject={activeProject} projectSettings={projectSettings}
         activeCategory={activeCategory} categories={categories} categoryById={categoryById}
-        imports={worldBibleImports} authoring={worldBibleAuthoring}
+        documentImport={documentImport} jsonImport={jsonImport} authoring={worldBibleAuthoring}
         isPasteImportOpen={draft.isPasteImportOpen} setIsPasteImportOpen={draft.setIsPasteImportOpen}
         pastedImportText={draft.pastedImportText} setPastedImportText={draft.setPastedImportText}
         importInputRef={importInputRef} jsonImportInputRef={jsonImportInputRef}

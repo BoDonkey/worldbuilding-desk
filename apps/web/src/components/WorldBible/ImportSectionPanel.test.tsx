@@ -1,7 +1,7 @@
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import type {EntityCategory} from '../../entityTypes';
-import type {WorldBibleImportDraft, WorldBibleImportSectionDraft} from '../../hooks/useWorldBibleImports';
+import type {WorldBibleImportDraft, WorldBibleImportSectionDraft} from '../../hooks/useWorldBibleDocumentImport';
 import {ImportSectionPanel} from './ImportSectionPanel';
 
 const characters: EntityCategory = {
