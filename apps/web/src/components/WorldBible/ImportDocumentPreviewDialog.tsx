@@ -1,6 +1,6 @@
 import {useRef} from 'react';
 import type {EntityCategory} from '../../entityTypes';
-import type {WorldBibleImportDraft} from '../../hooks/useWorldBibleImports';
+import type {WorldBibleImportDraft} from '../../hooks/useWorldBibleDocumentImport';
 import {useEscapeToClose} from '../../hooks/useEscapeToClose';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
 import {

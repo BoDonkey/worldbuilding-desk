@@ -1,11 +1,11 @@
 import {useState} from 'react';
 import type {Dispatch, RefObject, SetStateAction} from 'react';
 import type {EntityCategory, Project, ProjectSettings, WorldEntity} from '../../entityTypes';
+import type {ImportMode, useWorldBibleDocumentImport} from '../../hooks/useWorldBibleDocumentImport';
 import type {
-  ImportMode,
   JsonImportConflictResolution,
-  useWorldBibleImports
-} from '../../hooks/useWorldBibleImports';
+  useWorldBibleJsonImport
+} from '../../hooks/useWorldBibleJsonImport';
 import type {useWorldBibleAuthoringAssistant} from '../../hooks/useWorldBibleAuthoringAssistant';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
@@ -24,7 +24,8 @@ interface WorldBibleImportWorkspaceProps {
   activeCategory: EntityCategory | undefined;
   categories: EntityCategory[];
   categoryById: Map<string, EntityCategory>;
-  imports: ReturnType<typeof useWorldBibleImports>;
+  documentImport: ReturnType<typeof useWorldBibleDocumentImport>;
+  jsonImport: ReturnType<typeof useWorldBibleJsonImport>;
   authoring: ReturnType<typeof useWorldBibleAuthoringAssistant>;
   isPasteImportOpen: boolean;
   setIsPasteImportOpen: Dispatch<SetStateAction<boolean>>;
@@ -39,22 +40,25 @@ interface WorldBibleImportWorkspaceProps {
 
 export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps) => {
   const {
-    activeProject, projectSettings, activeCategory, categories, categoryById, imports, authoring,
+    activeProject, projectSettings, activeCategory, categories, categoryById, documentImport, jsonImport,
+    authoring,
     isPasteImportOpen, setIsPasteImportOpen, pastedImportText, setPastedImportText,
     importInputRef, jsonImportInputRef, onOpenImportedEntity
   } = props;
   // The import AI helper is AI coaching; it hides while that switch is off (5.18).
   const aiCoaching = readAISwitches(projectSettings?.aiSettings).coaching;
   const {
-    isApplyingImports, importDrafts, clearImportDrafts, applyImportDrafts, isApplyingJsonImport,
-    jsonImportSession, jsonImportConflictResolutions, activeJsonCategory,
+    isApplyingImports, importDrafts, clearImportDrafts, applyImportDrafts,
+    updateImportDraft, updateImportSectionDestination, handleImportEntities,
+    preparePastedImportDraft
+  } = documentImport;
+  const {
+    isApplyingJsonImport, jsonImportSession, jsonImportConflictResolutions, activeJsonCategory,
     preparedJsonRows, jsonImportValidCount, jsonImportConflictCount,
-    unresolvedJsonConflictCount, updateImportDraft, updateImportSectionDestination,
-    applyJsonImport, handleJsonCategoryChange, handleJsonNameKeyChange,
-    handleJsonModeChange, handleJsonFieldMapChange,
-    handleJsonConflictResolutionChange, clearJsonImportSession,
-    handleImportEntities, handleJsonImportFile, preparePastedImportDraft
-  } = imports;
+    unresolvedJsonConflictCount, applyJsonImport, handleJsonCategoryChange,
+    handleJsonNameKeyChange, handleJsonModeChange, handleJsonFieldMapChange,
+    handleJsonConflictResolutionChange, clearJsonImportSession, handleJsonImportFile
+  } = jsonImport;
   const {
     isImportAiHelperOpen, setIsImportAiHelperOpen, importAiContext,
     detectedSectionImportDraftCount, handleUseDetectedSectionsForImportDrafts

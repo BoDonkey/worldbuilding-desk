@@ -4,8 +4,8 @@ import {
   detectImportSections,
   mapImportedTextToFields,
   markdownToRichHtml
-} from './useWorldBibleImports';
-import type {EntityCategory} from '../entityTypes';
+} from './worldBibleImportParsing';
+import type {EntityCategory} from '../../entityTypes';
 
 const markExistingFieldSections = (
   sections: ReturnType<typeof detectImportSections>,

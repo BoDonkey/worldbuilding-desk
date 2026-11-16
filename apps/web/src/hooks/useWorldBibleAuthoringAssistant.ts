@@ -7,7 +7,7 @@ import {
 } from 'react';
 import type {EntityCategory, WorldEntity} from '../entityTypes';
 import {saveCategory} from '../services/storage';
-import type {WorldBibleImportDraft} from './useWorldBibleImports';
+import type {WorldBibleImportDraft} from './useWorldBibleDocumentImport';
 import {
   ALTERNATIVE_NAMES_KEY,
   extractPlainTextFromRichText,

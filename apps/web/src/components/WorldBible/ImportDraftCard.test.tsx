@@ -1,7 +1,7 @@
 import {fireEvent, render, screen} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import type {EntityCategory} from '../../entityTypes';
-import type {WorldBibleImportDraft} from '../../hooks/useWorldBibleImports';
+import type {WorldBibleImportDraft} from '../../hooks/useWorldBibleDocumentImport';
 import {ImportDraftCard} from './ImportDraftCard';
 
 const locations: EntityCategory = {

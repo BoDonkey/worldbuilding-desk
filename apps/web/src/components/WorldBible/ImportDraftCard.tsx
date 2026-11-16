@@ -3,7 +3,7 @@ import type {
   ImportMode,
   ImportSectionDestination,
   WorldBibleImportDraft
-} from '../../hooks/useWorldBibleImports';
+} from '../../hooks/useWorldBibleDocumentImport';
 import {getPreferredImportField} from '../../services/worldBible/worldBibleEntityHelpers';
 import {getImportSourceKind} from '../../services/worldBible/worldBibleImportParsing';
 import {ImportSectionPanel} from './ImportSectionPanel';

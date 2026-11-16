@@ -1,7 +1,7 @@
 import {act, renderHook} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import type {EntityCategory, WorldEntity} from '../entityTypes';
-import {useWorldBibleImports} from './useWorldBibleImports';
+import {useWorldBibleDocumentImport} from './useWorldBibleDocumentImport';
 
 const mocks = vi.hoisted(() => ({
   saveEntity: vi.fn(),
@@ -28,7 +28,7 @@ const renderImports = () => {
   });
   const hook = renderHook(
     ({currentCategories}: {currentCategories: EntityCategory[]}) =>
-      useWorldBibleImports({
+      useWorldBibleDocumentImport({
         activeProjectId: 'project',
         activeCategory: currentCategories[0],
         categories: currentCategories,
@@ -43,7 +43,7 @@ const renderImports = () => {
   return {...hook, getCategories: () => categories};
 };
 
-describe('useWorldBibleImports heading destinations', () => {
+describe('useWorldBibleDocumentImport heading destinations', () => {
   beforeEach(() => {
     mocks.saveEntity.mockReset().mockResolvedValue(undefined);
     mocks.saveCategory.mockReset().mockResolvedValue(undefined);
@@ -99,7 +99,7 @@ describe('useWorldBibleImports heading destinations', () => {
   });
 });
 
-describe('useWorldBibleImports draft status', () => {
+describe('useWorldBibleDocumentImport draft status', () => {
   beforeEach(() => {
     mocks.saveEntity.mockReset().mockResolvedValue(undefined);
     mocks.saveCategory.mockReset().mockResolvedValue(undefined);
