@@ -59,6 +59,9 @@ test('asks before contacting the update server, and checks only on request when 
 
 test('checks at startup once allowed, and offers the update without downloading it', async ({desktop}) => {
   await desktop.page.getByRole('button', {name: 'Check automatically', exact: true}).click();
+  // The question hides once the choice is saved. Relaunching before then can
+  // drop the choice, so the startup check never runs (Windows CI flake).
+  await expect(desktop.page.getByText('Check for updates automatically?')).toBeHidden();
   await desktop.relaunch();
   const {page} = desktop;
   const card = page.getByRole('region', {name: 'SagaSpine update'});
