@@ -374,7 +374,7 @@ messages).
 | 3.44 | Assistant turn planning out of the component (B2) | 3 | M | Done 93730fa |
 | 3.45 | One way to create a World Bible record (D3, B4, P1, P2) | 3 | M | Done d07dfb0 — B4's Compendium, category, and dialogue-style saves stay in place (no neighbouring hook); map placement saves and backup restore still skip place rules |
 | 3.46 | One name matcher (D5) | 3 | S | Done `6a7ccf9` |
-| 3.47 | Shared model-run hook for AI features (B3) | 3 | M | WIP (relates to 4.82) |
+| 3.47 | Shared model-run hook for AI features (B3) | 3 | M | Done `9e84773` |
 | 3.48 | Projects: backup import as its own hook and panel (S2) | 3 | M | Done 4469c40 — optional `useProjectSeriesLinks` not taken |
 | 3.49 | World Bible imports: split the two pipelines (S2) | 3 | M | Done 6b51ce7 |
 | 3.50 | Seam maps for the four baseline files (S1, plan only) | 3 | S | — |
