@@ -1,6 +1,3 @@
-import type {ProjectAISettings} from '../../entityTypes';
-import {describeError} from '../errors';
-import {LLMService} from '../llm/LLMService';
 import {
   brainstormFocusKey,
   type WorldCanvasBrainstormFocus,
@@ -69,15 +66,5 @@ export const handleBrainstormBeforeUnload = (event: BeforeUnloadEvent): void => 
   event.returnValue = '';
 };
 
-const NOT_CONFIGURED_MESSAGE = 'AI provider is not configured. Add one in Settings to brainstorm.';
-
-/** Resolves whether a request could be sent at all, without sending one. */
-export function getBrainstormProviderIssue(aiConfig: ProjectAISettings | undefined): string | null {
-  if (!aiConfig) return NOT_CONFIGURED_MESSAGE;
-  try {
-    new LLMService(aiConfig);
-    return null;
-  } catch (error) {
-    return describeError(error, NOT_CONFIGURED_MESSAGE, {record: false});
-  }
-}
+/** The provider issue brainstorm shows with no provider set up. */
+export const BRAINSTORM_NOT_CONFIGURED_MESSAGE = 'AI provider is not configured. Add one in Settings to brainstorm.';

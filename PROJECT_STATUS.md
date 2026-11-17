@@ -514,6 +514,15 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   existing runaway guard, and writing-coach requests record
   `writing-coach`. Both assistant surfaces show the same point-of-use route and
   budget disclosure beside Send.
+- Every other AI feature (Character Lab, Scene Draft, World Canvas coaching and
+  brainstorm, Corkboard coach and progression continuity, Canon Decisions,
+  model canon check, custom selection actions) sends its request through
+  `useFeatureModelRun`, which the assistant policy is also built on. It checks
+  provider readiness (`getProviderIssue`) and the budget, spends one
+  consultation under the request's feature, and streams the stoppable run.
+  Each feature keeps its own prompt, parser, wording, and data-flow
+  disclosure. A Canon Decisions request whose project-records retrieval fails is no
+  longer charged a consultation, since nothing was sent.
 - Future AI expansion should follow the adapter/tool boundary now captured in `docs/architecture-review.md`: provider/model capabilities are explicit, named workflow routes can choose model/reasoning/capability/cache policies per feature, structured output is schema-validated, tool-like actions produce confirmable proposals, and shared read-only project-context extraction feeds features without silently mutating canon or state.
 - Scene-scoped state mutation tracking now exists as a project-scoped persistence layer with accepted/invalidation flow, replay, and workspace inspection surfaces.
 - Deterministic `state_delta_candidate` extraction now feeds the same typed mutation ledger as proposed `deterministic-review` events rather than mutating tracked state automatically.

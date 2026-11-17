@@ -12,9 +12,8 @@ import {
   getDismissedProgressionContinuityKeys,
   restoreAllDismissedProgressionContinuityCandidates
 } from '../../services/progressionContinuity/progressionContinuityReviewPrefs';
-import {LLMService} from '../../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
-import {useModelRun} from '../../hooks/useModelRun';
+import {useFeatureModelRun} from '../../hooks/useFeatureModelRun';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
@@ -29,6 +28,7 @@ const KIND_LABELS: Record<ProgressionContinuityCandidate['kind'], string> = {
 };
 
 const MAX_EXCERPT_CHARS = 1200;
+const NOT_CONFIGURED = 'Configure an AI provider in Settings first.';
 
 interface ConsultationState {
   status: 'loading' | 'ready' | 'error';
@@ -56,7 +56,6 @@ export function ProgressionContinuitySection({
 }: ProgressionContinuitySectionProps) {
   const [dismissedKeys, setDismissedKeys] = useState(() => getDismissedProgressionContinuityKeys(projectId));
   const [consultationByKey, setConsultationByKey] = useState<Record<string, ConsultationState>>({});
-  const modelRun = useModelRun();
   /** The candidate whose run the progress line describes (the latest one asked about). */
   const [runKey, setRunKey] = useState<string | null>(null);
 
@@ -65,6 +64,7 @@ export function ProgressionContinuitySection({
   const inspector = aiConfig?.inspectorSettings;
   const consultationEnabled = readAISwitches(aiConfig).coaching;
   const budget = useConsultationBudget(projectId, inspector, aiConfig);
+  const {run: runModel, modelRun} = useFeatureModelRun({aiConfig, budget, providerMessages: {notConfigured: NOT_CONFIGURED}});
 
   const dismiss = (key: string) => {
     dismissProgressionContinuityCandidate(projectId, key);
@@ -80,7 +80,7 @@ export function ProgressionContinuitySection({
     if (!aiConfig) {
       setConsultationByKey((prev) => ({
         ...prev,
-        [candidate.key]: {status: 'error', error: 'Configure an AI provider in Settings first.'}
+        [candidate.key]: {status: 'error', error: NOT_CONFIGURED}
       }));
       return;
     }
@@ -118,10 +118,7 @@ export function ProgressionContinuitySection({
       });
       const {systemPrompt, userPrompt} = buildProgressionContinuityConsultationPrompt({candidate, evidence});
 
-      const service = new LLMService(aiConfig);
-      budget.spend('progression-continuity');
-
-      const {answer: content} = await modelRun.run(service, {
+      const {answer: content} = await runModel({
         feature: 'progression-continuity',
         messages: [{role: 'user', content: userPrompt}],
         systemPrompt,

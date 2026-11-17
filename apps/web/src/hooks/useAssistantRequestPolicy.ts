@@ -1,14 +1,13 @@
-import {useCallback, useMemo} from 'react';
+import {useCallback} from 'react';
 import type {ProjectAISettings} from '../entityTypes';
 import {describeError} from '../services/errors';
-import {LLMService} from '../services/llm/LLMService';
 import {describeRouteDataFlow} from '../services/llm/providerRoute';
 import type {LLMRequest} from '../services/llm/types';
 import type {SplitModelOutput} from '../services/llm/modelRun';
 import type {ConsultationFeature} from '../services/editor';
 import {aiSwitchRefusal} from '../services/llm/aiSwitches';
 import {useConsultationBudget} from './useConsultationBudget';
-import {useModelRun} from './useModelRun';
+import {useFeatureModelRun} from './useFeatureModelRun';
 
 export type AssistantRequestOutcome =
   | {ok: true; stopped: boolean}
@@ -31,26 +30,18 @@ export function useAssistantRequestPolicy({
 }) {
   const inspector = aiConfig?.inspectorSettings;
   const budget = useConsultationBudget(projectId, inspector, aiConfig);
-  const modelRun = useModelRun();
-
-  const provider = useMemo(() => {
-    if (!aiConfig) {
-      return {
-        service: null,
-        issue: 'AI provider is not configured. Add an API key in Settings.'
-      };
+  const featureRun = useFeatureModelRun({
+    aiConfig,
+    budget,
+    providerMessages: {
+      notConfigured: 'AI provider is not configured. Add an API key in Settings.',
+      invalid: 'Invalid AI configuration.',
+      record: true
     }
-    try {
-      return {service: new LLMService(aiConfig), issue: null};
-    } catch (error) {
-      return {
-        service: null,
-        issue: describeError(error, 'Invalid AI configuration.')
-      };
-    }
-  }, [aiConfig]);
+  });
+  const {modelRun, run: runModel} = featureRun;
 
-  const providerIssue = provider.issue ??
+  const providerIssue = featureRun.providerIssue ??
     (!budget.route.allowsRequests
       ? budget.route.reason ?? 'This provider route is not available.'
       : null);
@@ -72,9 +63,7 @@ export function useAssistantRequestPolicy({
     }): Promise<AssistantRequestOutcome> => {
       const switchRefusal = aiSwitchRefusal(aiConfig, feature);
       if (switchRefusal) return {ok: false, message: switchRefusal};
-      if (providerIssue || !provider.service) {
-        return {ok: false, message: providerIssue ?? 'AI provider unavailable. Check your settings and try again.'};
-      }
+      if (providerIssue) return {ok: false, message: providerIssue};
       if (budget.blocked) {
         return {
           ok: false,
@@ -82,11 +71,10 @@ export function useAssistantRequestPolicy({
         };
       }
 
-      // `recordConsultation` counts hosted/remote requests against the project
-      // budget and verified private-local requests against the runaway guard.
-      budget.spend(feature);
+      // `runModel` spends one consultation: `recordConsultation` counts hosted/remote requests
+      // against the project budget and verified private-local requests against the runaway guard.
       try {
-        const result = await modelRun.run(provider.service, {...request, feature}, onUpdate);
+        const result = await runModel({...request, feature}, onUpdate);
         return {ok: true, stopped: result.stopped};
       } catch (error) {
         return {
@@ -95,7 +83,7 @@ export function useAssistantRequestPolicy({
         };
       }
     },
-    [aiConfig, budget, modelRun, provider.service, providerIssue]
+    [aiConfig, budget, providerIssue, runModel]
   );
 
   return {

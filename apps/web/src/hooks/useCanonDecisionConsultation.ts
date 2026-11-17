@@ -1,6 +1,5 @@
 import {useMemo, useState} from 'react';
 import type {CanonDecisionCluster, Project, ProjectSettings} from '../entityTypes';
-import {LLMService} from '../services/llm/LLMService';
 import {buildRagContextChunks} from '../services/llm/contextProvenance';
 import {readAISwitches} from '../services/llm/aiSwitches';
 import {resolveResponseTokenLimit} from '../services/llm/modelRun';
@@ -12,8 +11,10 @@ import {
 } from '../services/lore/canonDecisionActions';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {useConsultationBudget} from './useConsultationBudget';
-import {useModelRun} from './useModelRun';
+import {useFeatureModelRun} from './useFeatureModelRun';
 import type {CanonDecisionFeedback} from './useCanonDecisionActions';
+
+const NOT_CONFIGURED = 'Configure an AI provider in Settings first.';
 
 const PROVIDER_LABELS = {
   anthropic: 'Claude',
@@ -36,7 +37,6 @@ export function useCanonDecisionConsultation(params: {
   setFeedback: (feedback: CanonDecisionFeedback) => void;
 }) {
   const {activeProject, projectSettings, records, ragService, setFeedback} = params;
-  const modelRun = useModelRun();
   const [consultingClusterId, setConsultingClusterId] = useState<string | null>(null);
   /** The cluster whose run the progress line describes (the latest one consulted). */
   const [runClusterId, setRunClusterId] = useState<string | null>(null);
@@ -81,11 +81,16 @@ export function useCanonDecisionConsultation(params: {
     projectSettings?.aiSettings?.inspectorSettings,
     consultationAISettings
   );
+  const {run: runModel, modelRun} = useFeatureModelRun({
+    aiConfig: consultationAISettings,
+    budget,
+    providerMessages: {notConfigured: NOT_CONFIGURED}
+  });
 
   const handleConsultCluster = async (cluster: CanonDecisionCluster) => {
     if (!activeProject) return;
     if (!projectSettings?.aiSettings) {
-      setFeedback({tone: 'error', message: 'Configure an AI provider in Settings first.'});
+      setFeedback({tone: 'error', message: NOT_CONFIGURED});
       return;
     }
     if (!aiConsultationEnabled) {
@@ -127,16 +132,13 @@ export function useCanonDecisionConsultation(params: {
 
     try {
       const aiSettingsForConsultation = consultationAISettings ?? projectSettings.aiSettings;
-      const service = new LLMService(aiSettingsForConsultation);
-      budget.spend('canon-decision');
 
       // The same trust labels the assistant uses, so a Source Note is not read as canon.
       const ragChunks = ragService
         ? await buildRagContextChunks(activeProject.id, await ragService.search(searchQuery, 3))
         : [];
 
-      await modelRun.run(
-        service,
+      await runModel(
         {
           feature: 'canon-decision',
           messages: [{role: 'user', content: userPrompt}],

@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {describePrivateLocalRoute} from '../../services/llm/providerRoute';
 import {Link} from 'react-router';
 import type {
@@ -9,10 +9,9 @@ import type {
 import {useAIProposalConfirmation} from '../../hooks/useAIProposalConfirmation';
 import type {ConfirmRequest} from '../../hooks/useConfirmDialog';
 import type {UseConsultationBudget} from '../../hooks/useConsultationBudget';
-import {useModelRun} from '../../hooks/useModelRun';
+import {useFeatureModelRun} from '../../hooks/useFeatureModelRun';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {describeError} from '../../services/errors';
-import {LLMService} from '../../services/llm/LLMService';
 import {
   BRAINSTORM_INVALID_RESPONSE_MESSAGE,
   BRAINSTORM_ITEM_KIND_LABELS,
@@ -28,7 +27,7 @@ import {
 } from '../../services/worldBible/worldCanvasBrainstorm';
 import {
   brainstormSessionKey,
-  getBrainstormProviderIssue,
+  BRAINSTORM_NOT_CONFIGURED_MESSAGE,
   getPendingBrainstormItems,
   getShownBrainstormTexts,
   handleBrainstormBeforeUnload,
@@ -75,14 +74,17 @@ export function WorldCanvasBrainstorm({
   const lensKind = focus.type === 'lens' ? focus.kind : undefined;
   const focusLabel = describeBrainstormFocus(focus);
   const [items, setItems] = useState<PendingBrainstormItem[]>(() => getPendingBrainstormItems(key));
-  const modelRun = useModelRun();
+  const {run: runModel, modelRun, providerIssue} = useFeatureModelRun({
+    aiConfig,
+    budget,
+    providerMessages: {notConfigured: BRAINSTORM_NOT_CONFIGURED_MESSAGE}
+  });
   const status = modelRun.isRunning ? 'loading' : 'idle';
   const [error, setError] = useState<string | null>(null);
   /** The unreadable reply, shown on request so the author can see what the model sent. */
   const [rejectedReply, setRejectedReply] = useState<string | null>(null);
   const [disclosed, setDisclosed] = useState(() => hasBrainstormDisclosure(projectId));
 
-  const providerIssue = useMemo(() => getBrainstormProviderIssue(aiConfig), [aiConfig]);
   const inspector = aiConfig?.inspectorSettings;
   const consultationEnabled = readAISwitches(aiConfig).coaching;
   const provider = aiConfig?.provider;
@@ -149,9 +151,7 @@ export function WorldCanvasBrainstorm({
         canonNames,
         earlierItems: getShownBrainstormTexts(key)
       });
-      const service = new LLMService(config);
-      budget.spend('canvas-brainstorm');
-      const result = await modelRun.run(service, {
+      const result = await runModel({
         feature: 'canvas-brainstorm',
         messages: [{role: 'user', content: userPrompt}],
         systemPrompt,
