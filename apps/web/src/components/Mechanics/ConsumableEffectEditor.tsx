@@ -5,6 +5,7 @@ import type {
   CompendiumEntry,
   StoredRuleset
 } from '../../entityTypes';
+import styles from './ConsumableEffectEditor.module.css';
 
 interface DraftEffect {
   id: string;
@@ -86,8 +87,8 @@ export function ConsumableEffectEditor({
   };
 
   return (
-    <div style={{gridColumn: '1 / -1', borderTop: '1px solid var(--color-border)', paddingTop: '0.75rem'}}>
-      <label style={{display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--color-text-primary)'}}>
+    <div className={styles.editor}>
+      <label className={styles.toggle}>
         <input
           type='checkbox'
           checked={enabled}
@@ -96,21 +97,21 @@ export function ConsumableEffectEditor({
         Consumed from inventory to apply an effect
       </label>
       {enabled && (
-        <div style={{display: 'grid', gap: '0.65rem', marginTop: '0.65rem'}}>
-          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem'}}>
-            <label style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+        <div className={styles.form}>
+          <div className={styles.details}>
+            <label className={styles.field}>
               Effect/status name
-              <input value={statusName} onChange={(event) => setStatusName(event.target.value)} placeholder={`${entry.name} effect`} style={{width: '100%'}} />
+              <input value={statusName} onChange={(event) => setStatusName(event.target.value)} placeholder={`${entry.name} effect`} />
             </label>
-            <label style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+            <label className={styles.field}>
               Duration in the story
-              <input value={durationLabel} onChange={(event) => setDurationLabel(event.target.value)} placeholder='20 minutes' style={{width: '100%'}} />
+              <input value={durationLabel} onChange={(event) => setDurationLabel(event.target.value)} placeholder='20 minutes' />
             </label>
           </div>
           <div>
-            <strong style={{fontSize: '0.82rem'}}>Stat and resource effects</strong>
+            <strong className={styles.effectsHeading}>Stat and resource effects</strong>
             {effects.map((effect) => (
-              <div key={effect.id} style={{display: 'grid', gridTemplateColumns: 'minmax(130px, 0.7fr) minmax(160px, 1fr) minmax(100px, 0.5fr) auto', gap: '0.5rem', marginTop: '0.4rem'}}>
+              <div key={effect.id} className={styles.effectRow}>
                 <select
                   aria-label='Effect type'
                   value={effect.type}
@@ -137,16 +138,16 @@ export function ConsumableEffectEditor({
                 <button type='button' disabled={effects.length === 1} onClick={() => setEffects((current) => current.filter((item) => item.id !== effect.id))}>Remove</button>
               </div>
             ))}
-            <button type='button' onClick={() => setEffects((current) => [...current, newEffect(ruleset)])} style={{marginTop: '0.45rem'}}>Add effect</button>
+            <button type='button' onClick={() => setEffects((current) => [...current, newEffect(ruleset)])} className={styles.addEffect}>Add effect</button>
           </div>
-          <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
+          <div className={styles.actions}>
             <button type='button' onClick={save} disabled={!ruleset || effects.every((effect) => !effect.delta)}>Save consumable effect</button>
-            <span style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>Expiration is placed later at a scene cursor, so narrative time stays author-controlled.</span>
+            <span className={styles.hint}>Expiration is placed later at a scene cursor, so narrative time stays author-controlled.</span>
           </div>
         </div>
       )}
       {!enabled && entry.consumable && (
-        <button type='button' onClick={save} style={{marginTop: '0.5rem'}}>Remove saved consumable effect</button>
+        <button type='button' onClick={save} className={styles.removeSaved}>Remove saved consumable effect</button>
       )}
     </div>
   );

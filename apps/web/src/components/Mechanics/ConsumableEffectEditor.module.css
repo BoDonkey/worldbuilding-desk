@@ -1,0 +1,64 @@
+.editor {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.75rem;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--color-text-primary);
+}
+
+.form {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+
+.field {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.field input {
+  width: 100%;
+}
+
+.effectsHeading {
+  font-size: var(--font-size-sm);
+}
+
+.effectRow {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.7fr) minmax(160px, 1fr) minmax(100px, 0.5fr) auto;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.addEffect {
+  margin-top: 0.45rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.removeSaved {
+  margin-top: 0.5rem;
+}

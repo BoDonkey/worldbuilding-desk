@@ -1,0 +1,81 @@
+.renderError {
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-error-soft-border);
+  background-color: var(--color-error-soft-bg);
+  color: var(--color-error);
+}
+
+.renderError h2 {
+  margin-top: 0;
+}
+
+.renderError p {
+  margin-bottom: 0.75rem;
+}
+
+.renderError pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--font-size-sm);
+}
+
+.page {
+  height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.summary {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.startPanel {
+  max-width: 680px;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel);
+}
+
+.startPanel h2 {
+  margin-top: 0;
+}
+
+.startPanel p {
+  color: var(--color-text-secondary);
+}
+
+.startActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hideAdvanced {
+  align-self: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.transferActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.wizardHost {
+  flex: 1;
+  min-height: 0;
+}

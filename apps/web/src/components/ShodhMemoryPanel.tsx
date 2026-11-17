@@ -1,5 +1,6 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import type {MemoryEntry} from '../services/shodh/ShodhMemoryService';
+import styles from './ShodhMemoryPanel.module.css';
 
 interface ScopeSelectorProps {
   label?: string;
@@ -71,34 +72,12 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
     : filteredMemories;
 
   return (
-    <div
-      style={{
-        marginTop: '1.25rem',
-        borderTop: '1px solid var(--color-border)',
-        paddingTop: '1rem',
-        color: 'var(--color-text-primary)'
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.75rem'
-        }}
-      >
-        <h3 style={{margin: 0}}>{title}</h3>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
-            alignItems: 'center'
-          }}
-        >
+    <div className={styles.panel}>
+      <div className={styles.header}>
+        <h3>{title}</h3>
+        <div className={styles.controls}>
           {scopeSelector && (
-            <label style={{fontSize: '0.85rem'}}>
+            <label className={styles.small}>
               {scopeSelector.label ?? 'Scope'}:{' '}
               <select
                 value={scopeSelector.value}
@@ -117,23 +96,17 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
             placeholder='Filter text or tags'
             value={filterValue}
             onChange={(e) => onFilterChange(e.target.value)}
-            style={{minWidth: '180px'}}
+            className={styles.filter}
           />
           {onRefresh && (
-            <button type='button' onClick={onRefresh} style={{fontSize: '0.85rem'}}>
+            <button type='button' onClick={onRefresh} className={styles.small}>
               Refresh
             </button>
           )}
         </div>
       </div>
       {effectivePageSize && (
-        <div
-          style={{
-            marginTop: '0.5rem',
-            fontSize: '0.85rem',
-            color: 'var(--color-text-secondary)'
-          }}
-        >
+        <div className={styles.pageSummary}>
           Showing{' '}
           {filteredMemories.length === 0
             ? 0
@@ -146,74 +119,44 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
         </div>
       )}
       {filteredMemories.length === 0 ? (
-        <p
-          style={{
-            fontSize: '0.9rem',
-            fontStyle: 'italic',
-            marginTop: '0.75rem',
-            color: 'var(--color-text-secondary)'
-          }}
-        >
+        <p className={styles.empty}>
           {emptyState}
         </p>
       ) : (
         <>
-          <ul
-            style={{
-              listStyle: 'none',
-              padding: 0,
-              margin: '0.75rem 0 0',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem',
-              maxHeight: effectivePageSize ? 240 : 'none',
-              overflowY: effectivePageSize ? 'auto' : 'visible'
-            }}
-          >
+          <ul className={effectivePageSize ? `${styles.list} ${styles.paged}` : styles.list}>
             {paginatedMemories.map((memory) => (
               <li
                 key={memory.id}
-                style={{
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '6px',
-                  padding: '0.5rem',
-                  color: 'var(--color-text-primary)',
-                  backgroundColor:
-                    highlightDocumentId && memory.documentId === highlightDocumentId
-                      ? 'var(--color-bg-secondary)'
-                      : 'var(--color-bg-primary)'
-                }}
+                className={
+                  highlightDocumentId && memory.documentId === highlightDocumentId
+                    ? `${styles.memory} ${styles.highlighted}`
+                    : styles.memory
+                }
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <strong style={{fontSize: '0.95rem'}}>
+                <div className={styles.memoryHeader}>
+                  <strong className={styles.memoryTitle}>
                     {memory.title || 'Untitled memory'}
                   </strong>
                   {showDelete && onDeleteMemory && (
                     <button
                       type='button'
                       onClick={() => onDeleteMemory(memory.id)}
-                      style={{fontSize: '0.8rem'}}
+                      className={styles.small}
                     >
                       Delete
                     </button>
                   )}
                   {renderMemoryActions && (
-                    <div style={{display: 'flex', gap: '0.25rem'}}>
+                    <div className={styles.memoryActions}>
                       {renderMemoryActions(memory)}
                     </div>
                   )}
                 </div>
-                <p style={{margin: '0.25rem 0', whiteSpace: 'pre-wrap'}}>
+                <p className={styles.memorySummary}>
                   {memory.summary}
                 </p>
-                <small style={{color: 'var(--color-text-secondary)'}}>
+                <small className={styles.meta}>
                   {new Date(memory.createdAt).toLocaleString()}
                   {memory.tags?.length ? ` · ${memory.tags.join(', ')}` : ''}
                   {renderSourceLabel && (
@@ -227,14 +170,7 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
             ))}
           </ul>
           {effectivePageSize && totalPages > 1 && (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.5rem',
-                marginTop: '0.5rem'
-              }}
-            >
+            <div className={styles.pager}>
               <button
                 type='button'
                 disabled={safePage === 0}
@@ -242,7 +178,7 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
               >
                 Previous
               </button>
-              <span style={{alignSelf: 'center', fontSize: '0.85rem'}}>
+              <span className={styles.pageLabel}>
                 Page {safePage + 1} / {totalPages}
               </span>
               <button
