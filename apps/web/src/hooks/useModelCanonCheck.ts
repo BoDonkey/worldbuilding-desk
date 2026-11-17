@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useState} from 'react';
 import type {ProjectAISettings, WritingDocument} from '../entityTypes';
 import {
   getEntitiesByProject,
@@ -19,13 +19,12 @@ import {
   type CanonCheckEntity
 } from '../services/consistency/modelCanonCheck';
 import type {ConsistencyReviewItem} from '../services/consistency/reviewReadiness';
-import {LLMService} from '../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../services/llm/modelRun';
 import {describeRouteDataFlow} from '../services/llm/providerRoute';
 import {describeError} from '../services/errors';
-import {getCharacterLabProviderIssue} from '../components/CharacterLab/characterLabProvider';
+import {CHARACTER_LAB_NOT_CONFIGURED} from '../components/CharacterLab/characterLabProvider';
 import {useConsultationBudget} from './useConsultationBudget';
-import {useModelRun} from './useModelRun';
+import {useFeatureModelRun} from './useFeatureModelRun';
 import {readAISwitches} from '../services/llm/aiSwitches';
 
 export interface CanonCheckPreview {
@@ -52,14 +51,17 @@ export function useModelCanonCheck(params: {
   onAddItems: (sceneId: string, items: ConsistencyReviewItem[]) => void;
 }) {
   const {projectId, aiSettings, scene, documents, onAddItems} = params;
-  const modelRun = useModelRun();
   const inspector = aiSettings?.inspectorSettings;
   const consultationEnabled = readAISwitches(aiSettings).coaching;
   const budget = useConsultationBudget(projectId, inspector, aiSettings);
+  const {run: runModel, modelRun, providerIssue} = useFeatureModelRun({
+    aiConfig: aiSettings,
+    budget,
+    providerMessages: {notConfigured: CHARACTER_LAB_NOT_CONFIGURED}
+  });
   const [preview, setPreview] = useState<CanonCheckPreview | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const providerIssue = useMemo(() => getCharacterLabProviderIssue(aiSettings), [aiSettings]);
   const disclosure = describeRouteDataFlow(
     budget.route,
     'this scene’s text and the accepted facts about the people and places it names'
@@ -101,8 +103,7 @@ export function useModelCanonCheck(params: {
         return;
       }
       const prompt = buildCanonCheckPrompt({sceneTitle: scene.title, sceneText: checked.text, facts: selected});
-      budget.spend('canon-check');
-      const result = await modelRun.run(new LLMService(aiSettings), {
+      const result = await runModel({
         feature: 'canon-check',
         systemPrompt: prompt.systemPrompt,
         messages: prompt.messages,
@@ -133,7 +134,7 @@ export function useModelCanonCheck(params: {
     } catch (runError) {
       setError(describeError(runError, 'The canon check could not finish.'));
     }
-  }, [aiSettings, budget, canCheck, documents, inspector?.maxResponseTokens, modelRun, projectId, scene]);
+  }, [aiSettings, budget, canCheck, documents, inspector?.maxResponseTokens, projectId, runModel, scene]);
 
   const confirm = useCallback(() => {
     if (!preview) return;

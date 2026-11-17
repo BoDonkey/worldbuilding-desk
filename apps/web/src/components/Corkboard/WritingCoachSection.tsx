@@ -6,9 +6,8 @@ import {
   dedupeCraftCitations,
   summarizeStoryDashboardForCoach
 } from '../../services/coach/writingCoachConsultation';
-import {LLMService} from '../../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
-import {useModelRun} from '../../hooks/useModelRun';
+import {useFeatureModelRun} from '../../hooks/useFeatureModelRun';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import type {ProjectAISettings} from '../../entityTypes';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
@@ -27,6 +26,7 @@ import {readAISwitches} from '../../services/llm/aiSwitches';
  * numbers, not prose, so a fixed structural query finds relevant patterns better than searching
  * on the numbers themselves. */
 const BASE_SEARCH_QUERY = 'story structure pacing chapter rhythm scene rhythm continuity distribution';
+const NOT_CONFIGURED = 'Configure an AI provider in Settings first.';
 const MECHANICS_SEARCH_QUERY = 'progression advancement rate mechanics pacing';
 
 interface WritingCoachSectionProps {
@@ -42,17 +42,16 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
   const [savedNoteTitle, setSavedNoteTitle] = useState<string | null>(null);
   const [noteDismissed, setNoteDismissed] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
-  const modelRun = useModelRun();
-
   const inspector = aiConfig?.inspectorSettings;
   const consultationEnabled = readAISwitches(aiConfig).coaching;
   const budget = useConsultationBudget(projectId, inspector, aiConfig);
+  const {run: runModel, modelRun} = useFeatureModelRun({aiConfig, budget, providerMessages: {notConfigured: NOT_CONFIGURED}});
   const hasEvidence = dashboard.scenes.length > 0;
 
   const askCoach = async () => {
     if (!aiConfig) {
       setStatus('error');
-      setError('Configure an AI provider in Settings first.');
+      setError(NOT_CONFIGURED);
       return;
     }
     if (!consultationEnabled) {
@@ -86,13 +85,9 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
         evidenceText: evidence
       });
 
-      const service = new LLMService(aiConfig);
-      budget.spend('writing-coach');
-
       setResponse({content: '', craftCitations});
       setStatus('ready');
-      await modelRun.run(
-        service,
+      await runModel(
         {
           feature: 'writing-coach',
           messages: [{role: 'user', content: userPrompt}],

@@ -5,7 +5,7 @@ import {useModelContextSize} from '../../hooks/useModelContextSize';
 import {ContextLeftOutNotice} from '../common/ContextLeftOutNotice';
 import {PromptTokenSummary} from '../common/PromptTokenSummary';
 import {sectionTokenLabel} from '../../services/llm/contextBudget';
-import {useModelRun} from '../../hooks/useModelRun';
+import {useFeatureModelRun} from '../../hooks/useFeatureModelRun';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
 import {
@@ -19,14 +19,13 @@ import {
   type CharacterVoiceContext,
   type CharacterVoicePosition
 } from '../../services/characterLab';
-import {LLMService} from '../../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {describeError} from '../../services/errors';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import styles from '../../styles/CharacterLab.module.css';
 import {StoryPointPicker} from './StoryPointPicker';
-import {describeCharacterLabDataFlow, getCharacterLabProviderIssue} from './characterLabProvider';
+import {describeCharacterLabDataFlow, CHARACTER_LAB_NOT_CONFIGURED} from './characterLabProvider';
 import {buildAITextProvenance, type AITextProvenance} from '../../services/editor/aiTextProvenance';
 import {readAISwitches} from '../../services/llm/aiSwitches';
 
@@ -57,10 +56,14 @@ export function CharacterSceneDialog({
 }: CharacterSceneDialogProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lab = useCharacterLabData(projectId, isOpen);
-  const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
   const consultationEnabled = readAISwitches(lab.aiConfig).prose;
   const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
+  const {run: runModel, modelRun, providerIssue} = useFeatureModelRun({
+    aiConfig: lab.aiConfig,
+    budget,
+    providerMessages: {notConfigured: CHARACTER_LAB_NOT_CONFIGURED}
+  });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [position, setPosition] = useState<CharacterVoicePosition>(defaultPosition);
   const [directionKind, setDirectionKind] = useState<CharacterSceneDirection['kind']>('directed');
@@ -114,7 +117,6 @@ export function CharacterSceneDialog({
     [lab.chapterCards, lab.openThreads, position]
   );
 
-  const providerIssue = useMemo(() => getCharacterLabProviderIssue(lab.aiConfig), [lab.aiConfig]);
   const contextSize = useModelContextSize(lab.aiConfig, isOpen);
 
   if (!isOpen) return null;
@@ -190,10 +192,7 @@ export function CharacterSceneDialog({
     setSavedMessage(null);
     updateDrafts((current) => [...current, draft]);
     try {
-      const service = new LLMService(lab.aiConfig);
-      budget.spend('character-scene');
-      const result = await modelRun.run(
-        service,
+      const result = await runModel(
         {
           feature: 'character-scene',
           systemPrompt: prompt.systemPrompt,

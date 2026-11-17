@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {Link, useNavigate} from 'react-router';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
-import {useModelRun} from '../../hooks/useModelRun';
+import {useFeatureModelRun} from '../../hooks/useFeatureModelRun';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
 import {
@@ -12,13 +12,12 @@ import {
   type CharacterFromDescriptionTarget,
   type CharacterProfile
 } from '../../services/characterLab';
-import {LLMService} from '../../services/llm/LLMService';
 import {HOSTED_STRUCTURED_RESPONSE_MINIMUM} from '../../services/llm/hostedResponsePolicy';
 import {describeError} from '../../services/errors';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import styles from '../../styles/CharacterLab.module.css';
-import {describeCharacterLabDataFlow, getCharacterLabProviderIssue} from './characterLabProvider';
+import {describeCharacterLabDataFlow, CHARACTER_LAB_NOT_CONFIGURED} from './characterLabProvider';
 import {isLocalAIProvider} from '../../services/llm/providerConfig';
 import {readAISwitches} from '../../services/llm/aiSwitches';
 
@@ -58,10 +57,14 @@ export function CharacterFromDescriptionDialog({
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lab = useCharacterLabData(projectId, isOpen);
-  const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
   const consultationEnabled = readAISwitches(lab.aiConfig).coaching;
   const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
+  const {run: runModel, modelRun, providerIssue} = useFeatureModelRun({
+    aiConfig: lab.aiConfig,
+    budget,
+    providerMessages: {notConfigured: CHARACTER_LAB_NOT_CONFIGURED}
+  });
   const [sessionId] = useState(() => crypto.randomUUID());
   const [description, setDescription] = useState('');
   const [authorInstructions, setAuthorInstructions] = useState('');
@@ -86,7 +89,6 @@ export function CharacterFromDescriptionDialog({
     setCollisionChoice(null);
   }, [name]);
 
-  const providerIssue = useMemo(() => getCharacterLabProviderIssue(lab.aiConfig), [lab.aiConfig]);
 
   if (!isOpen) return null;
 
@@ -110,9 +112,7 @@ export function CharacterFromDescriptionDialog({
     setError(null);
     try {
       const prompt = buildCharacterVoicePrompt({mode: 'generation', description, authorInstructions});
-      const service = new LLMService(lab.aiConfig);
-      budget.spend('character-lab');
-      const run = await modelRun.run(service, {
+      const run = await runModel({
         feature: 'character-lab',
         systemPrompt: prompt.systemPrompt,
         messages: prompt.messages,

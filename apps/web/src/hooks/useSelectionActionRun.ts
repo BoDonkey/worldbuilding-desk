@@ -20,14 +20,13 @@ import {
   selectionActionFeature,
   type SelectionActionRecord
 } from '../services/assistant/selectionActions';
-import {LLMService} from '../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../services/llm/modelRun';
 import {describeRouteDataFlow} from '../services/llm/providerRoute';
 import {buildAITextProvenance} from '../services/editor/aiTextProvenance';
 import {describeError} from '../services/errors';
-import {getCharacterLabProviderIssue} from '../components/CharacterLab/characterLabProvider';
+import {CHARACTER_LAB_NOT_CONFIGURED} from '../components/CharacterLab/characterLabProvider';
 import {useConsultationBudget} from './useConsultationBudget';
-import {useModelRun} from './useModelRun';
+import {useFeatureModelRun} from './useFeatureModelRun';
 
 export interface SelectionActionNote {
   actionName: string;
@@ -61,8 +60,12 @@ export function useSelectionActionRun(params: {
 }) {
   const {projectId, aiSettings, documentId, sceneTitle, content, documents, setPendingAIInsert, onSceneRevisionPreview} =
     params;
-  const modelRun = useModelRun();
   const budget = useConsultationBudget(projectId, aiSettings?.inspectorSettings, aiSettings);
+  const {run: runModel, modelRun, providerIssue} = useFeatureModelRun({
+    aiConfig: aiSettings,
+    budget,
+    providerMessages: {notConfigured: CHARACTER_LAB_NOT_CONFIGURED}
+  });
   const [actionName, setActionName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -90,7 +93,6 @@ export function useSelectionActionRun(params: {
     setActionName(action.name);
     setError(null);
     setMessage(null);
-    const providerIssue = getCharacterLabProviderIssue(aiSettings);
     if (providerIssue) {
       setError(providerIssue);
       return;
@@ -129,8 +131,7 @@ export function useSelectionActionRun(params: {
         records
       });
       const feature = selectionActionFeature(action.output);
-      budget.spend(feature);
-      const result = await modelRun.run(new LLMService(aiSettings), {
+      const result = await runModel({
         feature,
         systemPrompt: prompt.systemPrompt,
         messages: prompt.messages,
@@ -167,7 +168,7 @@ export function useSelectionActionRun(params: {
     } catch (runError) {
       setError(describeError(runError, `${action.name} could not finish.`));
     }
-  }, [actions, aiSettings, budget, content, documentId, documents, modelRun, onSceneRevisionPreview, projectId, sceneTitle, setPendingAIInsert]);
+  }, [actions, aiSettings, budget, content, documentId, documents, modelRun.isRunning, onSceneRevisionPreview, projectId, providerIssue, runModel, sceneTitle, setPendingAIInsert]);
 
   const menu: EditorSelectionActions | undefined = actions.length > 0
     ? {actions: actions.map(({id, name}) => ({id, name})), disclosure, busy: modelRun.isRunning, onRun: (id, selection) => void run(id, selection)}

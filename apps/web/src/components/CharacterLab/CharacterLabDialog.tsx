@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {Link} from 'react-router';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
-import {useModelRun} from '../../hooks/useModelRun';
+import {useFeatureModelRun} from '../../hooks/useFeatureModelRun';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
 import {
@@ -35,7 +35,6 @@ import {countAsConversation} from '../../services/llm/contextBudget';
 import type {LLMMessage} from '../../services/llm/types';
 import {PromptTokenSummary} from '../common/PromptTokenSummary';
 import {sectionTokenLabel} from '../../services/llm/contextBudget';
-import {LLMService} from '../../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {describeError} from '../../services/errors';
 import {ModelRunProgress} from '../common/ModelRunProgress';
@@ -43,7 +42,7 @@ import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {CharacterStatCard} from '../CharacterSheets/CharacterStatCard';
 import styles from '../../styles/CharacterLab.module.css';
 import {StoryPointPicker} from './StoryPointPicker';
-import {describeCharacterLabDataFlow, getCharacterLabProviderIssue} from './characterLabProvider';
+import {describeCharacterLabDataFlow, CHARACTER_LAB_NOT_CONFIGURED} from './characterLabProvider';
 import {readAISwitches} from '../../services/llm/aiSwitches';
 
 interface CharacterLabDialogProps {
@@ -76,10 +75,14 @@ export function CharacterLabDialog({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const lab = useCharacterLabData(projectId, isOpen);
-  const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
   const consultationEnabled = readAISwitches(lab.aiConfig).coaching;
   const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
+  const {run: runModel, modelRun, providerIssue} = useFeatureModelRun({
+    aiConfig: lab.aiConfig,
+    budget,
+    providerMessages: {notConfigured: CHARACTER_LAB_NOT_CONFIGURED}
+  });
   const [mode, setMode] = useState<CharacterLabMode>('talk');
   const [position, setPosition] = useState<CharacterVoicePosition>(defaultPosition);
   const [input, setInput] = useState('');
@@ -124,7 +127,6 @@ export function CharacterLabDialog({
   );
   const context = grounding?.context ?? null;
 
-  const providerIssue = useMemo(() => getCharacterLabProviderIssue(lab.aiConfig), [lab.aiConfig]);
   const contextSize = useModelContextSize(lab.aiConfig, isOpen);
 
   const maxTokens = lab.aiConfig ? resolveResponseTokenLimit(lab.aiConfig.provider, inspector?.maxResponseTokens) : undefined;
@@ -200,10 +202,7 @@ export function CharacterLabDialog({
         current.map((entry) => (entry.id === exchangeId ? updateShownVersion(entry, changes) : entry))
       );
     try {
-      const service = new LLMService(lab.aiConfig!);
-      budget.spend('character-lab');
-      const result = await modelRun.run(
-        service,
+      const result = await runModel(
         {feature: 'character-lab', systemPrompt: prompt.systemPrompt, messages: prompt.messages, maxTokens, cache: false},
         ({answer}) => updateShown({reply: answer})
       );
@@ -290,9 +289,7 @@ export function CharacterLabDialog({
     const request = buildSummaryRequest({characterName: context.name, previousSummary: summary?.text ?? null, exchanges: covered});
     setError(null);
     try {
-      const service = new LLMService(lab.aiConfig);
-      budget.spend('character-lab');
-      const result = await modelRun.run(service, {...request, feature: 'character-lab', maxTokens, cache: false});
+      const result = await runModel({...request, feature: 'character-lab', maxTokens, cache: false});
       if (!result.answer.trim() || result.stopped) {
         setError(result.stopped ? 'Summary stopped; the earlier turns are still sent in full.' : 'The model returned no summary.');
         return;

@@ -5,7 +5,7 @@ import {useModelContextSize} from '../../hooks/useModelContextSize';
 import {ContextLeftOutNotice} from '../common/ContextLeftOutNotice';
 import {PromptTokenSummary} from '../common/PromptTokenSummary';
 import {sectionTokenLabel} from '../../services/llm/contextBudget';
-import {useModelRun} from '../../hooks/useModelRun';
+import {useFeatureModelRun} from '../../hooks/useFeatureModelRun';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
 import {buildBudgetedVoicePrompt, type CharacterVoiceContext, type CharacterVoicePosition} from '../../services/characterLab';
@@ -25,14 +25,13 @@ import {
   type SceneDraftInputs
 } from '../../services/sceneDraft/sceneDraft';
 import {countWords} from '../../services/dashboard/storyDashboard';
-import {LLMService} from '../../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {describeRouteDataFlow} from '../../services/llm/providerRoute';
 import {describeError} from '../../services/errors';
 import {buildAITextProvenance, type AITextProvenance} from '../../services/editor/aiTextProvenance';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
-import {getCharacterLabProviderIssue} from '../CharacterLab/characterLabProvider';
+import {CHARACTER_LAB_NOT_CONFIGURED} from '../CharacterLab/characterLabProvider';
 import styles from '../../styles/CharacterLab.module.css';
 
 const MAX_PRESENT = 4;
@@ -70,10 +69,14 @@ const emptyInputs = (): SceneDraftInputs => ({
 export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInsert, onClose}: SceneDraftDialogProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lab = useCharacterLabData(projectId, isOpen);
-  const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
   const draftsAllowed = canDraftScenes(lab.aiConfig);
   const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
+  const {run: runModel, modelRun, providerIssue} = useFeatureModelRun({
+    aiConfig: lab.aiConfig,
+    budget,
+    providerMessages: {notConfigured: CHARACTER_LAB_NOT_CONFIGURED}
+  });
   const [inputs, setInputs] = useState<SceneDraftInputs>(emptyInputs);
   const [draft, setDraft] = useState<SceneDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +124,6 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
     });
     return {contexts, errors};
   }, [buildContext, inputs.presentEntityIds, isOpen, position]);
-  const providerIssue = useMemo(() => getCharacterLabProviderIssue(lab.aiConfig), [lab.aiConfig]);
   const contextSize = useModelContextSize(lab.aiConfig, isOpen);
 
   if (!isOpen) return null;
@@ -208,10 +210,7 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
     setDraft(next);
     let hitCap = false;
     try {
-      const service = new LLMService(lab.aiConfig);
-      budget.spend('scene-draft');
-      const result = await modelRun.run(
-        service,
+      const result = await runModel(
         {
           feature: 'scene-draft',
           systemPrompt: prompt.systemPrompt,

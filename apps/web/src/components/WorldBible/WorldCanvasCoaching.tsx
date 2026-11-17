@@ -9,9 +9,8 @@ import {
 import {getCraftLibraryService} from '../../services/craft/getCraftLibraryService';
 import type {CraftCitation} from '../../services/craft/types';
 import {describeError} from '../../services/errors';
-import {LLMService} from '../../services/llm/LLMService';
 import type {UseConsultationBudget} from '../../hooks/useConsultationBudget';
-import {useModelRun} from '../../hooks/useModelRun';
+import {useFeatureModelRun} from '../../hooks/useFeatureModelRun';
 import type {CanvasReference} from '../../services/worldBible/worldCanvasDerived';
 import {
   CANVAS_COACHING_ACTION_LABELS,
@@ -74,19 +73,13 @@ export function WorldCanvasCoaching({
   const [proposalDismissed, setProposalDismissed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rejectedReply, setRejectedReply] = useState<string | null>(null);
-  const modelRun = useModelRun();
+  const {run: runModel, modelRun, providerIssue} = useFeatureModelRun({
+    aiConfig,
+    budget,
+    providerMessages: {notConfigured: 'AI provider is not configured. Add one in Settings to use Canvas coaching.'}
+  });
   const inspector = aiConfig?.inspectorSettings;
   const consultationEnabled = readAISwitches(aiConfig).coaching;
-
-  const providerIssue = useMemo(() => {
-    if (!aiConfig) return 'AI provider is not configured. Add one in Settings to use Canvas coaching.';
-    try {
-      new LLMService(aiConfig);
-      return null;
-    } catch (providerError) {
-      return describeError(providerError, 'AI provider is not configured. Add one in Settings to use Canvas coaching.', {record: false});
-    }
-  }, [aiConfig]);
 
   const references = useMemo(() => paletteReferences.filter((reference) =>
     reference.existence === 'available' && (
@@ -143,9 +136,7 @@ export function WorldCanvasCoaching({
         selectedReferenceLines
       });
       const citations = dedupeCraftCitations(craftResults);
-      const service = new LLMService(aiConfig);
-      budget.spend('canvas-coach');
-      const run = await modelRun.run(service, {
+      const run = await runModel({
         feature: 'canvas-coach',
         messages: [{role: 'user', content: prompt.userPrompt}],
         context: buildCraftContextChunks(craftResults),
