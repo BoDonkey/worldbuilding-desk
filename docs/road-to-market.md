@@ -381,7 +381,7 @@ messages).
 | 3.51 | Dead code sweep (X1–X4) | 3 | S | Done `6d3a69c` — rules-engine factory helpers kept as public API (author, 2026-11-15) |
 | 3.52 | One ZIP and DOCX reader; shared text helpers (D6, D7) | 3 | S | Done ea157de |
 | 3.53 | Scene review in one function (D2) | 3 | S | Done `0ef00a6` |
-| 3.54 | Rules wizard on theme tokens (Y1, Y2) | 3 | M | WIP |
+| 3.54 | Rules wizard on theme tokens (Y1, Y2) | 3 | M | Done `d0a8aab` |
 | 3.55 | Architecture doc catch-up (B6, P3) | 3 | XS | — |
 | 3.56 | State continuity reviews the draft, not the saved scene | 3 | S | Done eccfcc4 |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
