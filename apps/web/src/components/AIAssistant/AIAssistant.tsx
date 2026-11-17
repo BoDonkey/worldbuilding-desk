@@ -17,33 +17,19 @@ import {
   buildRagContextChunks
 } from '../../services/llm/contextProvenance';
 import {PromptManager} from '../../services/prompts/PromptManager';
-import {buildUnverifiedFactualAnswer} from '../../services/assistant/factualQuestionBoundary';
+import {planAssistantTurn} from '../../services/assistant/assistantTurnPlan';
 import {assistantHistoryBudget, buildAssistantHistory} from '../../services/assistant/conversationHistory';
-import {
-  buildSubjectClarification,
-  describeResolvedSubject,
-  getPreviousTurn,
-  planFollowUpSubject
-} from '../../services/assistant/followUpSubject';
-import {
-  getTemporalCustodySubject,
-  resolveTemporalCustodyAnswer
-} from '../../services/assistant/temporalCustody';
-import {getDocumentsByProject} from '../../services/storage';
+import {getPreviousTurn} from '../../services/assistant/followUpSubject';
 import type {LoreFactProposal, ProjectAISettings, PromptTool, ProjectMode, WritingDocument} from '../../entityTypes';
 import {
   PENDING_PROPOSAL_INSTRUCTION,
-  appendPendingProposalNote,
-  buildPendingProposalChunks,
-  findPendingProposalsForQuestion
+  buildPendingProposalChunks
 } from '../../services/assistant/pendingProposalContext';
 import {
   getContextInstruction,
   getContextLabel,
-  getDirectSavedFactAnswer,
   getMemoryQueryTerms,
   getShodhTrustLabel,
-  requiresProjectGrounding,
   selectWorldBibleContextForPrompt,
   stripAssistantThinking
 } from './AIAssistant.helpers';
@@ -77,10 +63,7 @@ import {getContextSourceRefs, getContextSourceSummaries} from '../../services/as
 import {buildLatestReplyTranscript, getReaderTurn, type ReplyReaderSelection} from '../../services/assistant/conversationTranscript';
 import {describeError} from '../../services/errors';
 import {useStatusAnnouncement} from '../../hooks/useStatusAnnouncement';
-import {
-  filterCanonFactResultsForScene,
-  isCanonFactMemoryValidAtScene
-} from '../../services/lore/canonicalFactValidity';
+import {isCanonFactMemoryValidAtScene} from '../../services/lore/canonicalFactValidity';
 import {buildAITextProvenance, type AITextProvenance} from '../../services/editor/aiTextProvenance';
 import {useAssistantRequestPolicy} from '../../hooks/useAssistantRequestPolicy';
 import {OFF_COACHING_NOTE, readAISwitches} from '../../services/llm/aiSwitches';
@@ -396,98 +379,39 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     scrollMessagesToBottom();
 
     try {
-      // Get relevant indexed context
-      const groundingRequired = requiresProjectGrounding(
-        promptText,
-        Boolean(selectedText)
-      );
-      // A gated follow-up runs on its carried-over subject (1.4b); selected
-      // text keeps its own handling.
-      const subject = groundingRequired && !selectedText
-        ? await planFollowUpSubject({projectId, prompt: promptText, previousTurn})
-        : {kind: 'unchanged' as const};
-      if (subject.kind === 'clarify') {
-        setMessages((prev) => [
-          ...prev,
-          {role: 'assistant', content: buildSubjectClarification(subject.candidates)}
-        ]);
-        scrollMessagesToBottom();
-        return;
-      }
-      const factualPrompt = subject.kind === 'resolved' ? subject.prompt : promptText;
-      const withSubjectNote = (content: string) =>
-        subject.kind === 'resolved' ? `${describeResolvedSubject(subject.record)} ${content}` : content;
-      const needsOrderedScenes =
-        Boolean(getTemporalCustodySubject(factualPrompt)) ||
-        groundingRequired ||
-        context?.type === 'document';
-      const orderedScenes = needsOrderedScenes
-        ? await getDocumentsByProject(projectId).catch((error) => {
-            console.warn('Unable to load ordered saved scenes for grounding.', error);
-            return [];
-          })
-        : [];
-      const [unfilteredRagResults, shodhChunks] = await Promise.all([
-        ragService.current
-          ? ragService.current.search(factualPrompt, groundingRequired ? 20 : 3)
-          : [],
-        buildMemoryChunks(factualPrompt, orderedScenes)
-      ]);
-      const ragResults = filterCanonFactResultsForScene(
-        unfilteredRagResults,
-        context?.type === 'document' ? context.id : undefined,
-        orderedScenes
-      );
-
-      const directSavedFact =
-        resolveTemporalCustodyAnswer(factualPrompt, orderedScenes, ragResults) ??
-        getDirectSavedFactAnswer(factualPrompt, ragResults);
-      if (directSavedFact) {
-        const directChunks = await buildRagContextChunks(
+      // The evidence gate (3.44): a question that needs saved evidence is
+      // answered here and never reaches the model.
+      const plan = await planAssistantTurn(
+        {
           projectId,
-          directSavedFact.results
-        );
+          prompt: promptText,
+          hasSelection: Boolean(selectedText),
+          previousTurn,
+          documentSceneId: context?.type === 'document' ? context.id : undefined,
+          pendingProposals
+        },
+        {
+          search: async (query, limit) =>
+            ragService.current ? ragService.current.search(query, limit) : [],
+          memoryChunks: buildMemoryChunks
+        }
+      );
+      if (plan.kind !== 'provider-request') {
         setMessages((prev) => [
           ...prev,
-          {
-            role: 'assistant',
-            content: withSubjectNote(pendingProposals
-              ? appendPendingProposalNote(
-                  directSavedFact.content,
-                  findPendingProposalsForQuestion(factualPrompt, pendingProposals.proposals)
-                )
-              : directSavedFact.content),
-            contextSources: getContextSourceSummaries(directChunks),
-            contextSourceRefs: getContextSourceRefs(directChunks)
-          }
+          plan.kind === 'clarify'
+            ? {role: 'assistant', content: plan.content}
+            : {
+                role: 'assistant',
+                content: plan.content,
+                contextSources: getContextSourceSummaries(plan.sources),
+                contextSourceRefs: getContextSourceRefs(plan.sources)
+              }
         ]);
         scrollMessagesToBottom();
         return;
       }
-
-      if (groundingRequired) {
-        const unverified = buildUnverifiedFactualAnswer(ragResults);
-        const reviewedChunks = await buildRagContextChunks(
-          projectId,
-          unverified.results
-        );
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: withSubjectNote(pendingProposals
-              ? appendPendingProposalNote(
-                  unverified.content,
-                  findPendingProposalsForQuestion(factualPrompt, pendingProposals.proposals)
-                )
-              : unverified.content),
-            contextSources: getContextSourceSummaries(reviewedChunks),
-            contextSourceRefs: getContextSourceRefs(reviewedChunks)
-          }
-        ]);
-        scrollMessagesToBottom();
-        return;
-      }
+      const {ragResults, memoryChunks: shodhChunks} = plan;
 
       const ragChunks = await buildRagContextChunks(projectId, ragResults.slice(0, 3));
       const pendingChunks = pendingProposals

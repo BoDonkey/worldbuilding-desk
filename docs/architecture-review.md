@@ -81,7 +81,9 @@ Deterministic code may answer from an unambiguous accepted fact or explicit
 saved passage; otherwise the request fails closed with the retrieved sources
 reviewed. Unverified factual wording must never fall through to creative prompt
 tools or provider generation. Explicitly creative and analytical requests remain
-eligible for provider collaboration.
+eligible for provider collaboration. The gate is one function,
+`planAssistantTurn` in `services/assistant/assistantTurnPlan.ts`; only its
+`provider-request` result may reach a model.
 
 ## Privacy and Data Egress
 

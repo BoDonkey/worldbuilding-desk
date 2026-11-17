@@ -1,12 +1,12 @@
 import {describe, expect, it} from 'vitest';
 import {
-  getDirectSavedFactAnswer,
   getMemoryQueryTerms,
   getShodhTrustLabel,
-  requiresProjectGrounding,
   selectWorldBibleContextForPrompt,
   stripAssistantThinking
 } from './AIAssistant.helpers';
+import {requiresProjectGrounding} from '../../services/assistant/assistantTurnPlan';
+import {getDirectSavedFactAnswer} from '../../services/assistant/savedFactAnswer';
 
 describe('assistant grounding helpers', () => {
   it('requires saved project grounding for named factual questions', () => {
