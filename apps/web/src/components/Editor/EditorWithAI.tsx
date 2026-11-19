@@ -3,7 +3,6 @@ import React, {useState, useEffect, useRef, useCallback} from 'react';
 import type {Editor as TipTapEditorInstance} from '@tiptap/react';
 import TipTapEditor from '../TipTapEditor';
 import type {LoreInspectorRecord} from '../../services/workspace/workspaceConsultation';
-import {ContextPopover} from './ContextPopover';
 import {
   type ConsistencyHighlightIssue
 } from './extensions/ConsistencyHighlightsExtension';
@@ -11,28 +10,20 @@ import {
   type LoreHighlightEntry
 } from './extensions/LoreHighlightsExtension';
 import {createWorkspaceAnnotationsExtension} from './extensions/WorkspaceAnnotationsExtension';
-import {
-  createCurrentSceneFindExtension,
-  setCurrentSceneFind
-} from './extensions/CurrentSceneFindExtension';
-import {
-  createReviewFocusFlashExtension,
-  reviewFocusFlashKey,
-  setReviewFocusFlash
-} from './extensions/ReviewFocusFlashExtension';
+import {createCurrentSceneFindExtension} from './extensions/CurrentSceneFindExtension';
+import {createReviewFocusFlashExtension} from './extensions/ReviewFocusFlashExtension';
 import {
   createAIContextPassageExtension,
   setAIContextPassage,
   type AIContextPassageRange
 } from './extensions/AIContextPassageExtension';
-import {TextSelection} from 'prosemirror-state';
-import {normalizeSelectionSurface, useEditorSelectionMenu} from '../../hooks/useEditorSelectionMenu';
+import {useEditorSelectionMenu} from '../../hooks/useEditorSelectionMenu';
 import type {EditorConfig} from '../../config/editorConfig';
 import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
 import type {StatBlockPreviewData} from '../../hooks/useWorkspaceStatBlocks';
 import type {InlineHighlightsMode} from '../../entityTypes';
-import styles from '../../assets/components/AISettings.module.css';
-import {SelectionMenuAIEntries, type EditorSelectionActions} from './SelectionMenuAIEntries';
+import styles from '../../assets/components/Editor.module.css';
+import type {EditorSelectionActions} from './SelectionMenuAIEntries';
 import {
   captureStateMutationAnchor,
   normalizeStateMutationPosition,
@@ -42,26 +33,15 @@ import {
 import {getWorkspaceSceneScrollKey} from '../../services/workspace/workspaceScroll';
 import {useEditorStatPeek, type EditorCharacterStatPeek} from '../../hooks/useEditorStatPeek';
 import {EditorStatPeekLayer} from './EditorStatPeekLayer';
-import {
-  findCurrentSceneMatches,
-  resolveCurrentSceneFindIndex,
-  type CurrentSceneFindMatch
-} from '../../services/workspace/currentSceneFind';
 import type {AITextProvenance} from '../../services/editor/aiTextProvenance';
 import {useAITextControls} from '../../hooks/useAITextControls';
-import {
-  clearSavedEditorScrollTop,
-  readSavedEditorScrollTop,
-  writeSavedEditorScrollTop
-} from '../../services/editor/editorScrollStore';
-
-interface AIContextType {
-  type: 'document';
-  id: string;
-  selectedText: string;
-  from: number;
-  to: number;
-}
+import {useEditorScrollMemory} from '../../hooks/useEditorScrollMemory';
+import {useCurrentSceneFind} from '../../hooks/useCurrentSceneFind';
+import {useEditorReviewFocus} from '../../hooks/useEditorReviewFocus';
+import {useEditorContextPopovers} from '../../hooks/useEditorContextPopovers';
+import {CurrentSceneFindBar} from './CurrentSceneFindBar';
+import {EditorSelectionMenu, type EditorAIContext} from './EditorSelectionMenu';
+import {EditorContextPopovers} from './EditorContextPopovers';
 
 interface EditorWithAIProps {
   projectId: string;
@@ -103,7 +83,7 @@ interface EditorWithAIProps {
   presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
   getStatBlockPreviewData?: (rawToken: string) => StatBlockPreviewData;
   onRebindStatBlockToken?: (rawToken: string) => void;
-  onOpenAIContext?: (context: AIContextType, prompt?: string | null) => void;
+  onOpenAIContext?: (context: EditorAIContext, prompt?: string | null) => void;
   /** Custom AI actions listed after Ask AI about this (5.19); unset when none are on. */
   selectionActions?: EditorSelectionActions;
   onOpenLoreInspector?: (record: LoreInspectorRecord) => void;
@@ -121,8 +101,6 @@ interface EditorWithAIProps {
   /** The passage the assistant is using as context; marked until cleared. */
   aiContextPassage?: AIContextPassageRange | null;
 }
-
-const REVIEW_FOCUS_TOP_OFFSET = 120;
 
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   projectId,
@@ -162,27 +140,9 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 }) => {
   const [editorReadyToken, setEditorReadyToken] = useState(0);
   const [readyEditor, setReadyEditor] = useState<TipTapEditorInstance | null>(null);
-  const [lorePopoverRecord, setLorePopoverRecord] = useState<LoreInspectorRecord | null>(null);
-  const [lorePopoverAnchor, setLorePopoverAnchor] = useState<{left: number; top: number} | null>(
-    null
-  );
-  const [statBlockPopover, setStatBlockPopover] = useState<{
-    preview: StatBlockPreviewData;
-    left: number;
-    top: number;
-  } | null>(null);
   const [isActivelyTyping, setIsActivelyTyping] = useState(false);
-  const [isCurrentSceneFindOpen, setCurrentSceneFindOpen] = useState(false);
-  const [currentSceneFindQuery, setCurrentSceneFindQuery] = useState('');
-  const [currentSceneFindMatches, setCurrentSceneFindMatches] = useState<
-    CurrentSceneFindMatch[]
-  >([]);
-  const [currentSceneFindIndex, setCurrentSceneFindIndex] = useState(-1);
   const editorRef = useRef<TipTapEditorInstance | null>(null);
   const editorScrollRef = useRef<HTMLDivElement | null>(null);
-  const currentSceneFindInputRef = useRef<HTMLInputElement | null>(null);
-  const isRestoringEditorScrollRef = useRef(false);
-  const editorMountedAtRef = useRef(Date.now());
   const consistencyHighlightsRef = useRef(consistencyHighlights);
   const loreHighlightsRef = useRef<LoreHighlightEntry[]>([]);
   const typingIdleTimeoutRef = useRef<number | null>(null);
@@ -191,7 +151,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     projectId,
     documentId
   );
-  const appliedScrollResetKeyRef = useRef<string | null>(null);
 
   const {
     selectionMenu: selectionBubble,
@@ -205,11 +164,18 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     suppressed: suppressSelectionBubble,
     quickSnippets: selectionQuickSnippets
   });
-  const closeOtherPopovers = useCallback(() => {
-    setLorePopoverAnchor(null);
-    setLorePopoverRecord(null);
-    setStatBlockPopover(null);
-  }, []);
+  const popovers = useEditorContextPopovers({
+    quickSnippets: selectionQuickSnippets,
+    getStatBlockPreviewData,
+    onRebindStatBlockToken
+  });
+  const {
+    closeContextPopovers,
+    loreAnchor: lorePopoverAnchor,
+    statBlockPopover,
+    openLoreHighlight,
+    handleStatBlockTokenClick
+  } = popovers;
   const statPeekControls = useEditorStatPeek({
     editorRef,
     editorScrollRef,
@@ -217,55 +183,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     characterStatPeek,
     statPeekRequest,
     closeSelectionBubble,
-    closeOtherPopovers
+    closeOtherPopovers: closeContextPopovers
   });
   const {statPeek, setStatPeek, statPeekMenu, setStatPeekMenu, handleLoreHighlightHover, handleLoreHighlightLeave} =
     statPeekControls;
 
-  const openCurrentSceneFind = useCallback(() => {
-    setCurrentSceneFindOpen(true);
-    window.requestAnimationFrame(() => {
-      currentSceneFindInputRef.current?.focus();
-      currentSceneFindInputRef.current?.select();
-    });
-  }, []);
-
-  const closeCurrentSceneFind = useCallback(() => {
-    setCurrentSceneFindOpen(false);
-    setCurrentSceneFindQuery('');
-    setCurrentSceneFindMatches([]);
-    setCurrentSceneFindIndex(-1);
-    window.requestAnimationFrame(() => {
-      editorRef.current?.view.dom.focus({preventScroll: true});
-    });
-  }, []);
-
-  const navigateCurrentSceneFind = useCallback(
-    (direction: 'next' | 'previous') => {
-      setCurrentSceneFindIndex((currentIndex) =>
-        resolveCurrentSceneFindIndex(
-          currentIndex,
-          currentSceneFindMatches.length,
-          direction
-        )
-      );
-    },
-    [currentSceneFindMatches.length]
-  );
-
   const aiTextControls = useAITextControls(readyEditor);
-  const effectiveToolbarActions = React.useMemo(
-    () => [
-      ...toolbarActions,
-      {
-        id: 'find-current-scene',
-        label: 'Find in scene',
-        onClick: openCurrentSceneFind
-      },
-      ...aiTextControls.actions
-    ],
-    [openCurrentSceneFind, toolbarActions, aiTextControls.actions]
-  );
 
   const effectiveInlineHighlightsMode =
     inlineHighlightsMode === 'hidden-while-typing' && isActivelyTyping
@@ -292,14 +215,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     if (!editor || editor.isDestroyed) return;
     editor.view.dispatch(editor.state.tr.setMeta('highlight-refresh', Date.now()));
   }, [consistencyHighlights, loreHighlights]);
-
-  const loreRecordById = React.useMemo(() => {
-    const records = [
-      ...Object.values(selectionQuickSnippets?.characters ?? {}),
-      ...Object.values(selectionQuickSnippets?.entities ?? {})
-    ];
-    return new Map(records.map((entry) => [entry.lore.id, entry.lore]));
-  }, [selectionQuickSnippets]);
 
   // Add the workspace editor extensions to the config.
   const mergedConfig = React.useMemo(() => {
@@ -346,183 +261,22 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, []);
 
-  useEffect(() => {
-    const scrollElement = editorScrollRef.current;
-    if (!scrollElement) return;
-
-    let animationFrame: number | null = null;
-    let lastObservedScrollTop = readSavedEditorScrollTop(editorScrollKey);
-    const saveScrollPosition = () => {
-      if (isRestoringEditorScrollRef.current) {
-        return;
-      }
-      const nextScrollTop = lastObservedScrollTop;
-      const savedScrollTop = readSavedEditorScrollTop(editorScrollKey);
-      const isEarlyZeroAfterRemount =
-        nextScrollTop === 0 &&
-        savedScrollTop > 0 &&
-        Date.now() - editorMountedAtRef.current < 1500;
-
-      if (isEarlyZeroAfterRemount) {
-        scrollElement.dataset.wbdSavedScrollTop = String(savedScrollTop);
-        scrollElement.dataset.wbdSkippedZeroScrollSave = 'true';
-        return;
-      }
-
-      writeSavedEditorScrollTop(editorScrollKey, nextScrollTop);
-      scrollElement.dataset.wbdSavedScrollTop = String(nextScrollTop);
-      delete scrollElement.dataset.wbdSkippedZeroScrollSave;
-    };
-    const handleScroll = () => {
-      if (isRestoringEditorScrollRef.current) return;
-      lastObservedScrollTop = scrollElement.scrollTop;
-      if (animationFrame !== null) return;
-      animationFrame = window.requestAnimationFrame(() => {
-        animationFrame = null;
-        saveScrollPosition();
-      });
-    };
-    const captureScrollPosition = () => {
-      lastObservedScrollTop = scrollElement.scrollTop;
-      writeSavedEditorScrollTop(editorScrollKey, lastObservedScrollTop);
-    };
-
-    scrollElement.addEventListener('scroll', handleScroll, {passive: true});
-    window.addEventListener('wbd:capture-workspace-scroll', captureScrollPosition);
-    return () => {
-      if (animationFrame !== null) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-      isRestoringEditorScrollRef.current = false;
-      if (scrollElement.scrollTop > 0) {
-        lastObservedScrollTop = scrollElement.scrollTop;
-      }
-      saveScrollPosition();
-      scrollElement.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('wbd:capture-workspace-scroll', captureScrollPosition);
-    };
-  }, [editorScrollKey]);
-
-  // Restore once a scene's text has loaded, never on edits: re-running per
-  // keystroke snapped the scene to its stale saved position (5.17).
-  const hasContent = content.length > 0;
-  useEffect(() => {
-    const scrollElement = editorScrollRef.current;
-    if (!scrollElement || focusQuery?.trim()) return;
-    const resetKey = resetScrollToken ? `${documentId}:${resetScrollToken}` : null;
-    if (resetKey && appliedScrollResetKeyRef.current !== resetKey) return;
-
-    const storedScrollTop = readSavedEditorScrollTop(editorScrollKey);
-    if (storedScrollTop <= 0) {
-      if (scrollElement.scrollTop !== 0) {
-        scrollElement.scrollTop = 0;
-      }
-      scrollElement.dataset.wbdRestoreTarget = '0';
-      scrollElement.dataset.wbdRestoredScrollTop = '0';
-      return;
-    }
-
-    let cancelled = false;
-    let userInterrupted = false;
-    const startedAt = Date.now();
-    const frameIds: number[] = [];
-    isRestoringEditorScrollRef.current = true;
-    scrollElement.dataset.wbdRestoreTarget = String(storedScrollTop);
-
-    const restoreScrollPosition = () => {
-      if (cancelled || userInterrupted) {
-        isRestoringEditorScrollRef.current = false;
-        return;
-      }
-
-      const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
-      const nextScrollTop = Math.min(storedScrollTop, maxScrollTop);
-      scrollElement.scrollTop = nextScrollTop;
-      scrollElement.dataset.wbdRestoredScrollTop = String(nextScrollTop);
-
-      if (Date.now() - startedAt < 2500) {
-        frameIds.push(window.requestAnimationFrame(restoreScrollPosition));
-        return;
-      }
-
-      isRestoringEditorScrollRef.current = false;
-    };
-    const markUserInterrupted = () => {
-      userInterrupted = true;
-      isRestoringEditorScrollRef.current = false;
-      writeSavedEditorScrollTop(editorScrollKey, scrollElement.scrollTop);
-      scrollElement.dataset.wbdSavedScrollTop = String(scrollElement.scrollTop);
-    };
-
-    scrollElement.addEventListener('wheel', markUserInterrupted, {passive: true});
-    scrollElement.addEventListener('touchstart', markUserInterrupted, {passive: true});
-    scrollElement.addEventListener('pointerdown', markUserInterrupted);
-    scrollElement.addEventListener('keydown', markUserInterrupted);
-    frameIds.push(
-      window.requestAnimationFrame(() =>
-        frameIds.push(window.requestAnimationFrame(restoreScrollPosition))
-      )
-    );
-
-    return () => {
-      cancelled = true;
-      isRestoringEditorScrollRef.current = false;
-      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
-      scrollElement.removeEventListener('wheel', markUserInterrupted);
-      scrollElement.removeEventListener('touchstart', markUserInterrupted);
-      scrollElement.removeEventListener('pointerdown', markUserInterrupted);
-      scrollElement.removeEventListener('keydown', markUserInterrupted);
-    };
-  }, [
-    documentId,
-    editorReadyToken,
+  useEditorScrollMemory({
+    editorScrollRef,
     editorScrollKey,
+    editorReadyToken,
+    documentId,
     focusQuery,
-    hasContent,
+    // Restore once a scene's text has loaded, never on edits (5.17).
+    hasContent: content.length > 0,
     resetScrollToken
-  ]);
+  });
 
-  useEffect(() => {
-    if (!resetScrollToken) return;
-    const resetKey = `${documentId}:${resetScrollToken}`;
-    if (appliedScrollResetKeyRef.current === resetKey) return;
-    const scrollElement = editorScrollRef.current;
-    if (!scrollElement) return;
-    appliedScrollResetKeyRef.current = resetKey;
-    let cancelled = false;
-    const frameIds: number[] = [];
-    const timeoutIds: number[] = [];
-    const resetToTop = () => {
-      if (cancelled) return;
-      isRestoringEditorScrollRef.current = false;
-      scrollElement.scrollTop = 0;
-      scrollElement.dataset.wbdSavedScrollTop = '0';
-      scrollElement.dataset.wbdRestoredScrollTop = '0';
-      clearSavedEditorScrollTop(editorScrollKey);
-    };
-    resetToTop();
-    frameIds.push(window.requestAnimationFrame(resetToTop));
-    frameIds.push(
-      window.requestAnimationFrame(() =>
-        frameIds.push(window.requestAnimationFrame(resetToTop))
-      )
-    );
-    [50, 150, 300].forEach((delay) => {
-      timeoutIds.push(window.setTimeout(resetToTop, delay));
-    });
-    return () => {
-      cancelled = true;
-      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
-      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
-    };
-  }, [documentId, editorReadyToken, editorScrollKey, resetScrollToken]);
-
+  // Scrolling or resizing closes every floating layer: both popovers and the stat peek.
   useEffect(() => {
     if (!lorePopoverAnchor && !statBlockPopover && !statPeek && !statPeekMenu) return;
     const close = () => {
-      setLorePopoverAnchor(null);
-      setLorePopoverRecord(null);
-      setStatBlockPopover(null);
+      closeContextPopovers();
       setStatPeek(null);
       setStatPeekMenu(null);
     };
@@ -535,7 +289,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
     };
-  }, [lorePopoverAnchor, setStatPeek, setStatPeekMenu, statBlockPopover, statPeek, statPeekMenu]);
+  }, [closeContextPopovers, lorePopoverAnchor, setStatPeek, setStatPeekMenu, statBlockPopover, statPeek, statPeekMenu]);
 
   const handleSelectionChange = useCallback(() => {
     const editor = editorRef.current;
@@ -568,133 +322,34 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     handleSelectionChange();
   }, [handleSelectionChange]);
 
-  useEffect(() => {
-    const handleFindShortcut = (event: KeyboardEvent) => {
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        !event.altKey &&
-        event.key.toLocaleLowerCase() === 'f'
-      ) {
-        event.preventDefault();
-        openCurrentSceneFind();
-        return;
-      }
-      if (event.key === 'Escape' && isCurrentSceneFindOpen) {
-        event.preventDefault();
-        closeCurrentSceneFind();
-      }
-    };
-    window.addEventListener('keydown', handleFindShortcut);
-    return () => window.removeEventListener('keydown', handleFindShortcut);
-  }, [closeCurrentSceneFind, isCurrentSceneFindOpen, openCurrentSceneFind]);
-
-  useEffect(() => {
-    setCurrentSceneFindOpen(false);
-    setCurrentSceneFindQuery('');
-    setCurrentSceneFindMatches([]);
-    setCurrentSceneFindIndex(-1);
-  }, [documentId, onOpenAIContext]);
-
-  useEffect(() => {
-    const editor = editorRef.current;
-    if (!editor || !isCurrentSceneFindOpen || !currentSceneFindQuery.trim()) {
-      setCurrentSceneFindMatches([]);
-      setCurrentSceneFindIndex(-1);
-      return;
-    }
-
-    const segments: Array<{text: string; position: number}> = [];
-    editor.state.doc.descendants((node, position) => {
-      if (node.isText && node.text) {
-        segments.push({text: node.text, position});
-      }
-    });
-    const matches = findCurrentSceneMatches(segments, currentSceneFindQuery);
-    setCurrentSceneFindMatches(matches);
-    setCurrentSceneFindIndex((currentIndex) => {
-      if (!matches.length) return -1;
-      return currentIndex >= 0 && currentIndex < matches.length ? currentIndex : 0;
-    });
-  }, [content, currentSceneFindQuery, editorReadyToken, isCurrentSceneFindOpen]);
-
-  useEffect(() => {
-    const editor = editorRef.current;
-    if (!editor || editor.isDestroyed) return;
-    if (!isCurrentSceneFindOpen || !currentSceneFindMatches.length) {
-      editor.view.dispatch(setCurrentSceneFind(editor.state.tr, null));
-      return;
-    }
-
-    const activeMatch = currentSceneFindMatches[currentSceneFindIndex];
-    let transaction = setCurrentSceneFind(editor.state.tr, {
-      matches: currentSceneFindMatches,
-      activeIndex: currentSceneFindIndex
-    });
-    if (activeMatch) {
-      transaction = transaction
-        .setSelection(
-          TextSelection.create(editor.state.doc, activeMatch.from, activeMatch.to)
-        )
-        .scrollIntoView();
-    }
-    editor.view.dispatch(transaction);
-
-    if (!activeMatch) return;
-    window.requestAnimationFrame(() => {
-      const scrollElement = editorScrollRef.current;
-      if (scrollElement) {
-        const editorRect = scrollElement.getBoundingClientRect();
-        const matchRect = editor.view.coordsAtPos(activeMatch.from);
-        const desiredTop = editorRect.top + REVIEW_FOCUS_TOP_OFFSET;
-        if (matchRect.top < desiredTop) {
-          const nextScrollTop = Math.max(
-            0,
-            scrollElement.scrollTop - (desiredTop - matchRect.top)
-          );
-          scrollElement.scrollTop = nextScrollTop;
-          writeSavedEditorScrollTop(editorScrollKey, nextScrollTop);
-        }
-      }
-      currentSceneFindInputRef.current?.focus();
-    });
-  }, [
-    currentSceneFindIndex,
-    currentSceneFindMatches,
+  const {find, findInputRef} = useCurrentSceneFind({
+    editorRef,
+    editorScrollRef,
     editorReadyToken,
     editorScrollKey,
-    isCurrentSceneFindOpen
-  ]);
+    documentId,
+    content,
+    resetSignal: onOpenAIContext
+  });
+  const effectiveToolbarActions = React.useMemo(
+    () => [
+      ...toolbarActions,
+      {
+        id: 'find-current-scene',
+        label: 'Find in scene',
+        onClick: find.open
+      },
+      ...aiTextControls.actions
+    ],
+    [find.open, toolbarActions, aiTextControls.actions]
+  );
 
   const handleLoreHighlightClick = useCallback(
     (loreId: string, anchorRect: {left: number; top: number; bottom: number}) => {
       handleLoreHighlightLeave();
-      const record = loreRecordById.get(loreId);
-      if (!record) {
-        return;
-      }
-      setLorePopoverRecord(record);
-      setLorePopoverAnchor({
-        left: anchorRect.left,
-        top: anchorRect.bottom + 8
-      });
+      openLoreHighlight(loreId, anchorRect);
     },
-    [handleLoreHighlightLeave, loreRecordById]
-  );
-
-  const handleStatBlockTokenClick = useCallback(
-    (rawToken: string, anchorRect: {left: number; top: number; bottom: number}) => {
-      const preview = getStatBlockPreviewData?.(rawToken);
-      if (!preview) {
-        onRebindStatBlockToken?.(rawToken);
-        return;
-      }
-      setStatBlockPopover({
-        preview,
-        left: anchorRect.left,
-        top: anchorRect.bottom + 8
-      });
-    },
-    [getStatBlockPreviewData, onRebindStatBlockToken]
+    [handleLoreHighlightLeave, openLoreHighlight]
   );
 
   useEffect(() => {
@@ -708,99 +363,15 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, [editorReadyToken, handleSelectionChange]);
 
-  useEffect(() => {
-    const query = focusQuery?.trim();
-    const editor = editorRef.current;
-    if (!editor || !query) return;
-
-    const loweredQuery = query.toLowerCase();
-    let matchFrom = -1;
-    let matchTo = -1;
-
-    editor.state.doc.descendants((node, pos) => {
-      if (matchFrom >= 0 || !node.isText || !node.text) {
-        return;
-      }
-      const index = node.text.toLowerCase().indexOf(loweredQuery);
-      if (index < 0) {
-        return;
-      }
-      matchFrom = pos + index;
-      matchTo = pos + index + query.length;
-    });
-
-    if (matchFrom < 0 || matchTo <= matchFrom) return;
-
-    editor.commands.focus();
-    const flashToken = focusToken || Date.now();
-    editor.view.dispatch(
-      setReviewFocusFlash(editor.state.tr.setSelection(
-        TextSelection.create(editor.state.doc, matchFrom, matchTo)
-      ), {
-        from: matchFrom,
-        to: matchTo,
-        token: flashToken
-      }).scrollIntoView()
-    );
-    window.requestAnimationFrame(() => {
-      const scrollElement = editorScrollRef.current;
-      if (!scrollElement) return;
-      const editorRect = scrollElement.getBoundingClientRect();
-      const focusRect = editor.view.coordsAtPos(matchFrom);
-      const desiredTop = editorRect.top + REVIEW_FOCUS_TOP_OFFSET;
-      if (focusRect.top < desiredTop) {
-        const nextScrollTop = Math.max(0, scrollElement.scrollTop - (desiredTop - focusRect.top));
-        scrollElement.scrollTop = nextScrollTop;
-        writeSavedEditorScrollTop(editorScrollKey, nextScrollTop);
-      }
-
-      const flashSelector = `[data-review-focus-token="${flashToken}"]`;
-      if (!editor.view.dom.querySelector(flashSelector)) {
-        const domAtMatch = editor.view.domAtPos(matchFrom);
-        const fallbackElement =
-          domAtMatch.node.nodeType === Node.TEXT_NODE
-            ? domAtMatch.node.parentElement
-            : domAtMatch.node instanceof HTMLElement
-              ? domAtMatch.node
-              : null;
-        fallbackElement?.classList.add('review-focus-flash');
-        fallbackElement?.setAttribute(
-          'data-review-focus-fallback-token',
-          String(flashToken)
-        );
-      }
-    });
-    const clearFallbackFlash = () => {
-      editor.view.dom
-        .querySelectorAll(`[data-review-focus-fallback-token="${flashToken}"]`)
-        .forEach((element) => {
-          element.classList.remove('review-focus-flash');
-          element.removeAttribute('data-review-focus-fallback-token');
-        });
-    };
-    const clearToken = window.setTimeout(() => {
-      const current = reviewFocusFlashKey.getState(editor.state);
-      if (current?.token === flashToken) {
-        editor.view.dispatch(setReviewFocusFlash(editor.state.tr, null));
-      }
-      clearFallbackFlash();
-    }, 1800);
-    return () => {
-      window.clearTimeout(clearToken);
-      clearFallbackFlash();
-    };
-  }, [documentId, editorReadyToken, editorScrollKey, focusQuery, focusToken]);
-
-  /** Replaces the selection with the matched record's quick snippet. */
-  const insertSelectionSnippet = (kind: 'characters' | 'entities') => {
-    const editor = editorRef.current;
-    const key = selectionBubble ? normalizeSelectionSurface(selectionBubble.selectedText) : null;
-    const snippet = key ? selectionQuickSnippets?.[kind][key]?.html : null;
-    if (!selectionBubble || !snippet || !editor) return;
-    editor.commands.setTextSelection({from: selectionBubble.from, to: selectionBubble.to});
-    editor.commands.insertContent(snippet);
-    setSelectionBubble(null);
-  };
+  useEditorReviewFocus({
+    editorRef,
+    editorScrollRef,
+    editorReadyToken,
+    editorScrollKey,
+    documentId,
+    focusQuery,
+    focusToken
+  });
 
   const handleTypingActivity = useCallback(() => {
     if (inlineHighlightsMode !== 'hidden-while-typing') {
@@ -829,65 +400,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
   return (
     <div className={styles.container} data-ai-text-highlight={aiTextControls.highlight ? 'on' : 'off'}>
-      {isCurrentSceneFindOpen && (
-        <div className={styles.currentSceneFindBar} role='search' aria-label='Find in current scene'>
-          <label className={styles.currentSceneFindField}>
-            <span>Find in scene</span>
-            <input
-              ref={currentSceneFindInputRef}
-              type='search'
-              value={currentSceneFindQuery}
-              onChange={(event) => {
-                setCurrentSceneFindQuery(event.target.value);
-                setCurrentSceneFindIndex(0);
-              }}
-              onKeyDown={(event) => {
-                if (event.key !== 'Enter') return;
-                event.preventDefault();
-                navigateCurrentSceneFind(event.shiftKey ? 'previous' : 'next');
-              }}
-              aria-describedby='current-scene-find-status'
-            />
-          </label>
-          <span
-            id='current-scene-find-status'
-            className={styles.currentSceneFindStatus}
-            role='status'
-            aria-live='polite'
-          >
-            {!currentSceneFindQuery.trim()
-              ? 'Type to find'
-              : currentSceneFindMatches.length === 0
-                ? 'No matches'
-                : `${currentSceneFindIndex + 1} of ${currentSceneFindMatches.length}`}
-          </span>
-          <div className={styles.currentSceneFindActions}>
-            <button
-              type='button'
-              onClick={() => navigateCurrentSceneFind('previous')}
-              disabled={!currentSceneFindMatches.length}
-              aria-label='Previous match in scene'
-            >
-              Previous
-            </button>
-            <button
-              type='button'
-              onClick={() => navigateCurrentSceneFind('next')}
-              disabled={!currentSceneFindMatches.length}
-              aria-label='Next match in scene'
-            >
-              Next
-            </button>
-            <button
-              type='button'
-              onClick={closeCurrentSceneFind}
-              aria-label='Close find in scene'
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <CurrentSceneFindBar find={find} inputRef={findInputRef} />
       <div
         className={styles.editor}
         ref={editorScrollRef}
@@ -921,208 +434,27 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           presentStatBlockToken={presentStatBlockToken}
         />
         {selectionBubble && (
-          <div
-            ref={selectionMenuRef}
-            className={styles.selectionBubble}
-            style={{
-              left: `${selectionBubble.x}px`,
-              top: `${selectionBubble.y}px`
-            }}
-            onMouseDown={(event) => event.preventDefault()}
-          >
-            <SelectionMenuAIEntries controls={selectionActions} selection={selectionBubble}
-              onAskAI={onOpenAIContext && (() => onOpenAIContext({type: 'document', id: documentId,
-                selectedText: selectionBubble.selectedText, from: selectionBubble.from, to: selectionBubble.to}))}
-              getPassage={() => editorRef.current?.state.doc.textBetween(selectionBubble.from, selectionBubble.to, '\n\n') ?? ''}
-              onDone={closeSelectionBubble} />
-            {selectionBubble.matchType === 'character' && (
-              <button
-                type='button'
-                onClick={() => {
-                  if (!selectionBubble.matchRecord) return;
-                  setStatBlockPopover({
-                    preview: {
-                      rawToken: selectionBubble.matchName ?? selectionBubble.selectedText,
-                      title: `${selectionBubble.matchRecord.name} · Quick Preview`,
-                      sourceType: 'character',
-                      style: 'compact',
-                      status: 'resolved',
-                      message: 'Quick character snapshot from the current workspace state.',
-                      html: selectionBubble.matchRecord.html,
-                      requiresRebind: false
-                    },
-                    left: selectionBubble.x,
-                    top: selectionBubble.y + 12
-                  });
-                }}
-              >
-                Preview Stats
-              </button>
-            )}
-            {selectionBubble.matchType === 'character' && (
-              <button type='button' onClick={() => insertSelectionSnippet('characters')}>
-                Insert Stat Snapshot
-              </button>
-            )}
-            {selectionBubble.matchType === 'entity' && (
-              <button type='button' onClick={() => insertSelectionSnippet('entities')}>
-                Insert Lore Snippet
-              </button>
-            )}
-            {selectionBubble.matchRecord && (
-              <button
-                type='button'
-                onClick={() => {
-                  setLorePopoverRecord(selectionBubble.matchRecord?.lore ?? null);
-                  setLorePopoverAnchor({
-                    left: selectionBubble.x,
-                    top: selectionBubble.y + 12
-                  });
-                }}
-              >
-                Quick Lore
-              </button>
-            )}
-            {selectionBubble.matchRecord && (
-              <button
-                type='button'
-                onClick={() => {
-                  if (!selectionBubble.matchRecord?.lore) return;
-                  onOpenLoreInspector?.(selectionBubble.matchRecord.lore);
-                }}
-              >
-                Open Lore
-              </button>
-            )}
-            {!selectionBubble.matchRecord && (
-              <button
-                type='button'
-                onClick={() => {
-                  onOpenWorldCapture?.(selectionBubble.selectedText, {
-                    left: selectionBubble.x,
-                    top: selectionBubble.y,
-                    bottom: selectionBubble.y + 12
-                  });
-                  setSelectionBubble(null);
-                }}
-              >
-                Add to World
-              </button>
-            )}
-            {onAddSelectionToInventory && (
-              <button
-                type='button'
-                onClick={() => {
-                  onAddSelectionToInventory({
-                    itemName: selectionBubble.selectedText,
-                    from: selectionBubble.from,
-                    to: selectionBubble.to
-                  });
-                  setSelectionBubble(null);
-                }}
-              >
-                Record item/state
-              </button>
-            )}
-            {selectionBubble.matchName && (
-              <span className={styles.selectionHint}>{selectionBubble.matchName}</span>
-            )}
-          </div>
+          <EditorSelectionMenu
+            selection={selectionBubble}
+            menuRef={selectionMenuRef}
+            setSelection={setSelectionBubble}
+            closeMenu={closeSelectionBubble}
+            editorRef={editorRef}
+            documentId={documentId}
+            quickSnippets={selectionQuickSnippets}
+            selectionActions={selectionActions}
+            popovers={popovers}
+            onOpenAIContext={onOpenAIContext}
+            onOpenLoreInspector={onOpenLoreInspector}
+            onOpenWorldCapture={onOpenWorldCapture}
+            onAddSelectionToInventory={onAddSelectionToInventory}
+          />
         )}
-        {lorePopoverRecord && lorePopoverAnchor && (
-          <ContextPopover
-            title={lorePopoverRecord.name}
-            message={lorePopoverRecord.type === 'character' ? 'Character lore peek' : 'World lore peek'}
-            left={lorePopoverAnchor.left}
-            top={lorePopoverAnchor.top}
-            onClose={() => {
-              setLorePopoverAnchor(null);
-              setLorePopoverRecord(null);
-            }}
-          >
-            <div className={styles.lorePeekVitals}>
-              {lorePopoverRecord.vitalSigns.map((item) => (
-                <span key={item} className={styles.loreVitalChip}>
-                  {item}
-                </span>
-              ))}
-            </div>
-            <div className={styles.lorePeekList}>
-              <div>
-                <strong>Goal:</strong> {lorePopoverRecord.synopsis.goal}
-              </div>
-              <div>
-                <strong>Recent Event:</strong> {lorePopoverRecord.synopsis.recentEvent}
-              </div>
-              <div>
-                <strong>Motivation:</strong> {lorePopoverRecord.synopsis.motivation}
-              </div>
-            </div>
-            <div className={styles.systemActions}>
-              <button
-                type='button'
-                onClick={() => {
-                  onOpenLoreInspector?.(lorePopoverRecord);
-                  setLorePopoverAnchor(null);
-                  setLorePopoverRecord(null);
-                }}
-              >
-                Open Lore Inspector
-              </button>
-            </div>
-          </ContextPopover>
-        )}
-        {statBlockPopover && (
-          <ContextPopover
-            title={statBlockPopover.preview.title}
-            message={statBlockPopover.preview.message}
-            left={statBlockPopover.left}
-            top={statBlockPopover.top}
-            onClose={() => setStatBlockPopover(null)}
-          >
-            <div className={styles.statBlockPopoverMeta}>
-              <span
-                className={`${styles.statBlockStatusChip} ${
-                  statBlockPopover.preview.status === 'resolved'
-                    ? styles.statBlockStatusResolved
-                    : statBlockPopover.preview.status === 'ambiguous'
-                      ? styles.statBlockStatusAmbiguous
-                      : styles.statBlockStatusMissing
-                }`}
-              >
-                {statBlockPopover.preview.status === 'resolved'
-                  ? 'Linked'
-                  : statBlockPopover.preview.status === 'ambiguous'
-                    ? 'Needs rebind'
-                    : 'Missing source'}
-              </span>
-              <span className={styles.statBlockKindLabel}>
-                {statBlockPopover.preview.sourceType === 'character'
-                  ? 'Character'
-                  : 'Entity'}
-              </span>
-            </div>
-            {statBlockPopover.preview.html && (
-              <div
-                className={styles.statBlockPreviewCard}
-                dangerouslySetInnerHTML={{__html: statBlockPopover.preview.html}}
-              />
-            )}
-            {statBlockPopover.preview.requiresRebind && (
-              <div className={styles.systemActions}>
-                <button
-                  type='button'
-                  onClick={() => {
-                    onRebindStatBlockToken?.(statBlockPopover.preview.rawToken);
-                    setStatBlockPopover(null);
-                  }}
-                >
-                  Rebind Token
-                </button>
-              </div>
-            )}
-          </ContextPopover>
-        )}
+        <EditorContextPopovers
+          popovers={popovers}
+          onOpenLoreInspector={onOpenLoreInspector}
+          onRebindStatBlockToken={onRebindStatBlockToken}
+        />
         <EditorStatPeekLayer
           peek={statPeekControls}
           characterStatPeek={characterStatPeek}

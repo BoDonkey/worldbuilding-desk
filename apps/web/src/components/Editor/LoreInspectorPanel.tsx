@@ -1,4 +1,4 @@
-import styles from '../../assets/components/AISettings.module.css';
+import styles from '../../assets/components/Editor.module.css';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import type {UseConsultationBudget} from '../../hooks/useConsultationBudget';
 import type {LoreInspectorRecord} from '../../services/workspace/workspaceConsultation';

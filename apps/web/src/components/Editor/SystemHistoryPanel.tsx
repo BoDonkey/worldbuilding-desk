@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import type {SystemHistoryEntry} from '../../entityTypes';
-import styles from '../../assets/components/AISettings.module.css';
+import styles from '../../assets/components/Editor.module.css';
 
 interface SystemHistoryPanelProps {
   entries: SystemHistoryEntry[];
