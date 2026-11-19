@@ -377,13 +377,18 @@ messages).
 | 3.47 | Shared model-run hook for AI features (B3) | 3 | M | Done `9e84773` |
 | 3.48 | Projects: backup import as its own hook and panel (S2) | 3 | M | Done 4469c40 — optional `useProjectSeriesLinks` not taken |
 | 3.49 | World Bible imports: split the two pipelines (S2) | 3 | M | Done 6b51ce7 |
-| 3.50 | Seam maps for the four baseline files (S1, plan only) | 3 | S | — |
+| 3.50 | Seam maps for the four baseline files (S1, plan only) | 3 | S | Done `21c07d8` — maps in `docs/baseline-seam-maps.md`; slices 3.57–3.61 |
 | 3.51 | Dead code sweep (X1–X4) | 3 | S | Done `6d3a69c` — rules-engine factory helpers kept as public API (author, 2026-11-15) |
 | 3.52 | One ZIP and DOCX reader; shared text helpers (D6, D7) | 3 | S | Done ea157de |
 | 3.53 | Scene review in one function (D2) | 3 | S | Done `0ef00a6` |
 | 3.54 | Rules wizard on theme tokens (Y1, Y2) | 3 | M | Done `d0a8aab` |
 | 3.55 | Architecture doc catch-up (B6, P3) | 3 | XS | Done `dd184e6` |
 | 3.56 | State continuity reviews the draft, not the saved scene | 3 | S | Done eccfcc4 |
+| 3.57 | Consistency engine along its seams (map: baseline-seam-maps.md) | 3 | M | — |
+| 3.58 | Workspace editor along its seams (map: baseline-seam-maps.md) | 3 | M | — |
+| 3.59 | AI Settings along its sections (map: baseline-seam-maps.md) | 3 | M | — |
+| 3.60 | Split the Workspace CSS module along component seams (map: baseline-seam-maps.md) | 3 | L | — |
+| 3.61 | One download helper | 3 | XS | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -809,6 +814,37 @@ Workspace data store; see Backlog) and P5 (no finding).
   did: `ConsistencyEngineService.ts`, `EditorWithAI.tsx`, `AISettings.tsx`,
   `WorkspaceRoute.module.css`. Each map becomes its own slice.
 
+The maps are in `docs/baseline-seam-maps.md`, which has each seam's lines,
+target file, and risks. All four slices preserve behavior and run the
+full-coverage tier with no test changes beyond import paths. Each one
+`--update`s the size baseline as its file shrinks. Suggested order: 3.58,
+3.59, 3.57, then 3.60 at any time.
+
+- **3.57 Consistency engine along its seams.** Move the name cue words,
+  mention extraction, the scene presence check, and the unknown-name rules
+  out of `ConsistencyEngineService.ts` into modules in
+  `services/consistency/`. The engine keeps known-entity matching,
+  `buildExtractedProposal`, and the class (about 300 lines). The new
+  modules are not re-exported from `index.ts`.
+- **3.58 Workspace editor along its seams.** Find in scene, scroll memory,
+  review focus, the selection menu body, and the context popovers each
+  become a hook or component beside `EditorWithAI.tsx` (about 400 lines
+  left). Replace the two copies of reveal-below-the-toolbar with one
+  helper. Rename `assets/components/AISettings.module.css` to
+  `Editor.module.css`, since only Editor components import it.
+- **3.59 AI Settings along its sections.** Provider setup, AI guardrails,
+  prompt tools, and tool packs become sections beside `AISettings.tsx`,
+  following `AISwitchesFields` and `AIActionsSection`, with hooks for
+  provider setup and prompt tools. `withDefaultModes` becomes a pure
+  service function. Use `utils/downloadJson.ts` instead of the local copy.
+- **3.60 Split the Workspace CSS module along component seams.** As 3.32a:
+  move rules into modules beside their components, including
+  `GettingStartedGuide` in `Onboarding/`. Keep the route layout and shared
+  modal shell in `WorkspaceRoute.module.css`, and do not copy a rule into
+  two modules. Delete the about 130 lines of rules nothing uses, in their
+  own commit. Take pixel-identical before/after screenshots in both themes
+  and at 700px and 760px.
+
 **Tidy-up (any time).**
 
 - **3.51 Dead code sweep.** X1–X3. Delete the seven unimported files and
@@ -836,6 +872,11 @@ Workspace data store; see Backlog) and P5 (no finding).
   scene under review into the scene order in place of its saved copy (or
   append it). Behavior change, with tests for an edited draft and a new
   scene.
+- **3.61 One download helper.** Found in 3.50. `utils/downloadJson.ts`
+  has `triggerBlobDownload`, but `jsonTransfer.ts`, `projectBackupExport.ts`,
+  `sceneExport.ts`, `portableData.ts`, and `AISettings.tsx` each keep their
+  own copy of the link-click download. Point them at the util. Unit-only
+  tier; behavior-preserving.
 
 ### Phase 4 — Places, positions, and maps (before beta)
 
