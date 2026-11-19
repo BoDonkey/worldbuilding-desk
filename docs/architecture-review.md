@@ -136,11 +136,15 @@ their own origin, Ollama and the local model server only on loopback (the
 hosted OpenAI provider also still accepts a loopback address). The browser-only dev build keeps keys in browser storage
 behind the same `providerKeyStore` module.
 
-The packaged renderer runs under a Content-Security-Policy that allows code
-only from the app and network requests only to loopback and to the hosts the
-in-app embedding model and its runtime are downloaded from (Hugging Face and
-jsDelivr). Those downloads carry no author content. Hosted AI providers are
-not reachable from the renderer at all.
+The packaged renderer runs under a Content-Security-Policy
+(`apps/web/rendererCsp.ts`) that allows code only from the app and network
+requests only to the app and loopback (Ollama and the local model server). The
+in-app embedding model and its runtime ship with the app
+(`services/embeddings/bundledEmbeddingModel.ts` turns remote models off), so no
+download host is allowed. The dev-server policy in
+`apps/desktop/src/main/windowPolicy.ts` adds only Vite's inline scripts and
+hot-reload websocket, and `windowPolicy.test.ts` pins it. Hosted AI providers
+are not reachable from the renderer at all.
 
 Technical errors remain local. A support workflow may produce a redacted,
 copyable diagnostic, but it must exclude manuscript text, API keys, provider
@@ -395,11 +399,24 @@ Avoid broad rewrites that move complexity without clarifying ownership.
 ### Desktop host
 
 The Electron process owns privileged operations, provider credentials, and
-every provider request. Keep the IPC surface narrow (`llm:*` and
-`provider-keys:status|set|clear`), validate payloads at the boundary, allow
+every provider request. Keep the IPC surface narrow, validate payloads at the
+boundary, allow
 provider addresses and external URLs only through explicit scheme/host
 policies, and keep the main window on the renderer (`will-navigate` guard).
 The desktop package is linted and unit-tested like the other workspaces.
+
+The preload bridge (`apps/desktop/src/main/preload.ts`) exposes fixed channel
+names only; none comes from the renderer.
+
+| Channels | Direction | Registered in |
+|---|---|---|
+| `llm:complete`, `llm:stream`, `llm:stream:cancel`, `llm:local-context-size` | renderer → main (`invoke`) | `apiHandler.ts` |
+| `provider-keys:status`, `provider-keys:set`, `provider-keys:clear` | renderer → main (`invoke`) | `apiHandler.ts` |
+| `updates:get`, `updates:check`, `updates:download`, `updates:install`, `updates:set-check-automatically`, `updates:open-release-page` | renderer → main (`invoke`) | `updateIpc.ts` |
+| `llm:stream:chunk`, `llm:stream:complete`, `llm:stream:error` | main → renderer (events) | `apiHandler.ts` |
+| `updates:changed` | main → renderer (event) | `updateIpc.ts` |
+
+A new channel goes in this table in the same change.
 
 ### Rules engine
 
@@ -495,8 +512,9 @@ without turning cancelled or unverified code into a passing check.
 5. Provider capabilities are not yet normalized behind one proposal/action
    contract.
 6. Some assistant/retrieval behavior still needs realistic provenance testing.
-7. Remaining egress worth watching is the embedding-model download from
-   Hugging Face/jsDelivr; it carries no author content.
+7. The renderer has no network egress beyond loopback: the embedding model
+   ships with the app and the CSP allows no download host. Keep it that way;
+   any new destination needs a CSP change, a test, and a line here.
 
 Evidence for risks 1, 2, and 4:
 `docs/archive/architecture-review-2026-10-17.md`. Prior evidence:
