@@ -385,7 +385,7 @@ messages).
 | 3.55 | Architecture doc catch-up (B6, P3) | 3 | XS | Done `dd184e6` |
 | 3.56 | State continuity reviews the draft, not the saved scene | 3 | S | Done eccfcc4 |
 | 3.57 | Consistency engine along its seams (map: baseline-seam-maps.md) | 3 | M | — |
-| 3.58 | Workspace editor along its seams (map: baseline-seam-maps.md) | 3 | M | — |
+| 3.58 | Workspace editor along its seams (map: baseline-seam-maps.md) | 3 | M | Done `0ccd497` — 1,134 → 466; close-on-scroll effect stays in the editor (spans popovers and stat peek) |
 | 3.59 | AI Settings along its sections (map: baseline-seam-maps.md) | 3 | M | — |
 | 3.60 | Split the Workspace CSS module along component seams (map: baseline-seam-maps.md) | 3 | L | — |
 | 3.61 | One download helper | 3 | XS | — |

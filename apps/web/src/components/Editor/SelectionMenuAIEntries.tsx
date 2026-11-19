@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import styles from '../../assets/components/AISettings.module.css';
+import styles from '../../assets/components/Editor.module.css';
 
 /** What the Workspace hands the selection menu for custom AI actions (Slice 5.19). */
 export interface EditorSelectionActions {

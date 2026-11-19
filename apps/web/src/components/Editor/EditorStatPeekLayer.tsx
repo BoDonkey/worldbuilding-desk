@@ -6,7 +6,7 @@ import {
   type EditorCharacterStatPeek,
   type EditorStatPeekControls
 } from '../../hooks/useEditorStatPeek';
-import styles from '../../assets/components/AISettings.module.css';
+import styles from '../../assets/components/Editor.module.css';
 
 interface EditorStatPeekLayerProps {
   peek: EditorStatPeekControls;
