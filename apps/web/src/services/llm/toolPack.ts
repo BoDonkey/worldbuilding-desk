@@ -33,12 +33,31 @@ export type ToolPackSettings = Pick<
   'promptTools' | 'defaultToolIds' | 'defaultToolIdsByMode' | 'selectionActions'
 >;
 
-const modeDefaultsOf = (settings: ToolPackSettings): Record<ProjectMode, string[]> =>
+/** Each mode's default prompt tools; older settings fall back to `defaultToolIds` for every mode. */
+export const modeDefaultsOf = (settings: ToolPackSettings): Record<ProjectMode, string[]> =>
   settings.defaultToolIdsByMode ?? {
     litrpg: [...(settings.defaultToolIds ?? [])],
     game: [...(settings.defaultToolIds ?? [])],
     general: [...(settings.defaultToolIds ?? [])]
   };
+
+/**
+ * Applies `updates` to the settings, keeping each mode's default tools that
+ * `updates` does not set, so older settings gain a per-mode map on first edit.
+ */
+export function withDefaultModes(
+  settings: ProjectAISettings,
+  updates: Partial<ProjectAISettings>
+): ProjectAISettings {
+  return {
+    ...settings,
+    ...updates,
+    defaultToolIdsByMode: {
+      ...modeDefaultsOf(settings),
+      ...(updates.defaultToolIdsByMode ?? {})
+    }
+  };
+}
 
 export function buildToolPack(settings: ToolPackSettings): ToolPack {
   return {

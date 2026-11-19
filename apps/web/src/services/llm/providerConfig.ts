@@ -1,4 +1,4 @@
-import type {AIProviderId} from '../../entityTypes';
+import type {AIProviderId, ProjectAISettings} from '../../entityTypes';
 
 export const DEFAULT_AI_PROVIDER: AIProviderId = 'ollama';
 
@@ -41,6 +41,17 @@ export const PROVIDER_DEFAULT_BASE_URLS: Partial<Record<AIProviderId, string>> =
   // KoboldCPP's default. LM Studio uses port 1234 and the llama.cpp server 8080.
   'local-openai': 'http://localhost:5001/v1'
 };
+
+/** The active provider's model (blank for the default) and base URL (its default when unset). */
+export function readActiveProviderConfig(
+  settings: Pick<ProjectAISettings, 'provider' | 'configs'>
+): {model: string; baseUrl: string | undefined} {
+  const config = settings.configs[settings.provider] ?? {};
+  return {
+    model: config.model ?? '',
+    baseUrl: (config as {baseUrl?: string}).baseUrl ?? PROVIDER_DEFAULT_BASE_URLS[settings.provider]
+  };
+}
 
 export function normalizeConfiguredModel(model: string | undefined): string | undefined {
   const normalized = model?.trim();
