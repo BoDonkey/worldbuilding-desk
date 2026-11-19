@@ -14,6 +14,7 @@ import {
 } from '../services/rules';
 import {describeError} from '../services/errors';
 import {InlineAlert, RouteFeedback} from '../components/common';
+import styles from '../styles/RulesetRoute.module.css';
 
 // activeProject and setActiveProject read from store below
 
@@ -42,30 +43,12 @@ class RulesetWizardErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <div
-          role='alert'
-          style={{
-            padding: '1rem',
-            borderRadius: '8px',
-            border: '1px solid var(--color-error-soft-border)',
-            backgroundColor: 'var(--color-error-soft-bg)',
-            color: 'var(--color-error)'
-          }}
-        >
-          <h2 style={{marginTop: 0}}>Ruleset editor failed to load.</h2>
-          <p style={{marginBottom: '0.75rem'}}>
+        <div role='alert' className={styles.renderError}>
+          <h2>Ruleset editor failed to load.</h2>
+          <p>
             The rest of the app is still available, but this route hit a render error.
           </p>
-          <pre
-            style={{
-              margin: 0,
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              fontSize: '0.85rem'
-            }}
-          >
-            {this.state.error.message}
-          </pre>
+          <pre>{this.state.error.message}</pre>
         </div>
       );
     }
@@ -214,33 +197,33 @@ function RulesetRoute() {
   }
 
   return (
-    <section style={{height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column'}}>
-      <h1 style={{marginTop: 0, marginBottom: '0.5rem'}}>World Ruleset</h1>
-      <p style={{marginTop: 0, marginBottom: '0.75rem', color: 'var(--color-text-secondary)'}}>
+    <section className={styles.page}>
+      <h1 className={styles.title}>World Ruleset</h1>
+      <p className={styles.summary}>
         {ruleset
           ? `${ruleset.statDefinitions.length + ruleset.resourceDefinitions.length} tracked values are available to character mechanics.`
           : 'Tracking is optional. The quickest start is one value on a saved World Bible character.'}
       </p>
       {quarantinedRuleNotice && <InlineAlert variant='info' message={quarantinedRuleNotice} />}
       {!showAdvancedRules ? (
-        <div style={{maxWidth: '680px', padding: '1rem', border: '1px solid var(--surface-border-soft)', borderRadius: '14px', background: 'var(--surface-panel)'}}>
-          <h2 style={{marginTop: 0}}>{ruleset ? 'Rules are ready' : 'Start with a character'}</h2>
-          <p style={{color: 'var(--color-text-secondary)'}}>
+        <div className={styles.startPanel}>
+          <h2>{ruleset ? 'Rules are ready' : 'Start with a character'}</h2>
+          <p>
             {ruleset
               ? 'Use World Bible → Character → Mechanics to track values and record scene changes. Open advanced rules only to edit definitions, templates, types, limits, or transfer files.'
               : 'Open a saved character, choose Mechanics, then Add mechanics. You will name one Stat or Resource and confirm once; the project setup and linked sheet are created together.'}
           </p>
-          <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+          <div className={styles.startActions}>
             <button type='button' onClick={() => navigate('/world-bible')}>Open World Bible</button>
             <button type='button' onClick={() => setShowAdvancedRules(true)}>Advanced rules</button>
           </div>
         </div>
       ) : (
       <>
-      <button type='button' onClick={() => setShowAdvancedRules(false)} style={{alignSelf: 'flex-start', marginBottom: '0.75rem'}}>
+      <button type='button' onClick={() => setShowAdvancedRules(false)} className={styles.hideAdvanced}>
         Hide advanced rules
       </button>
-      <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.9rem'}}>
+      <div className={styles.transferActions}>
         <button
           type='button'
           onClick={() => void handleExport()}
@@ -260,14 +243,14 @@ function RulesetRoute() {
           type='file'
           accept='.json,application/json'
           onChange={(event) => void handleImport(event)}
-          style={{display: 'none'}}
+          className={styles.hiddenInput}
         />
       </div>
       <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
       {loading ? (
         <p>Loading ruleset...</p>
       ) : (
-        <div style={{flex: 1, minHeight: 0}}>
+        <div className={styles.wizardHost}>
           <RulesetWizardErrorBoundary>
             <WorldBuildingWizard
               key={activeProject.id}

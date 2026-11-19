@@ -640,6 +640,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   AI Settings and consultation notices use the defined secondary-text token
   for helper text. A unit check scans every application stylesheet and fails
   on undefined CSS variable references, including those with fallbacks.
+- The rules wizard (`packages/rules-ui/src/styles/wizard.css`) uses the app's
+  theme tokens, so it follows light and dark mode and the design system's
+  sage primary buttons instead of fixed white panels and indigo. The token
+  check also scans `packages/rules-ui/src` and fails on any hardcoded colour
+  there. The Ruleset route, the memory panel, and the consumable effect editor
+  take their layout from CSS modules rather than inline styles.
 - Service layer reorganized into domain folders with barrel exports.
 - `App.tsx` split into routing/layout composition and shared shell concerns.
 - `rules-ui` consumes React and React DOM as React 18/19 peer dependencies;
