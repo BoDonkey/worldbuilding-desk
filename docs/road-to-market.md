@@ -384,7 +384,7 @@ messages).
 | 3.54 | Rules wizard on theme tokens (Y1, Y2) | 3 | M | Done `d0a8aab` |
 | 3.55 | Architecture doc catch-up (B6, P3) | 3 | XS | Done `dd184e6` |
 | 3.56 | State continuity reviews the draft, not the saved scene | 3 | S | Done eccfcc4 |
-| 3.57 | Consistency engine along its seams (map: baseline-seam-maps.md) | 3 | M | — |
+| 3.57 | Consistency engine along its seams (map: baseline-seam-maps.md) | 3 | M | Done `468419c` — 1,250 → 319; local Cypress: Electron renderer crashed once in world-canvas (passes alone) |
 | 3.58 | Workspace editor along its seams (map: baseline-seam-maps.md) | 3 | M | Done `0ccd497` — 1,134 → 466; close-on-scroll effect stays in the editor (spans popovers and stat peek) |
 | 3.59 | AI Settings along its sections (map: baseline-seam-maps.md) | 3 | M | Done `f30a376` — 1,080 → 126; section state stays in AISettings so it survives the AI switches |
 | 3.60 | Split the Workspace CSS module along component seams (map: baseline-seam-maps.md) | 3 | L | — |
