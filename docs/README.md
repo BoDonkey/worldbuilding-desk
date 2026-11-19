@@ -50,6 +50,10 @@ Other files:
   records, containment, connections, per-map coordinates and distance,
   movement checks, and the imported-image map surface (3.37). Built by
   slices 4.76–4.81 before the beta.
+- `docs/baseline-seam-maps.md` — seam maps for the four files on the size
+  baseline (`ConsistencyEngineService.ts`, `EditorWithAI.tsx`,
+  `AISettings.tsx`, `WorkspaceRoute.module.css`), written in 3.50. Plan for
+  slices 3.57–3.60; archive once they are done.
 - `docs/character-experience-design-review.md` — accepted decision record for
   unifying characters around one canonical World Bible identity; its durable
   contract and journey tests are folded into the authorities above, while the
