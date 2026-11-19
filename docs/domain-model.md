@@ -243,6 +243,30 @@ change; the mutation ledger says when it changed.
   reloads the suggestion and the ledger and runs the same checks. The checks
   are in `stateChangeValidation.ts`. `saveStateChangeRecord` is for an event
   whose commands did not change (re-anchor, reorder).
+- **What is fixed in an accepted event, and what may change.** An accepted
+  event is never deleted, and the app never changes on its own what it
+  records: its `id`, `sceneId`, `sourceType`, `createdAt`, and its commands
+  (who: `actorId`; what: the kind and the item, stat, or place name it names;
+  how much). Legacy `actorId`s stay as written; replay resolves them through
+  the actor-resolution map. Only the author changes a command, by editing the
+  change through `saveStateChange`, which runs every check again. The app may
+  update:
+  - *Where the change sits:* `sceneOrder`, `sceneTitle`, `sceneSequence`,
+    `scenePosition`, `sceneAnchor`, `label`, `sourceRevision`, and
+    `sourceHash`. This happens when scenes move (`stateSceneOrder.ts`), when
+    the author re-anchors the change, and when a scene is reviewed again and
+    still yields the same commands (`reconcileSceneStateMutationEvents`).
+  - *Its place link:* `placeId` on a `location_set` command, which is not
+    part of the change's identity (4.77). A position name links to a place
+    record when it matches exactly one, the author can link or create one
+    (`useUnlinkedPlacePositions`), and a place merge repoints it
+    (`placeMerge.ts`).
+  - *Its status:* `accepted` → `invalidated`, with `invalidatedAt` and
+    `invalidationReason`, when its scene is deleted, a re-review no longer
+    finds it, or the author invalidates it. Invalidated events stay for audit.
+
+  A migration or feature that needs to change a fixed field is a contract
+  change: record it here first.
 - Replay: accepted events only, applied over a `CharacterSheet`-derived
   baseline; last accepted set-style command wins, additive commands
   accumulate, invalid commands are rejected before persistence.
@@ -355,8 +379,8 @@ author-facing identities.
   identity: if no canon record exists, creating one is an explicit author
   action first.
 - **State events use canonical actor identity.** New commands store the
-  character entity ID as `actorId`. Accepted ledger events are immutable; a
-  persisted actor-resolution map translates legacy character and sheet IDs to
+  character entity ID as `actorId`. An accepted event's `actorId` is never
+  rewritten (§3, what is fixed in an accepted event); a persisted actor-resolution map translates legacy character and sheet IDs to
   entity IDs during replay. Name-based actor matching is not part of the
   target model.
 - **Facts, aliases, and lore links converge on entities.** All new writes use
@@ -386,7 +410,8 @@ safe but are never presented as canon or assistant grounding.
    categories. Every other collision enters author resolution.
 3. **No canon invention.** Migration never creates a `WorldEntity`; only an
    explicit author action can create canon.
-4. **Ledger immutability.** Accepted `StateMutationEvent`s are never rewritten;
+4. **Ledger immutability.** Migration never changes the fixed fields of an
+   accepted `StateMutationEvent` (§3, what is fixed in an accepted event);
    legacy identity resolves through the actor-resolution map.
 5. **Replay parity.** For each linked character, replayed state at every scene
    is byte-identical before and after migration.
@@ -646,8 +671,8 @@ The workspace handoff follows these rules:
   author chooses `Add one and consume it`, `Consume without inventory
   tracking`, or cancel. The application does not invent an acquisition event.
 - Later scene edits make affected proposals stale and use the existing
-  invalidation/review behavior. Accepted ledger events remain immutable and
-  reusable definitions are not deleted or rewritten as a side effect.
+  invalidation/review behavior. Accepted ledger events keep their fixed
+  fields (§3, what is fixed in an accepted event), and reusable definitions are not deleted or rewritten as a side effect.
 
 Deterministic phrase detection is sufficient for the basic path; model help
 may broaden proposal generation only through the same evidence, schema,
