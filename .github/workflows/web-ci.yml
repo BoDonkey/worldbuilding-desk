@@ -64,6 +64,8 @@ jobs:
         run: node --test scripts/ci/*.test.mjs
       - name: Check file sizes
         run: node scripts/check-file-sizes.mjs
+      - name: Check code tour paths and symbols
+        run: node scripts/check-code-tour.mjs
 
   web-verify:
     needs: changes

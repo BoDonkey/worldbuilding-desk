@@ -10,7 +10,7 @@ const full = (files) => assert.equal(createPlan(files, specs).mode, 'full');
 
 test('documentation and known tooling never require application checks', () => {
   for (const file of ['docs/road-to-market.md', 'README.md', 'PROJECT_STATUS.md', 'AGENTS.md',
-    'scripts/check-file-sizes.mjs', 'scripts/file-size-baseline.json']) {
+    'scripts/check-file-sizes.mjs', 'scripts/file-size-baseline.json', 'scripts/check-code-tour.mjs']) {
     const plan = createPlan([file], specs);
     assert.equal(plan.application, false, file);
     assert.equal(plan.mode, 'none', file);

@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-11-11
+Last updated: 2026-11-20
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -28,6 +28,10 @@ Read in this order:
    round-trip, review completion, and character canon unification.
 7. `docs/marketing-plan.md` — positioning, audience, pricing, and launch
    channels; companion to road-to-market Phase 6.
+8. `docs/code-tour.md` — where the code lives: the layer diagram, a folder
+   map, four features traced file by file, where data lives, a
+   troubleshooting table, and a glossary. Kept current by the slices that
+   move code; `pnpm check:code-tour` checks its paths and symbols.
 
 If documents disagree: current implementation truth comes from
 `PROJECT_STATUS.md`; open work and its order come from
@@ -197,7 +201,7 @@ the current tree.
 - Archive completed or superseded documents with a short banner naming the
   replacement; repair internal links whenever a document moves.
 - Do not create new parallel roadmaps, navigation plans, or spec forks; extend
-  the six active files under `docs/` instead. If a new large proposal is
+  the active files under `docs/` instead. If a new large proposal is
   genuinely needed, give it a status and date, and fold its durable outcome
   back into the authority docs when decided.
 - Update this map when authority or placement changes.

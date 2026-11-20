@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto';
 
 // These files cannot affect the application. Everything unknown is treated as code.
 export const isDocumentation = (file) => /^(README\.md|PROJECT_STATUS\.md|AGENTS\.md|docs\/.*\.md)$/.test(file);
-export const isTooling = (file) => ['scripts/check-file-sizes.mjs', 'scripts/file-size-baseline.json'].includes(file);
+export const isTooling = (file) => ['scripts/check-file-sizes.mjs', 'scripts/file-size-baseline.json', 'scripts/check-code-tour.mjs'].includes(file);
 const isUnitTest = (file) => /^(apps|packages)\//.test(file) && /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
 const specPrefix = 'apps/web/';
 

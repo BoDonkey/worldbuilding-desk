@@ -81,6 +81,7 @@ Every update runs the CI-policy regression tests and the file-size gate:
 ```bash
 node --test scripts/ci/*.test.mjs
 pnpm check:file-sizes
+pnpm check:code-tour
 ```
 
 Application and CI-policy changes also run the fast battery before commit:
@@ -97,7 +98,8 @@ in `scripts/ci/plan.mjs`. Preview the local plan, including uncommitted files,
 with `CI_BASE_SHA=origin/main node scripts/ci/detect.mjs`:
 
 - **Documentation and known tooling:** root README, PROJECT_STATUS, AGENTS,
-  Markdown under `docs/`, and the size-check script/baseline need only the
+  Markdown under `docs/`, the size-check script/baseline, and the code-tour
+  check need only the
   tooling checks. They do not require application tests on their own.
 - **Unit-only changes:** run the fast battery; no browser tests are required.
 - **Focused UI:** the explicit Settings, Source Notes, Corkboard, and Projects
@@ -359,7 +361,7 @@ messages).
 | 5.19 | Custom AI actions in the selection menu | 5 | M | Done `da9ed97` |
 | 3.32 | Break up the oversized route files along feature seams | 3 | L | Done `0145d97` — World Bible 2,145 → 596; Lore 1,766 → 194; Workspace 1,841 → 991 (drawer 1,284 → 567); Character Sheets 2,042 → 249; CSS as 3.32a. Workspace misses the 600 target; author accepted it (2026-11-12): line targets are aims, not hard limits |
 | 3.32a | Split the World Bible CSS module along component seams | 3 | M | Done `25d0b92` — 19 modules, largest 466 lines; 52 before/after screenshots pixel-identical |
-| 3.33 | Code tour for maintainers | 3 | M | — (author request, 2026-11-07; stable half now, route sections after 3.32) |
+| 3.33 | Code tour for maintainers | 3 | M | Done `a068e5d` — all six sections at once (3.32 and 3.57–3.60 had finished the route splits); `pnpm check:code-tour` runs in CI |
 | 3.34 | One module per state-change kind, one change vocabulary (mechanics registry) | 3 | L | Done `fb53c2a` — CI flake to fix: Windows Desktop E2E `app-updates.e2e.ts` ("checks at startup once allowed…") timed out waiting for the update card once on PR #102, passed on rerun; unrelated to 3.34 |
 | 3.34a | XP and levels through the scene ledger (first new kind on 3.34) | 3 | M | Done `8b6af1e` — inserted stat blocks replay level and XP only; their stats and resources still come from the sheet |
 | 3.35 | Route every project-mode decision through project capabilities | 3 | S | Done `00647c0` — 5 named mode capabilities in `projectMode.ts`; `isGeneralFiction` removed |
