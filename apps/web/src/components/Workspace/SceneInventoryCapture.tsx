@@ -1,5 +1,6 @@
 import {useState} from 'react';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './SceneStateCapture.module.css';
 
 interface SceneInventoryCaptureProps {
   itemName: string;
@@ -52,9 +53,9 @@ export function SceneInventoryCapture({
   );
 
   return (
-    <div className={`${styles.modalCard} ${styles.changeComposerCard}`}>
-      <h3 className={styles.modalTitle}>Add item to inventory</h3>
-      <p className={styles.modalDescription}>
+    <div className={`${workspaceStyles.modalCard} ${styles.changeComposerCard}`}>
+      <h3 className={workspaceStyles.modalTitle}>Add item to inventory</h3>
+      <p className={workspaceStyles.modalDescription}>
         Record this pickup at the selected passage in the scene.
       </p>
       {evidenceText && evidenceText.trim() !== initialItemName.trim() && (
@@ -133,7 +134,7 @@ export function SceneInventoryCapture({
           )}
         </div>
       )}
-      <div className={styles.modalActions}>
+      <div className={workspaceStyles.modalActions}>
         <button type='button' onClick={onCancel}>Cancel</button>
         <button
           type='button'

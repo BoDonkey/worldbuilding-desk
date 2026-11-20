@@ -7,7 +7,8 @@ import type {
   useWorkspaceConsistency
 } from '../../hooks/useWorkspaceConsistency';
 import type {ConsistencyReviewItem} from '../../services/consistency/reviewReadiness';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import drawerStyles from './WorkspaceDrawer.module.css';
+import styles from './WorkspaceReview.module.css';
 import {CanonCheckPanel} from './CanonCheckPanel';
 import {WorkspaceReviewIssueItem} from './WorkspaceReviewIssueItem';
 import {WorkspaceStateChangeReview} from './WorkspaceStateChangeReview';
@@ -144,8 +145,8 @@ export function WorkspaceReviewTab({
   };
 
   return (
-    <div className={styles.contextSummary}>
-      <div className={styles.contextSummaryText}>
+    <div className={drawerStyles.contextSummary}>
+      <div className={drawerStyles.contextSummaryText}>
         <strong>Project Review</strong>
         <div className={styles.consistencyDescription}>
           Scans every scene for names and canon references that are not already
@@ -229,7 +230,7 @@ export function WorkspaceReviewTab({
         />
       )}
       {consistencyReviewItems.length === 0 && stateMutationReviewItems.length === 0 ? (
-        <p className={styles.contextSummaryText}>No open review items.</p>
+        <p className={drawerStyles.contextSummaryText}>No open review items.</p>
       ) : null}
     </div>
   );

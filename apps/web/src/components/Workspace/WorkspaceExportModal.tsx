@@ -2,7 +2,8 @@ import {useRef} from 'react';
 import {useEscapeToClose} from '../../hooks/useEscapeToClose';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
 import type {WorkspaceExportFormat, WorkspaceExportItem} from '../../store/workspaceUiStore';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceExportModal.module.css';
 
 interface WorkspaceExportModalProps {
   isOpen: boolean;
@@ -24,12 +25,12 @@ export const WorkspaceExportModal = ({
   useFocusTrap(dialogRef, isOpen);
   if (!isOpen) return null;
   return (
-    <div ref={dialogRef} role='dialog' aria-modal='true' className={styles.modalOverlay}>
-      <div className={`${styles.modalCard} ${styles.exportModalCard}`}>
-        <h3 className={styles.modalTitle}>
+    <div ref={dialogRef} role='dialog' aria-modal='true' className={workspaceStyles.modalOverlay}>
+      <div className={`${workspaceStyles.modalCard} ${styles.exportModalCard}`}>
+        <h3 className={workspaceStyles.modalTitle}>
           Export scenes as {format === 'markdown' ? 'Markdown' : format === 'docx' ? 'DOCX' : 'EPUB'}
         </h3>
-        <p className={styles.modalDescription}>
+        <p className={workspaceStyles.modalDescription}>
           Choose which scenes to export and adjust their order for the final file.
         </p>
         <div className={styles.exportControlRow}>
@@ -60,8 +61,8 @@ export const WorkspaceExportModal = ({
             </ul>
           )}
         </div>
-        <div className={styles.modalActions}>
-          <button type='button' onClick={onClose} className={styles.modalSecondaryAction}>Cancel</button>
+        <div className={workspaceStyles.modalActions}>
+          <button type='button' onClick={onClose} className={workspaceStyles.modalSecondaryAction}>Cancel</button>
           <button type='button' onClick={onExport}>Export</button>
         </div>
       </div>

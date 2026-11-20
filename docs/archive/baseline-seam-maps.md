@@ -1,3 +1,7 @@
+> **Archived 2026-11-20.** All four slices are done (3.57–3.60), and no file
+> is on the size baseline. The status board in `docs/road-to-market.md` keeps
+> each slice's commit.
+
 # Seam Maps for the Four Baseline Files
 
 **Slice:** 3.50 (review finding S1, `docs/archive/architecture-review-2026-11-13.md`)

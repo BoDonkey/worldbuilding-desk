@@ -7,7 +7,7 @@ import type {useWorkspaceSceneRoster} from '../../hooks/useWorkspaceSceneRoster'
 import {resolveReusableItem} from '../../services/state/itemStateAuthoringService';
 import {isItemCategory} from '../../services/worldBible/worldBibleSummary';
 import {placeNameSuggestions} from '../../services/worldBible/placePositions';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
 import {PositionedStateChangeComposer} from './PositionedStateChangeComposer';
 import {SceneConsumptionCapture} from './SceneConsumptionCapture';
 import {SceneInventoryCapture} from './SceneInventoryCapture';
@@ -116,7 +116,7 @@ export function WorkspaceSceneStateDialogs({
           aria-modal='true'
           aria-label='Record positioned state change'
           onClick={() => setPendingPositionedChange(null)}
-          className={styles.modalOverlay}
+          className={workspaceStyles.modalOverlay}
         >
           <div onClick={(event) => event.stopPropagation()}>
             <PositionedStateChangeComposer
@@ -149,7 +149,7 @@ export function WorkspaceSceneStateDialogs({
             ? 'Record selected item use'
             : 'Add selected item to inventory'}
           onClick={() => setPendingInventoryCapture(null)}
-          className={styles.modalOverlay}
+          className={workspaceStyles.modalOverlay}
         >
           <div onClick={(event) => event.stopPropagation()}>
             {pendingInventoryCapture.action === 'consume' ? (

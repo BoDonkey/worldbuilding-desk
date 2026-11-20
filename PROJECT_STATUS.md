@@ -756,8 +756,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   `useWorkspaceRenderDiagnostics`, and `useWorkspaceDocumentReviewBridge`
   (the refs that let the documents hook call review without a cycle).
   Review wording and scene-drawer badge counts are pure, tested helpers in
-  `services/workspace/`. `WorkspaceRoute.module.css` (2,349 lines) is not
-  split yet.
+  `services/workspace/`. Workspace styles live in modules beside their
+  components (3.60): `WorkspaceRoute.module.css` keeps the route layout, the
+  shared modal shell, and the drawer-top buttons; review lists and popovers
+  share `WorkspaceReview.module.css`, the drawers share
+  `WorkspaceDrawer.module.css`, and the three state capture dialogs share
+  `SceneStateCapture.module.css`. No file is on the size baseline.
 - Workspace review/canon status UI now includes focused `UnknownEntityPanel` and
   `CanonPanel` components while preserving the route-owned review and sync
   workflows.

@@ -3,7 +3,7 @@ import type {
   StateMutationReviewItem,
   useWorkspaceConsistency
 } from '../../hooks/useWorkspaceConsistency';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceReview.module.css';
 
 interface WorkspaceStateChangeReviewProps {
   consistency: ReturnType<typeof useWorkspaceConsistency>;

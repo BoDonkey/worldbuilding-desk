@@ -377,7 +377,7 @@ messages).
 | 3.47 | Shared model-run hook for AI features (B3) | 3 | M | Done `9e84773` |
 | 3.48 | Projects: backup import as its own hook and panel (S2) | 3 | M | Done 4469c40 — optional `useProjectSeriesLinks` not taken |
 | 3.49 | World Bible imports: split the two pipelines (S2) | 3 | M | Done 6b51ce7 |
-| 3.50 | Seam maps for the four baseline files (S1, plan only) | 3 | S | Done `21c07d8` — maps in `docs/baseline-seam-maps.md`; slices 3.57–3.61 |
+| 3.50 | Seam maps for the four baseline files (S1, plan only) | 3 | S | Done `21c07d8` — maps in `docs/archive/baseline-seam-maps.md`; slices 3.57–3.61 |
 | 3.51 | Dead code sweep (X1–X4) | 3 | S | Done `6d3a69c` — rules-engine factory helpers kept as public API (author, 2026-11-15) |
 | 3.52 | One ZIP and DOCX reader; shared text helpers (D6, D7) | 3 | S | Done ea157de |
 | 3.53 | Scene review in one function (D2) | 3 | S | Done `0ef00a6` |
@@ -814,7 +814,7 @@ Workspace data store; see Backlog) and P5 (no finding).
   did: `ConsistencyEngineService.ts`, `EditorWithAI.tsx`, `AISettings.tsx`,
   `WorkspaceRoute.module.css`. Each map becomes its own slice.
 
-The maps are in `docs/baseline-seam-maps.md`, which has each seam's lines,
+The maps are in `docs/archive/baseline-seam-maps.md`, which has each seam's lines,
 target file, and risks. All four slices preserve behavior and run the
 full-coverage tier with no test changes beyond import paths. Each one
 `--update`s the size baseline as its file shrinks. Suggested order: 3.58,

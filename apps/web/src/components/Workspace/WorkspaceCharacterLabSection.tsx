@@ -2,7 +2,8 @@ import {useMemo, useState} from 'react';
 import type {EntityCategory, WorldEntity} from '../../entityTypes';
 import {isCharacterCategory} from '../../services/characters/characterIdentity';
 import type {AISwitches} from '../../services/llm/aiSwitches';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import reviewStyles from './WorkspaceReview.module.css';
+import styles from './WorkspaceDrawer.module.css';
 
 /**
  * The Characters drawer's lab entries. Talking to a character is AI coaching; writing a
@@ -45,7 +46,7 @@ export function WorkspaceCharacterLabSection({
     <>
       <div className={styles.contextSummaryText}>
         <strong>Character lab</strong>
-        <div className={styles.consistencyDescription}>{description}</div>
+        <div className={reviewStyles.consistencyDescription}>{description}</div>
       </div>
       {labCharacterOptions.length === 0 ? (
         <p className={styles.contextSummaryText}>

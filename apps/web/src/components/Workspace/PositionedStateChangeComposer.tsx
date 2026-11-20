@@ -13,7 +13,8 @@ import {
 } from '../../services/state/positionedStateChange';
 import {isDescriptiveStateCommand, stateMutationCommandTypes} from '@worldbuilding-desk/rules-engine';
 import {getAppStateKind} from '../../services/state/kinds';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './SceneStateCapture.module.css';
 import {inventoryChoicesForChange} from './positionedStateChangeInventory';
 
 const composerInput = (kind: PositionedChangeKind) => getAppStateKind(kind).composer.input;
@@ -142,11 +143,11 @@ export function PositionedStateChangeComposer({
   };
 
   return (
-    <div className={`${styles.modalCard} ${styles.changeComposerCard}`}>
-      <h3 className={styles.modalTitle}>
+    <div className={`${workspaceStyles.modalCard} ${styles.changeComposerCard}`}>
+      <h3 className={workspaceStyles.modalTitle}>
         {existingEvent ? 'Edit scene change' : 'Record change here'}
       </h3>
-      <p className={styles.modalDescription}>
+      <p className={workspaceStyles.modalDescription}>
         {characterName} · {sceneTitle}{showAdvanced && !descriptiveOnly ? ` · position ${cursorPosition}` : ''}
       </p>
 
@@ -377,7 +378,7 @@ export function PositionedStateChangeComposer({
         )}
       </div>
 
-      <div className={styles.modalActions}>
+      <div className={workspaceStyles.modalActions}>
         <button type='button' onClick={onCancel}>Cancel</button>
         <button
           type='button'

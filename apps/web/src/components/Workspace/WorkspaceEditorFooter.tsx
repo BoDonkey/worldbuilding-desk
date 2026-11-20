@@ -1,5 +1,6 @@
 import type {SaveStatus} from '../../hooks/useWorkspaceDocuments';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceEditorFooter.module.css';
 
 interface WorkspaceEditorFooterProps {
   saveStatus: SaveStatus;
@@ -70,14 +71,14 @@ export function WorkspaceEditorFooter({
       <div className={styles.editorFooterUtilities}>
         <button
           type='button'
-          className={styles.drawerTopButton}
+          className={workspaceStyles.drawerTopButton}
           onClick={onOpenScratchpad}
         >
           Scratchpad
         </button>
         <button
           type='button'
-          className={styles.drawerTopButton}
+          className={workspaceStyles.drawerTopButton}
           aria-label='Open quick Corkboard'
           onClick={onOpenCorkboard}
         >
@@ -85,14 +86,14 @@ export function WorkspaceEditorFooter({
         </button>
         <button
           type='button'
-          className={styles.drawerTopButton}
+          className={workspaceStyles.drawerTopButton}
           onClick={onToggleSceneDrawer}
         >
           Scenes
         </button>
         <button
           type='button'
-          className={styles.drawerTopButton}
+          className={workspaceStyles.drawerTopButton}
           onClick={onToggleContextDrawer}
         >
           Context

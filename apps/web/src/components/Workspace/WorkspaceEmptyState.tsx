@@ -1,4 +1,5 @@
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceEmptyState.module.css';
 
 interface WorkspaceEmptyStateProps {
   onNewScene: () => Promise<unknown>;
@@ -21,7 +22,7 @@ export function WorkspaceEmptyState({
   onToggleSceneDrawer
 }: WorkspaceEmptyStateProps) {
   return (
-    <div className={styles.emptyWorkspaceState}>
+    <div className={workspaceStyles.emptyWorkspaceState}>
       <h2 className={styles.emptyWorkspaceTitle}>Start writing immediately</h2>
       <p className={styles.emptyWorkspaceCopy}>
         Create a blank scene or import existing pages. World context and review
@@ -44,21 +45,21 @@ export function WorkspaceEmptyState({
         </button>
         <button
           type='button'
-          className={styles.drawerTopButton}
+          className={workspaceStyles.drawerTopButton}
           onClick={onOpenScratchpad}
         >
           Open Scratchpad
         </button>
         <button
           type='button'
-          className={styles.drawerTopButton}
+          className={workspaceStyles.drawerTopButton}
           onClick={onOpenCorkboard}
         >
           Open Corkboard
         </button>
         <button
           type='button'
-          className={styles.drawerTopButton}
+          className={workspaceStyles.drawerTopButton}
           onClick={onToggleSceneDrawer}
         >
           Browse Scenes

@@ -13,7 +13,8 @@ import {useAppStore} from '../../store/appStore';
 import {pushAppToast} from '../../store/notificationStore';
 import {useWorkspaceUiStore} from '../../store/workspaceUiStore';
 import {copyText} from '../../utils/clipboard';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceAITextReportModal.module.css';
 
 interface WorkspaceAITextReportModalProps {
   documents: WritingDocument[];
@@ -68,17 +69,17 @@ export function WorkspaceAITextReportModal({
   const sceneWord = report.sceneCount === 1 ? 'scene' : 'scenes';
 
   return (
-    <div className={styles.modalOverlay} onClick={onClose} role='presentation'>
+    <div className={workspaceStyles.modalOverlay} onClick={onClose} role='presentation'>
       <div
         ref={dialogRef}
         role='dialog'
         aria-modal='true'
         aria-labelledby='ai-text-report-title'
-        className={`${styles.modalCard} ${styles.aiTextReportCard}`}
+        className={`${workspaceStyles.modalCard} ${styles.aiTextReportCard}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <h3 id='ai-text-report-title' className={styles.modalTitle}>AI text report</h3>
-        <p className={styles.modalDescription} data-testid='ai-text-report-summary'>
+        <h3 id='ai-text-report-title' className={workspaceStyles.modalTitle}>AI text report</h3>
+        <p className={workspaceStyles.modalDescription} data-testid='ai-text-report-summary'>
           {report.markedWords === 0
             ? `No marked AI text in ${report.sceneCount.toLocaleString()} ${sceneWord}.`
             : `${summarizeAITextCounts(report.markedWords, report.passages)}, across ` +
@@ -132,8 +133,8 @@ export function WorkspaceAITextReportModal({
           ))}
         </div>
 
-        <div className={styles.modalActions}>
-          <button type='button' onClick={onClose} className={styles.modalSecondaryAction}>Close</button>
+        <div className={workspaceStyles.modalActions}>
+          <button type='button' onClick={onClose} className={workspaceStyles.modalSecondaryAction}>Close</button>
           <button type='button' onClick={() => void handleCopy()}>Copy report</button>
         </div>
       </div>

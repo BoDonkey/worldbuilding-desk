@@ -24,7 +24,8 @@ import TipTapEditor from '../TipTapEditor';
 import type {MemoryEntry} from '../../services/shodh/ShodhMemoryService';
 import type {WorkspaceContextDrawerView} from '../../hooks/useWorkspaceDrawers';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import reviewStyles from './WorkspaceReview.module.css';
+import styles from './WorkspaceDrawer.module.css';
 import {SceneRosterPanel} from './SceneRosterPanel';
 import type {
   SceneRosterAddOption,
@@ -413,7 +414,7 @@ export function WorkspaceContextDrawer({
         <div className={styles.contextSummary}>
           <div className={styles.contextSummaryText}>
             <strong>Scratchpad</strong>
-            <div className={styles.consistencyDescription}>
+            <div className={reviewStyles.consistencyDescription}>
               Private project notes that stay out of scenes and canon.
             </div>
           </div>

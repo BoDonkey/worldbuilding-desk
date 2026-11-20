@@ -1,5 +1,5 @@
 import type {ComponentProps, ReactNode, RefObject} from 'react';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceDrawer.module.css';
 import {WorkspaceContextDrawer} from './WorkspaceContextDrawer';
 import {WorkspaceDrawerPanel} from './WorkspaceDrawerPanel';
 import {WorkspaceSceneDrawer} from './WorkspaceSceneDrawer';

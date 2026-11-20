@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import type {ChapterCard} from '../../entityTypes';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceChapterCardContext.module.css';
 
 interface WorkspaceChapterCardContextProps {
   cards: ChapterCard[];
