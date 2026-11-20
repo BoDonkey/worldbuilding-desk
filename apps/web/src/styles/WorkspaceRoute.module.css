@@ -11,13 +11,6 @@
   margin: -4px;
 }
 
-.drawerToggleRow {
-  display: flex;
-  gap: 0.75rem;
-  align-items: stretch;
-  margin-bottom: 0.75rem;
-}
-
 .workspaceLayout {
   display: flex;
   gap: 1rem;
@@ -969,14 +962,6 @@
   color: var(--color-accent-soft-text);
 }
 
-.consistencyPanel {
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background-color: var(--color-bg-secondary);
-}
-
 .consistencyPanelHeader {
   display: flex;
   justify-content: flex-end;
@@ -1273,35 +1258,12 @@
   font-size: 0.76rem;
 }
 
-.unknownList {
-  margin: 0.5rem 0 0 1rem;
-  padding: 0;
-}
-
-.unknownItem {
-  margin-bottom: 0.4rem;
-}
-
-.unknownSurface {
-  margin-right: 0.5rem;
-}
-
 .unknownActionButton {
   font-size: 0.8rem;
 }
 
 .unknownActionButtonSpaced {
   margin-left: 0.35rem;
-  font-size: 0.8rem;
-}
-
-.unknownSelect {
-  margin-left: 0.5rem;
-  font-size: 0.8rem;
-}
-
-.unknownNote {
-  margin-left: 0.5rem;
   font-size: 0.8rem;
 }
 
@@ -1324,30 +1286,6 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-}
-
-.consistencyPopover {
-  position: fixed;
-  z-index: var(--layer-popover);
-  width: min(360px, calc(100vw - 2rem));
-  padding: 0.75rem;
-  border-radius: 10px;
-  border: 1px solid var(--color-warning-soft-border);
-  background: var(--color-warning-soft-bg);
-  box-shadow: 0 18px 40px var(--color-shadow);
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.consistencyPopoverTitle {
-  font-weight: 700;
-  color: var(--color-warning);
-}
-
-.consistencyPopoverMessage {
-  font-size: 0.84rem;
-  color: var(--color-warning);
 }
 
 .consistencyPopoverActions {
@@ -1490,15 +1428,6 @@
   border: 1px solid var(--color-warning-soft-border);
   border-radius: 6px;
   padding: 0.45rem 0.55rem;
-}
-
-.consistencyPopoverClose {
-  align-self: flex-end;
-  background: transparent;
-  border: 0;
-  color: var(--color-warning);
-  text-decoration: underline;
-  padding: 0;
 }
 
 .canonPanel {
@@ -1670,39 +1599,6 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-}
-
-.positionedChangeGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0.75rem;
-  margin: 1rem 0;
-}
-
-.positionedChangeGrid label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  color: var(--color-text-secondary);
-  font-size: 0.82rem;
-  font-weight: 650;
-}
-
-.positionedChangeGrid input,
-.positionedChangeGrid select {
-  width: 100%;
-  border: 1px solid var(--input-border);
-  border-radius: 10px;
-  background: var(--input-bg);
-  color: var(--input-text);
-  padding: 0.55rem 0.65rem;
-}
-
-.positionedChangeGrid input:focus,
-.positionedChangeGrid select:focus {
-  outline: none;
-  border-color: var(--input-border-focus);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 24%, transparent);
 }
 
 .changeComposerCard {
