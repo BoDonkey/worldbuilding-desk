@@ -1,6 +1,7 @@
 import type {WritingDocument} from '../entityTypes';
 import {htmlTextContent} from './textHelpers';
 import {buildZip} from './zip';
+import {triggerBytesDownload} from './downloadJson';
 
 function sanitizeFileNamePart(value: string): string {
   const cleaned = value
@@ -10,20 +11,6 @@ function sanitizeFileNamePart(value: string): string {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
   return cleaned || 'project';
-}
-
-function downloadBlob(fileName: string, data: Uint8Array, type: string): void {
-  const bytes = new Uint8Array(data.byteLength);
-  bytes.set(data);
-  const blob = new Blob([bytes], {type});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 }
 
 function htmlToPlainTextWithParagraphs(html: string): string {
@@ -357,7 +344,7 @@ export function exportScenesAsMarkdown(params: {
   const bytes = new TextEncoder().encode(markdown);
   const stamp = new Date().toISOString().slice(0, 10);
   const fileName = `${sanitizeFileNamePart(params.projectName)}-scenes-${stamp}.md`;
-  downloadBlob(fileName, bytes, 'text/markdown;charset=utf-8');
+  triggerBytesDownload(fileName, bytes, 'text/markdown;charset=utf-8');
 }
 
 export function exportScenesAsDocx(params: {
@@ -367,7 +354,7 @@ export function exportScenesAsDocx(params: {
   const bytes = buildScenesDocx(params);
   const stamp = new Date().toISOString().slice(0, 10);
   const fileName = `${sanitizeFileNamePart(params.projectName)}-scenes-${stamp}.docx`;
-  downloadBlob(
+  triggerBytesDownload(
     fileName,
     bytes,
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -381,5 +368,5 @@ export function exportScenesAsEpub(params: {
   const bytes = buildScenesEpub(params);
   const stamp = new Date().toISOString().slice(0, 10);
   const fileName = `${sanitizeFileNamePart(params.projectName)}-scenes-${stamp}.epub`;
-  downloadBlob(fileName, bytes, 'application/epub+zip');
+  triggerBytesDownload(fileName, bytes, 'application/epub+zip');
 }
