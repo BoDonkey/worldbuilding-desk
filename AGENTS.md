@@ -2,7 +2,8 @@
 
 Read order for any task: `docs/README.md` (doc map) → `PROJECT_STATUS.md`
 (current truth) → `docs/road-to-market.md` (the only active roadmap and slice
-plan; its status board is authoritative for open work).
+plan; its status board is authoritative for open work) → `docs/code-tour.md`
+(where code lives and how the main features run through it).
 
 ## Working on roadmap slices
 
@@ -44,6 +45,11 @@ commit hash. Refactor slices are strictly behavior-preserving.
     file must then be covered by an open breakup slice on the status board
     (see 3.32). New files still may not pass 1,000 lines.
   - Otherwise, run `--update` only to record a file that shrank.
+- **Code tour:** a slice that moves a seam, renames a folder, or changes a
+  path traced in `docs/code-tour.md` updates the tour in the same PR.
+  `pnpm check:code-tour` (run in CI) fails when a path or symbol the tour
+  names no longer exists; it cannot tell when a trace's order changed, so
+  reread the affected trace too.
 - **Docs:** update `PROJECT_STATUS.md` (and `docs/status-writing-workspace.md`
   for Workspace behavior) when application truth changes; keep
   completed-work diaries out of the roadmap; archive superseded docs to

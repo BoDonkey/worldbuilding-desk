@@ -888,6 +888,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Re-enable suppressed React hook lint rules one at a time (`set-state-in-effect`, `purity`, `preserve-manual-memoization`); prefer targeted inline disables with a `// why:` comment over blanket config suppression.
 
 ### Documentation
+- `docs/code-tour.md` (slice 3.33) maps where code lives: the layer diagram, folder map, four traced features, data locations, a troubleshooting table, and a glossary. `pnpm check:code-tour` checks every path and symbol it names and runs in CI's tooling job.
 - Keep summary docs aligned with the writing-first UX direction.
 - Treat older “functional IDE” language as implementation heritage, not the main pitch.
 - Dual LLM review direction is captured in `docs/archive/dual-llm-review-architecture.md`: local World Engine for passive structured review, BYOK providers for explicit creative work.
