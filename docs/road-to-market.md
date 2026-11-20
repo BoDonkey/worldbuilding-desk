@@ -387,7 +387,7 @@ messages).
 | 3.57 | Consistency engine along its seams (map: baseline-seam-maps.md) | 3 | M | Done `468419c` — 1,250 → 319; local Cypress: Electron renderer crashed once in world-canvas (passes alone) |
 | 3.58 | Workspace editor along its seams (map: baseline-seam-maps.md) | 3 | M | Done `0ccd497` — 1,134 → 466; close-on-scroll effect stays in the editor (spans popovers and stat peek) |
 | 3.59 | AI Settings along its sections (map: baseline-seam-maps.md) | 3 | M | Done `f30a376` — 1,080 → 126; section state stays in AISettings so it survives the AI switches |
-| 3.60 | Split the Workspace CSS module along component seams (map: baseline-seam-maps.md) | 3 | L | — |
+| 3.60 | Split the Workspace CSS module along component seams (map: baseline-seam-maps.md) | 3 | L | Done `ffcbd93` — 2,349 → 106 in 18 modules, largest 370; 180 before/after captures match; size baseline now empty; local Cypress: Electron renderer crashed once in post-merge-smoke (passes alone) |
 | 3.61 | One download helper | 3 | XS | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
