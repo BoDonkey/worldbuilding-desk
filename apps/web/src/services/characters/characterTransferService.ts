@@ -13,11 +13,11 @@ import {
   type ConsistencyAlias,
   getCanonicalFactsByProject,
   getCharacterSheetsByProject,
-  downloadJsonFile,
   readJsonFile,
   sanitizeFileNamePart,
   saveCharacterTransferImport
 } from '../storage';
+import {triggerJsonDownload} from '../../utils/downloadJson';
 import {
   classifyCharacterIdentities,
   createCharacterLinkResolver,
@@ -250,7 +250,7 @@ export async function exportCharactersJson(params: {
   const fileName = `${sanitizeFileNamePart(
     params.projectName
   )}-characters-${payload.packageType}-${stamp}.json`;
-  downloadJsonFile(fileName, payload);
+  triggerJsonDownload(fileName, payload);
 }
 
 export function prepareCharacterTransferImport(params: {

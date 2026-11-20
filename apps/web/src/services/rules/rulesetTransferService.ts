@@ -1,9 +1,6 @@
 import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
-import {
-  downloadJsonFile,
-  readJsonFile,
-  sanitizeFileNamePart
-} from '../storage';
+import {readJsonFile, sanitizeFileNamePart} from '../storage';
+import {triggerJsonDownload} from '../../utils/downloadJson';
 
 interface RulesetTransferPayload {
   schemaVersion: 1;
@@ -41,7 +38,7 @@ export async function exportRulesetJson(params: {
   const fileName = `${sanitizeFileNamePart(
     params.projectName
   )}-ruleset-${stamp}.json`;
-  downloadJsonFile(fileName, payload);
+  triggerJsonDownload(fileName, payload);
 }
 
 export async function importRulesetJson(file: File): Promise<WorldRuleset> {

@@ -10,6 +10,7 @@ import type {
   WorldMap
 } from '../../entityTypes';
 import type {ConsistencyAlias} from '../storage';
+import {triggerBytesDownload} from '../../utils/downloadJson';
 import {buildZip, type ZipEntryInput} from '../../utils/zip';
 import {
   connectionsForPlace,
@@ -510,18 +511,11 @@ export function downloadPortableDataZip(params: {
   maps?: WorldMap[];
   unitConversions?: UnitConversion[];
 }): void {
-  const bytes = buildPortableDataZip(params);
-  const copy = new Uint8Array(bytes.byteLength);
-  copy.set(bytes);
-  const blob = new Blob([copy.buffer], {type: 'application/zip'});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${sanitizePathPart(params.projectName)}-portable-${new Date().toISOString().slice(0, 10)}.zip`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  triggerBytesDownload(
+    `${sanitizePathPart(params.projectName)}-portable-${new Date().toISOString().slice(0, 10)}.zip`,
+    buildPortableDataZip(params),
+    'application/zip'
+  );
 }
 
 const parseFrontmatterValue = (raw: string): unknown => {

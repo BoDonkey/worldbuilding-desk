@@ -1,6 +1,7 @@
 import {buildProjectSnapshot, serializeProjectSnapshot} from './projectSnapshotService';
 import {buildSingleFileZip} from '../../utils/zip';
 import {encryptBackup, ENCRYPTED_BACKUP_EXTENSION} from './backupEncryption';
+import {triggerBytesDownload} from '../../utils/downloadJson';
 
 function sanitizeFileNamePart(value: string): string {
   const cleaned = value
@@ -10,20 +11,6 @@ function sanitizeFileNamePart(value: string): string {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
   return cleaned || 'project';
-}
-
-function downloadBlob(fileName: string, data: Uint8Array, type: string): void {
-  const bytes = new Uint8Array(data.byteLength);
-  bytes.set(data);
-  const blob = new Blob([bytes], {type});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 }
 
 /**
@@ -47,10 +34,10 @@ export async function exportProjectBackupZip(params: {
   if (params.passphrase) {
     const encrypted = await encryptBackup(zipBytes, params.passphrase);
     const fileName = `${baseName}${ENCRYPTED_BACKUP_EXTENSION}`;
-    downloadBlob(fileName, encrypted, 'application/octet-stream');
+    triggerBytesDownload(fileName, encrypted, 'application/octet-stream');
     return {fileName, encrypted: true};
   }
   const fileName = `${baseName}.zip`;
-  downloadBlob(fileName, zipBytes, 'application/zip');
+  triggerBytesDownload(fileName, zipBytes, 'application/zip');
   return {fileName, encrypted: false};
 }

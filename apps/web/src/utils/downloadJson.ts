@@ -10,6 +10,16 @@ export const triggerBlobDownload = (fileName: string, blob: Blob): void => {
   URL.revokeObjectURL(url);
 };
 
+/**
+ * Saves `data` bytes as a file of MIME `type`. The bytes are copied first so
+ * the Blob always gets a plain ArrayBuffer-backed array.
+ */
+export const triggerBytesDownload = (fileName: string, data: Uint8Array, type: string): void => {
+  const bytes = new Uint8Array(data.byteLength);
+  bytes.set(data);
+  triggerBlobDownload(fileName, new Blob([bytes], {type}));
+};
+
 /** Saves `data` as a pretty-printed JSON file through the browser's download. */
 export const triggerJsonDownload = (fileName: string, data: unknown): void => {
   triggerBlobDownload(fileName, new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
