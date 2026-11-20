@@ -10,7 +10,8 @@ import {
   buildCompoundChangePreview
 } from '../../services/state/positionedStateChange';
 import type {CharacterReplayState} from '../../services/state/stateReplay';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './SceneStateCapture.module.css';
 
 interface ConsumptionContext {
   actorId: string;
@@ -216,9 +217,9 @@ export function SceneConsumptionCapture({
   );
 
   return (
-    <div className={`${styles.modalCard} ${styles.changeComposerCard}`}>
-      <h3 className={styles.modalTitle}>Record item use</h3>
-      <p className={styles.modalDescription}>
+    <div className={`${workspaceStyles.modalCard} ${styles.changeComposerCard}`}>
+      <h3 className={workspaceStyles.modalTitle}>Record item use</h3>
+      <p className={workspaceStyles.modalDescription}>
         Confirm what changes here without leaving the scene.
       </p>
       {evidenceText && <p className={styles.changeComposerEvidence}>“{evidenceText}”</p>}
@@ -260,7 +261,7 @@ export function SceneConsumptionCapture({
       )}
 
       {!tracksEffects ? (
-        <p className={styles.modalDescription}>
+        <p className={workspaceStyles.modalDescription}>
           {context?.name} has no character sheet, so this records the item being used up.
         </p>
       ) : approvedConsumable && !customize ? (
@@ -327,7 +328,7 @@ export function SceneConsumptionCapture({
             {approvedEntry ? 'Update remembered effect for future uses' : 'Remember this effect'}
           </label>
           {operation === 'set' && (
-            <p className={styles.modalDescription}>Set-to effects apply only to this scene.</p>
+            <p className={workspaceStyles.modalDescription}>Set-to effects apply only to this scene.</p>
           )}
         </div>
       )}
@@ -383,7 +384,7 @@ export function SceneConsumptionCapture({
           <div className={styles.changeComposerWarning}>{preview.issues.join(' ')}</div>
         ) : null}
       </div>
-      <div className={styles.modalActions}>
+      <div className={workspaceStyles.modalActions}>
         <button type='button' onClick={onCancel}>Cancel</button>
         <button
           type='button'

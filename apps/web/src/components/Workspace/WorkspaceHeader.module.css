@@ -1,0 +1,88 @@
+/* Workspace header: review indicator, scratchpad button, chapter card line. */
+
+.scratchpadHeaderButton {
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.scratchpadHeaderButton:hover {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.reviewIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-height: 1.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  padding: 0.25rem 0.65rem;
+  font-size: 0.73rem;
+  font-weight: 600;
+}
+
+.reviewIndicator:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+.reviewIndicatorDot {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: var(--color-text-tertiary);
+  flex: 0 0 auto;
+}
+
+.reviewIndicator_idle {
+  color: var(--color-text-secondary);
+}
+
+.reviewIndicator_running .reviewIndicatorDot {
+  background: var(--color-accent);
+}
+
+.reviewIndicator_ready {
+  border-color: var(--color-accent-soft-border);
+  color: var(--color-accent-hover);
+}
+
+.reviewIndicator_ready .reviewIndicatorDot {
+  background: var(--color-accent);
+}
+
+.reviewIndicator_attention {
+  border-color: var(--color-warning-soft-border);
+  color: var(--color-warning);
+}
+
+.reviewIndicator_attention .reviewIndicatorDot {
+  background: var(--color-warning);
+}
+
+.reviewIndicator_unavailable {
+  border-color: var(--color-error-soft-border);
+  color: var(--color-error);
+}
+
+.reviewIndicator_unavailable .reviewIndicatorDot {
+  background: var(--color-error);
+}
+
+.workspaceHeaderMeta {
+  display: block;
+}

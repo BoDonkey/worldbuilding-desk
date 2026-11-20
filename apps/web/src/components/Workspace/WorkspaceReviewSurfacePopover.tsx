@@ -6,7 +6,7 @@ import {buildCharacterCaptureAliasList} from '../../services/worldBible/worldBib
 import {isCharacterLikeCategory} from '../../services/workspace/workspaceView';
 import {ContextPopover} from '../Editor/ContextPopover';
 import {WorldCategorySelect} from './WorldCategorySelect';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceReview.module.css';
 
 type WorkspaceConsistency = ReturnType<typeof useWorkspaceConsistency>;
 

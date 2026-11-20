@@ -1,4 +1,4 @@
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './CanonPanel.module.css';
 
 interface CanonPanelProps {
   childLastSynced?: string;

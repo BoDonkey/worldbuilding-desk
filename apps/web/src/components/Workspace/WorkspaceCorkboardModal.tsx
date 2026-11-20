@@ -5,7 +5,8 @@ import type {ChapterCard, WritingDocument} from '../../entityTypes';
 import type {useWorkspaceCorkboard} from '../../hooks/useWorkspaceCorkboard';
 import {removeSceneLink, toggleSceneLink} from '../../services/workspace/chapterCardSceneLinks';
 import {ChapterCardSceneLinks} from '../Corkboard/ChapterCardSceneLinks';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceCorkboardModal.module.css';
 
 interface WorkspaceCorkboardModalProps {
   isOpen: boolean;
@@ -64,20 +65,20 @@ export const WorkspaceCorkboardModal = ({
 
   return (
     <div ref={dialogRef} role='dialog' aria-modal='true' aria-label='Project corkboard'
-      onClick={onClose} className={styles.modalOverlay}>
+      onClick={onClose} className={workspaceStyles.modalOverlay}>
       <div onClick={(event) => event.stopPropagation()}
-        className={`${styles.modalCard} ${styles.corkboardModalCard}`}>
+        className={`${workspaceStyles.modalCard} ${styles.corkboardModalCard}`}>
         <div className={styles.corkboardModalHeader}>
           <div>
-            <h3 className={styles.modalTitle}>Corkboard</h3>
-            <p className={styles.modalDescription}>
+            <h3 className={workspaceStyles.modalTitle}>Corkboard</h3>
+            <p className={workspaceStyles.modalDescription}>
               Quick access to the same chapter cards, beats, and scene links as Planning → Corkboard.
             </p>
           </div>
           <div className={styles.corkboardHeaderActions}>
-            <button type='button' className={styles.modalSecondaryAction}
+            <button type='button' className={workspaceStyles.modalSecondaryAction}
               onClick={createCorkboardCard}>New Card</button>
-            <button type='button' className={styles.modalSecondaryAction}
+            <button type='button' className={workspaceStyles.modalSecondaryAction}
               onClick={onClose}>Close</button>
           </div>
         </div>
@@ -118,11 +119,11 @@ export const WorkspaceCorkboardModal = ({
                       placeholder='Chapter or sequence title' className={styles.corkboardTitleInput} />
                   </div>
                   <div className={styles.corkboardCardActions}>
-                    <button type='button' className={styles.modalSecondaryAction}
+                    <button type='button' className={workspaceStyles.modalSecondaryAction}
                       onClick={() => moveCorkboardCard(card.id, -1)} disabled={index === 0}>Up</button>
-                    <button type='button' className={styles.modalSecondaryAction}
+                    <button type='button' className={workspaceStyles.modalSecondaryAction}
                       onClick={() => moveCorkboardCard(card.id, 1)} disabled={index === cards.length - 1}>Down</button>
-                    <button type='button' className={styles.modalSecondaryAction}
+                    <button type='button' className={workspaceStyles.modalSecondaryAction}
                       onClick={() => deleteCorkboardCard(card.id)}>Delete</button>
                   </div>
                 </div>
@@ -163,7 +164,7 @@ export const WorkspaceCorkboardModal = ({
                 <div className={styles.corkboardPlotSection}>
                   <div className={styles.corkboardPlotHeader}>
                     <strong>Plot points</strong>
-                    <button type='button' className={styles.modalSecondaryAction}
+                    <button type='button' className={workspaceStyles.modalSecondaryAction}
                       onClick={() => addCorkboardPlotPoint(card.id)}>Add plot point</button>
                   </div>
                   {card.plotPoints.length === 0 ? (
@@ -178,13 +179,13 @@ export const WorkspaceCorkboardModal = ({
                               onChange={(event) => updateCorkboardPlotPoint(card.id, plotPoint.id, {title: event.target.value})}
                               placeholder='Beat or turning point' className={styles.corkboardPlotTitleInput} />
                             <div className={styles.corkboardPlotActions}>
-                              <button type='button' className={styles.modalSecondaryAction}
+                              <button type='button' className={workspaceStyles.modalSecondaryAction}
                                 onClick={() => moveCorkboardPlotPoint(card.id, plotPoint.id, -1)}
                                 disabled={plotIndex === 0}>Up</button>
-                              <button type='button' className={styles.modalSecondaryAction}
+                              <button type='button' className={workspaceStyles.modalSecondaryAction}
                                 onClick={() => moveCorkboardPlotPoint(card.id, plotPoint.id, 1)}
                                 disabled={plotIndex === card.plotPoints.length - 1}>Down</button>
-                              <button type='button' className={styles.modalSecondaryAction}
+                              <button type='button' className={workspaceStyles.modalSecondaryAction}
                                 onClick={() => deleteCorkboardPlotPoint(card.id, plotPoint.id)}>Delete</button>
                             </div>
                           </div>
@@ -201,7 +202,7 @@ export const WorkspaceCorkboardModal = ({
           </div>
         )}
         <div className={styles.corkboardFooterActions}>
-          <button type='button' className={styles.modalSecondaryAction}
+          <button type='button' className={workspaceStyles.modalSecondaryAction}
             onClick={onOpenScratchpad}>Open Scratchpad</button>
           <button type='button' onClick={onClose}>Done</button>
         </div>

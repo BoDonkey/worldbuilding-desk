@@ -1,4 +1,4 @@
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './UnknownEntityPanel.module.css';
 
 interface UnknownEntityPanelProps {
   hiddenReviewSurfaceCount: number;

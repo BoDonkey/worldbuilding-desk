@@ -3,7 +3,8 @@ import {useEscapeToClose} from '../../hooks/useEscapeToClose';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
 import TipTapEditor from '../TipTapEditor';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceDrawer.module.css';
 import modalStyles from './WorkspaceScratchpadModal.module.css';
 
 interface WorkspaceScratchpadModalProps {
@@ -39,17 +40,17 @@ export const WorkspaceScratchpadModal = ({
   if (!isOpen) return null;
   return (
     <div ref={dialogRef} role='dialog' aria-modal='true' aria-label='Project scratchpad'
-      onClick={onClose} className={styles.modalOverlay}>
+      onClick={onClose} className={workspaceStyles.modalOverlay}>
       <div onClick={(event) => event.stopPropagation()}
-        className={`${styles.modalCard} ${modalStyles.card}`}>
+        className={`${workspaceStyles.modalCard} ${modalStyles.card}`}>
         <div className={modalStyles.header}>
           <div>
-            <h3 className={styles.modalTitle}>Scratchpad</h3>
-            <p className={styles.modalDescription}>
+            <h3 className={workspaceStyles.modalTitle}>Scratchpad</h3>
+            <p className={workspaceStyles.modalDescription}>
               Loose project notes that stay outside scenes and canon.
             </p>
           </div>
-          <button type='button' className={styles.modalSecondaryAction} onClick={onClose}>
+          <button type='button' className={workspaceStyles.modalSecondaryAction} onClick={onClose}>
             Close
           </button>
         </div>
@@ -60,7 +61,7 @@ export const WorkspaceScratchpadModal = ({
         <div className={modalStyles.footer}>
           <div className={styles.scratchpadStatus} role='status'>{statusLabel}</div>
           <div className={modalStyles.actions}>
-            <button type='button' className={styles.modalSecondaryAction} onClick={() => {
+            <button type='button' className={workspaceStyles.modalSecondaryAction} onClick={() => {
               setActiveContextView('scratchpad');
               setContextDrawerOpen(true);
               if (isNarrowViewport) setSceneDrawerOpen(false);

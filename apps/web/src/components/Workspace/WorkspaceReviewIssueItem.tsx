@@ -7,7 +7,7 @@ import {
   type ConsistencyReviewItem
 } from '../../services/consistency/reviewReadiness';
 import {buildCharacterCaptureAliasList} from '../../services/worldBible/worldBibleCanonicalization';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceReview.module.css';
 import {WorldCategorySelect} from './WorldCategorySelect';
 
 const ISSUE_LABELS: Record<string, string> = {

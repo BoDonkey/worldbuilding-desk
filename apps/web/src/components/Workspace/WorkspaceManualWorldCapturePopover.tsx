@@ -9,7 +9,7 @@ import {
 import {ContextPopover} from '../Editor/ContextPopover';
 import {WorldCategorySelect} from './WorldCategorySelect';
 import type {WorkspaceReviewSurfaceActions} from './WorkspaceReviewSurfacePopover';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceReview.module.css';
 
 export interface ManualWorldCapture {
   sourceText: string;

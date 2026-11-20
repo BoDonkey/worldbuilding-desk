@@ -6,7 +6,8 @@ import type {
   StatBlockSourceType, StatBlockStyle, WorldEntity
 } from '../../entityTypes';
 import type {useWorkspaceStatBlocks} from '../../hooks/useWorkspaceStatBlocks';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceStatBlockModal.module.css';
 
 interface WorkspaceStatBlockModalProps {
   isOpen: boolean;
@@ -48,16 +49,16 @@ export const WorkspaceStatBlockModal = (props: WorkspaceStatBlockModalProps) => 
           aria-modal='true'
           aria-label='Status Block Builder'
           onClick={closeStatBlockModal}
-          className={styles.modalOverlay}
+          className={workspaceStyles.modalOverlay}
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            className={`${styles.modalCard} ${styles.statModalCard}`}
+            className={`${workspaceStyles.modalCard} ${styles.statModalCard}`}
           >
-            <h3 className={styles.modalTitle}>
+            <h3 className={workspaceStyles.modalTitle}>
               {pendingStatBlockRebindToken ? 'Rebind Status Block' : 'Insert Status Block'}
             </h3>
-            <p className={styles.modalDescription}>
+            <p className={workspaceStyles.modalDescription}>
               {pendingStatBlockRebindToken ? (
                 <>
                   Choose the correct source and save it back into this placeholder token.
@@ -334,11 +335,11 @@ export const WorkspaceStatBlockModal = (props: WorkspaceStatBlockModalProps) => 
               </div>
             )}
 
-            <div className={styles.modalActions}>
+            <div className={workspaceStyles.modalActions}>
               <button
                 type='button'
                 onClick={closeStatBlockModal}
-                className={styles.modalSecondaryAction}
+                className={workspaceStyles.modalSecondaryAction}
               >
                 Cancel
               </button>

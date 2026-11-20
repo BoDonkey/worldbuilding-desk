@@ -1,7 +1,7 @@
 import type {WritingDocument} from '../../entityTypes';
 import type {useWorkspaceChapterCardLinks} from '../../hooks/useWorkspaceChapterCardLinks';
 import type {ReviewReadiness} from '../../services/consistency/reviewReadiness';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceHeader.module.css';
 import {PageHeader} from '../PageHeader';
 import {WorkspaceChapterCardContext} from './WorkspaceChapterCardContext';
 

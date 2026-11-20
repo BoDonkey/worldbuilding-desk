@@ -8,7 +8,7 @@ import {
   isOnboardingGuideDismissed,
   type OnboardingGuideVariant
 } from '../../services/onboarding/onboardingGuide';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './GettingStartedGuide.module.css';
 
 interface GettingStartedGuideProps {
   projectId: string;

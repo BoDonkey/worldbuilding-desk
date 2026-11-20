@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './SceneRosterPanel.module.css';
 import type {
   SceneRosterCharacterCard,
   SceneRosterInventoryLine,

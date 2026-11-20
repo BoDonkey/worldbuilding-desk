@@ -1,0 +1,370 @@
+/* Review findings: the review tab lists, issue items and their actions, state change and
+   canon check panels, and the review surface and world capture popovers. */
+
+.consistencyPanelHeader {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.consistencyDescription {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.consistencyLastRun {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.5rem;
+}
+
+.consistencyList {
+  margin: 0.65rem 0 0 1rem;
+  padding: 0;
+}
+
+.reviewIssueSection {
+  margin-top: 0.75rem;
+}
+
+.reviewIssueSectionHeader {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.consistencyListItem {
+  margin-bottom: 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.35rem 0.4rem;
+}
+
+.consistencyListItemActive {
+  border-color: var(--color-accent-soft-border);
+  background: var(--color-accent-soft-bg);
+}
+
+.consistencyListItemConflict {
+  border-color: var(--color-error-soft-border);
+  background: var(--color-error-soft-bg);
+}
+
+.consistencyListItemConflict.consistencyListItemActive {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 2px var(--color-error-soft-border);
+}
+
+.consistencyItemHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.consistencyHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.consistencyItemBody {
+  margin-top: 0.25rem;
+}
+
+.consistencyItemTitle {
+  color: var(--color-text-primary);
+}
+
+.consistencyMessage {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.consistencySceneButton {
+  font-size: 0.82rem;
+}
+
+.consistencyReason {
+  display: inline-flex;
+  margin-left: 0.4rem;
+  border: 1px solid var(--color-accent-soft-bg);
+  border-radius: 999px;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-hover);
+  padding: 0.08rem 0.38rem;
+  font-size: 0.7rem;
+}
+
+.consistencyConflictBadge {
+  display: inline-flex;
+  margin-left: 0.4rem;
+  border: 1px solid var(--color-error-soft-border);
+  border-radius: 999px;
+  background: var(--color-error-soft-bg);
+  color: var(--color-error-soft-text);
+  padding: 0.08rem 0.38rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.consistencyDismissButton {
+  border-color: var(--button-danger-border);
+  background: var(--button-danger-bg);
+  color: var(--button-danger-text);
+  font-size: 0.78rem;
+}
+
+.consistencyBadgeReady {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-success-soft-border);
+  border-radius: 999px;
+  background: var(--color-success-soft-bg);
+  color: var(--color-success);
+  padding: 0.08rem 0.38rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.consistencyBadgeBatch {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-accent-soft-bg);
+  border-radius: 999px;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent);
+  padding: 0.08rem 0.38rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.consistencyBadgeBlocked {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-warning-soft-border);
+  border-radius: 999px;
+  background: var(--color-warning-soft-bg);
+  color: var(--color-warning);
+  padding: 0.08rem 0.38rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.consistencyRelated {
+  margin-left: 0.5rem;
+}
+
+.consistencyRelatedButton {
+  margin-right: 0.35rem;
+  font-size: 0.78rem;
+}
+
+.reviewActionPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+  padding: 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--surface-panel);
+}
+
+.reviewActionField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.reviewActionField input,
+.reviewActionField select,
+.reviewActionRow select {
+  width: 100%;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--color-text-primary);
+  padding: 0.35rem 0.45rem;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.reviewActionField input:focus,
+.reviewActionField select:focus,
+.reviewActionRow select:focus {
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 24%, transparent);
+  outline: none;
+}
+
+.reviewActionRow {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.reviewActionRow select {
+  flex: 1 1 11rem;
+}
+
+.reviewActionRow button {
+  flex: 1 1 8rem;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+.consistencyPopoverActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.consistencyPopoverActions select,
+.consistencyPopoverActions .captureNameField,
+.consistencyPopoverActions .captureNameInput {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+}
+
+.consistencyPopoverActions button {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+.captureNameInput {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+}
+
+.captureNameField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.canonicalCaptureHint {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border: 1px solid var(--color-accent-soft-border);
+  border-radius: 10px;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-text);
+  padding: 0.5rem 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.aliasPreviewList {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.aliasPreviewList span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--color-accent-soft-border);
+  border-radius: 999px;
+  background: var(--color-bg-primary);
+  color: var(--color-accent-hover);
+  padding: 0.1rem 0.45rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.aliasPreviewList button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  min-height: 1rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--color-accent-soft-border);
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.aliasPreviewList button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent-hover);
+}
+
+.manualExistingLinkControls {
+  display: flex;
+  grid-column: 1 / -1;
+  flex: 1 1 100%;
+  gap: 0.45rem;
+}
+
+.manualExistingLinkControls select {
+  flex: 1 1 220px;
+  min-width: 180px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.45rem 0.55rem;
+}
+
+.consistencyPopoverLinkRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: start;
+}
+
+.consistencyPopoverLinkRow select {
+  width: 100%;
+  min-width: 0;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+}
+
+.consistencyPopoverLinkRow .consistencyPopoverNote {
+  grid-column: 1 / -1;
+}
+
+.consistencyPopoverNote {
+  font-size: 0.8rem;
+  color: var(--color-warning);
+  background-color: var(--color-warning-soft-bg);
+  border: 1px solid var(--color-warning-soft-border);
+  border-radius: 6px;
+  padding: 0.45rem 0.55rem;
+}

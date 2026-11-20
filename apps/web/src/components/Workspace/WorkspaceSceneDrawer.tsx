@@ -1,7 +1,7 @@
 import type {WritingDocument, WorkspaceImportMode} from '../../entityTypes';
 import type {WorkspaceImportSummary} from '../../store/workspaceUiStore';
 import {useWorkspaceUiStore} from '../../store/workspaceUiStore';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceSceneDrawer.module.css';
 
 interface WorkspaceSceneTimelineEntry {
   id: string;

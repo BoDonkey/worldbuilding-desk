@@ -1,7 +1,8 @@
 import {useRef} from 'react';
 import {useEscapeToClose} from '../../hooks/useEscapeToClose';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceMemoryModal.module.css';
 
 interface WorkspaceMemoryModalProps {
   isOpen: boolean;
@@ -20,17 +21,17 @@ export const WorkspaceMemoryModal = ({
   useFocusTrap(dialogRef, isOpen);
   if (!isOpen) return null;
   return (
-    <div ref={dialogRef} role='dialog' aria-modal='true' className={styles.modalOverlay}>
-      <div className={`${styles.modalCard} ${styles.memoryModalCard}`}>
-        <h3 className={styles.modalTitle}>Capture project memory</h3>
-        <p className={styles.modalDescription}>
+    <div ref={dialogRef} role='dialog' aria-modal='true' className={workspaceStyles.modalOverlay}>
+      <div className={`${workspaceStyles.modalCard} ${styles.memoryModalCard}`}>
+        <h3 className={workspaceStyles.modalTitle}>Capture project memory</h3>
+        <p className={workspaceStyles.modalDescription}>
           Review or edit the summary before adding it to the project canon.
         </p>
         <textarea value={draft} onChange={(event) => setDraft(event.target.value)}
           rows={6} className={styles.memoryTextarea} />
-        <div className={styles.modalActions}>
+        <div className={workspaceStyles.modalActions}>
           <button type='button' onClick={onClose} disabled={isSaving}
-            className={styles.modalSecondaryAction}>Cancel</button>
+            className={workspaceStyles.modalSecondaryAction}>Cancel</button>
           <button type='button' onClick={onSave} disabled={isSaving || !draft.trim()}>
             {isSaving ? 'Saving...' : 'Save memory'}
           </button>

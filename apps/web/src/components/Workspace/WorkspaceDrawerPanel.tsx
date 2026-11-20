@@ -2,7 +2,7 @@ import {
   forwardRef,
   type ReactNode
 } from 'react';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceDrawer.module.css';
 
 interface WorkspaceDrawerPanelProps {
   ariaLabel: string;

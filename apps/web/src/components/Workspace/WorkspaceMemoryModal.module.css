@@ -1,0 +1,11 @@
+/* Extract memory dialog. */
+
+.memoryModalCard {
+  padding: 1.5rem;
+  width: min(520px, 90vw);
+  max-height: 80vh;
+}
+
+.memoryTextarea {
+  width: 100%;
+}

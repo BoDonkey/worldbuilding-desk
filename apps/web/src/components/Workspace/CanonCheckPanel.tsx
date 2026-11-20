@@ -3,7 +3,7 @@ import type {ModelCanonCheckController} from '../../hooks/useModelCanonCheck';
 import {AIProposalPreview} from '../common/AIProposalPreview';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
-import styles from '../../styles/WorkspaceRoute.module.css';
+import styles from './WorkspaceReview.module.css';
 
 interface CanonCheckPanelProps {
   check: ModelCanonCheckController;

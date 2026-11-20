@@ -1,0 +1,20 @@
+/* Workspace with no scene open. */
+
+.emptyWorkspaceTitle {
+  margin: 0;
+  font-size: 1.55rem;
+}
+
+.emptyWorkspaceCopy {
+  margin: 0.65rem 0 0;
+  max-width: 42rem;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.emptyWorkspaceActions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
