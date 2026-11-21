@@ -2,7 +2,6 @@ import {describe, expect, it} from 'vitest';
 import type {EntityCategory, WorldEntity} from '../../entityTypes';
 import {
   buildEntityCardSummary,
-  isCharacterCategory,
   isItemCategory
 } from './worldBibleSummary';
 
@@ -38,21 +37,6 @@ const entity: WorldEntity = {
   createdAt: 1,
   updatedAt: 1
 };
-
-describe('isCharacterCategory', () => {
-  it('recognizes explicit character-kind categories regardless of their label', () => {
-    expect(isCharacterCategory(category)).toBe(true);
-    expect(
-      isCharacterCategory({...category, slug: 'cast', name: 'Important People'})
-    ).toBe(true);
-  });
-
-  it('rejects unrelated categories', () => {
-    expect(
-      isCharacterCategory({...category, kind: 'general', slug: 'characters', name: 'Characters'})
-    ).toBe(false);
-  });
-});
 
 describe('isItemCategory', () => {
   it('recognizes the canonical item category by slug or name', () => {

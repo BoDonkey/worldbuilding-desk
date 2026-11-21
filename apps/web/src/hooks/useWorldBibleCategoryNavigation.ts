@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {EntityCategory} from '../entityTypes';
 import {useCollapsedPreference} from './useCollapsedPreference';
-import {isCharacterCategory} from '../services/worldBible/worldBibleSummary';
+import {isCharacterCategory} from '../services/characters/characterIdentity';
 import {isSystemNegativeSpaceCategory} from '../services/worldBible/systemNegativeSpace';
 
 export type WorldBibleViewMode = 'category' | 'review';

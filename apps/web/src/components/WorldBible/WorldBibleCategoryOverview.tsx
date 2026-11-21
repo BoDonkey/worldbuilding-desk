@@ -1,5 +1,6 @@
 import type {EntityCategory} from '../../entityTypes';
-import {isCharacterCategory, isItemCategory} from '../../services/worldBible/worldBibleSummary';
+import {isCharacterCategory} from '../../services/characters/characterIdentity';
+import {isItemCategory} from '../../services/worldBible/worldBibleSummary';
 import {isSystemNegativeSpaceCategory} from '../../services/worldBible/systemNegativeSpace';
 import shared from './worldBibleShared.module.css';
 import styles from './WorldBibleCategoryOverview.module.css';

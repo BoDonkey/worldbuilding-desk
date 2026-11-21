@@ -45,10 +45,8 @@ import {getCanonSyncState, getSeriesBibleConfig} from '../services/seriesBible/S
 import type {MemoryEntry, ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
 import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
 import {getShodhService} from '../services/shodh/getShodhService';
-import {
-  CHARACTER_NOTES_FIELD,
-  isCharacterCategory
-} from '../services/worldBible/worldBibleSummary';
+import {isCharacterCategory} from '../services/characters/characterIdentity';
+import {CHARACTER_NOTES_FIELD} from '../services/worldBible/worldBibleSummary';
 import {describeError} from '../services/errors';
 import {parseAlternativeNames} from '../services/worldBible/worldBibleEntityHelpers';
 import {RECORDS_CHANGED} from '../services/recordEvents';

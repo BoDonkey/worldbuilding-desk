@@ -391,6 +391,11 @@ messages).
 | 3.59 | AI Settings along its sections (map: baseline-seam-maps.md) | 3 | M | Done `f30a376` — 1,080 → 126; section state stays in AISettings so it survives the AI switches |
 | 3.60 | Split the Workspace CSS module along component seams (map: baseline-seam-maps.md) | 3 | L | Done `ffcbd93` — 2,349 → 106 in 18 modules, largest 370; 180 before/after captures match; size baseline now empty; local Cypress: Electron renderer crashed once in post-merge-smoke (passes alone) |
 | 3.61 | One download helper | 3 | XS | Done `879cc94` — AISettings copy already gone (3.59); `sanitizeFileNamePart` still copied in three files |
+| 3.62 | One character-category rule (K1) | 3 | S | Done `b7e954e` — author-made categories are always `general`, so only the built-in Characters category gets character capture; a second character category would be a new feature |
+| 3.63 | Drop the write-only consistency log (K2) | 3 | S | — |
+| 3.64 | Backup store list in one place (K3) | 3 | XS | — |
+| 3.65 | Cleanliness tidy-up sweep (K5, K8) | 3 | XS | — |
+| 3.66 | Scene item plans: one lookup (K4) | 3 | S | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -879,6 +884,44 @@ full-coverage tier with no test changes beyond import paths. Each one
   `sceneExport.ts`, `portableData.ts`, and `AISettings.tsx` each keep their
   own copy of the link-click download. Point them at the util. Unit-only
   tier; behavior-preserving.
+
+### Phase 3 — From the 2026-11-21 cleanliness review
+
+Source: `docs/archive/architecture-review-2026-11-21.md` (audited
+`9760aae`; line numbers drift). Each slice names the findings it closes; the
+finding is the full prompt. Re-check it against current code before
+building. Deferred from the review: K6 (shared dialog shell, unless
+dogfooding finds a backdrop click losing work) and K7 (desktop policy parity
+check, unless one of those files changes).
+
+- **3.62 One character-category rule.** K1. One `kind`-based
+  `isCharacterCategory` (keep `services/characters/characterIdentity.ts`);
+  remove the copy in `worldBibleSummary.ts`, the name-guessing shadow in
+  `WorkspaceReviewIssueItem.tsx`, the unused `CHARACTER_CATEGORY_HINTS`
+  export, and the slug guesses in `worldBibleEntityPlans.ts`. The hint list
+  in `inferLegacyCategoryKind` and the unknown-name category suggestions
+  stay. Behavior change on purpose: the review list, the record editor, and
+  first-name alias suggestions follow the category's kind. Tests with a
+  character category named without hint words and a general one named with
+  them.
+- **3.63 Drop the write-only consistency log.** K2.
+  - **Decided (author, 2026-11-21).** Drop it, do not cap it. Remove
+    `saveProposal` and `saveGuardrailEvent` and their calls, then clear and
+    delete the `consistency_proposals` and `consistency_events` stores in a
+    schema migration.
+  - **Verify.** Full-coverage tier; `DB_VERSION` changes, so run the
+    packaged desktop E2E and grep for pinned versions.
+- **3.64 Backup store list in one place.** K3. After 3.63. Declare the
+  stores backups leave out next to `PROJECT_SCOPED_STORE_NAMES`, with a test
+  that every project-scoped store is backed up or listed there.
+- **3.65 Cleanliness tidy-up sweep.** K5, K8. Delete the dead and test-only
+  exports; one `sanitizeFileNamePart`; settle the two `slugifyFieldKey`
+  fallbacks (check non-Latin headings on re-import); the
+  `ConsumableEffectEditor` lint warning; the `as any`; the scene drawer's
+  inline styles. Unit-only tier except the drawer styles.
+- **3.66 Scene item plans: one lookup.** K4. Decide the two edge cases
+  first (missing subject; how the compendium definition is found), then
+  share the common step in `sceneRosterItemPlans.ts` with tests for each.
 
 ### Phase 4 — Places, positions, and maps (before beta)
 
