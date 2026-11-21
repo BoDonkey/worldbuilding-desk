@@ -156,7 +156,11 @@ the full-length originals behind the 2026-08-01 consolidation:
 - `project-vault-plan.md` and `next-prompt-5.15c.md` — completed Slice 5.15
   vault design and its final verification handoff; durable behavior lives in
   `PROJECT_STATUS.md` and the roadmap records the completed slices.
-- `architecture-review-2026-11-13.md` — latest dated architecture and code
+- `architecture-review-2026-11-21.md` — latest dated review, a cleanliness
+  pass before dogfooding (two rules for character categories, a write-only
+  consistency log, hand-kept backup store lists, copied item lookups, dead
+  exports) behind roadmap Slices 3.62–3.66.
+- `architecture-review-2026-11-13.md` — prior dated architecture and code
   review (scene order in the state ledger, a story-specific assistant
   answer, unvalidated state-change acceptance, the local AI review bypass,
   record-creation and name-matching drift, size headroom, dead code, and
