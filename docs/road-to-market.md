@@ -392,7 +392,7 @@ messages).
 | 3.60 | Split the Workspace CSS module along component seams (map: baseline-seam-maps.md) | 3 | L | Done `ffcbd93` — 2,349 → 106 in 18 modules, largest 370; 180 before/after captures match; size baseline now empty; local Cypress: Electron renderer crashed once in post-merge-smoke (passes alone) |
 | 3.61 | One download helper | 3 | XS | Done `879cc94` — AISettings copy already gone (3.59); `sanitizeFileNamePart` still copied in three files |
 | 3.62 | One character-category rule (K1) | 3 | S | Done `b7e954e` — author-made categories are always `general`, so only the built-in Characters category gets character capture; a second character category would be a new feature |
-| 3.63 | Drop the write-only consistency log (K2) | 3 | S | — |
+| 3.63 | Drop the write-only consistency log (K2) | 3 | S | Done `a72cc1a` — DB_VERSION 32; `applyAcceptedProposal` removed with it (it only logged) |
 | 3.64 | Backup store list in one place (K3) | 3 | XS | — |
 | 3.65 | Cleanliness tidy-up sweep (K5, K8) | 3 | XS | — |
 | 3.66 | Scene item plans: one lookup (K4) | 3 | S | — |
@@ -918,7 +918,12 @@ check, unless one of those files changes).
   exports; one `sanitizeFileNamePart`; settle the two `slugifyFieldKey`
   fallbacks (check non-Latin headings on re-import); the
   `ConsumableEffectEditor` lint warning; the `as any`; the scene drawer's
-  inline styles. Unit-only tier except the drawer styles.
+  inline styles. Found in 3.63: `npx tsc --noEmit -p cypress` in `apps/web`
+  reports type errors in nine specs (redeclared constants, loose
+  `cy.wrap` types) that no CI check runs, and `STORE_NAMES` in
+  `cypress/support/commands.ts` is unused. Fix the errors, and add the
+  check to CI only if it stays cheap. Unit-only tier except the drawer
+  styles.
 - **3.66 Scene item plans: one lookup.** K4. Decide the two edge cases
   first (missing subject; how the compendium definition is found), then
   share the common step in `sceneRosterItemPlans.ts` with tests for each.

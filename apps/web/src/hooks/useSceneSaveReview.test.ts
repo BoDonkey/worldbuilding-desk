@@ -45,8 +45,7 @@ const engine = (allowCommit: boolean) => ({
         message: "Entity 'Harrison' not found.", surface: 'Harrison'
       }]
     }
-  }),
-  applyAcceptedProposal: vi.fn().mockResolvedValue(undefined)
+  })
 }) as unknown as WorldEngine;
 
 const renderSave = (worldEngine: WorldEngine, doc: WritingDocument) =>

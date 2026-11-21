@@ -99,7 +99,7 @@ export function useSceneSaveReview({
 
       if (consistencyMode !== 'lenient') {
         try {
-          const {proposal, validation, observations, issueAnnotations} =
+          const {validation, observations, issueAnnotations} =
             await worldEngine.reviewText({
               projectId: doc.projectId,
               text: htmlToPlainText(doc.content),
@@ -153,7 +153,6 @@ export function useSceneSaveReview({
           }
 
           if (validation.allowCommit) {
-            await worldEngine.applyAcceptedProposal(proposal, validation);
             const orderedDocuments = sortWritingDocuments(documents);
             const sceneOrder =
               orderedDocuments.findIndex((entry) => entry.id === doc.id) + 1;

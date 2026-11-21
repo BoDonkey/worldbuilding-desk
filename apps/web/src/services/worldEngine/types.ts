@@ -122,8 +122,4 @@ export interface WorldEngine {
   extractObservations(input: ExtractProposalInput): Promise<ObservationProposal[]>;
   reviewText(input: ExtractProposalInput): Promise<WorldEngineReviewResult>;
   classifyReviewItem(input: ReviewClassificationInput): Promise<ReviewClassification>;
-  applyAcceptedProposal(
-    proposal: ExtractedProposal,
-    validation: ValidationResult
-  ): Promise<void>;
 }

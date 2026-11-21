@@ -4,7 +4,7 @@ import {wrapVaultDatabase} from './vault/vaultDatabase';
 import {isVaultRegistryLoaded, loadVaultRegistry} from './vault/vaultRegistry';
 
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 31;
+export const DB_VERSION = 32;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
@@ -31,8 +31,12 @@ export const ZONE_AFFINITY_PROFILE_STORE_NAME = 'zone_affinity_profiles';
 export const ZONE_AFFINITY_PROGRESS_STORE_NAME = 'zone_affinity_progress';
 export const SETTLEMENT_MODULE_STORE_NAME = 'settlement_modules';
 export const SETTLEMENT_STATE_STORE_NAME = 'settlement_state';
-export const CONSISTENCY_PROPOSAL_STORE_NAME = 'consistency_proposals';
-export const CONSISTENCY_EVENT_STORE_NAME = 'consistency_events';
+/**
+ * Stores the consistency engine wrote on every review and nothing read
+ * (review K2, slice 3.63). Deleted at DB_VERSION 32; deleting a store
+ * deletes its records.
+ */
+export const RETIRED_STORE_NAMES = ['consistency_proposals', 'consistency_events'] as const;
 export const CONSISTENCY_ALIAS_STORE_NAME = 'consistency_aliases';
 export const STATE_MUTATION_EVENT_STORE_NAME = 'state_mutation_events';
 export const PROJECT_MIGRATION_BACKUP_STORE_NAME = 'project_migration_backups';
@@ -70,8 +74,6 @@ export const PROJECT_SCOPED_STORE_NAMES = [
   ZONE_AFFINITY_PROGRESS_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
-  CONSISTENCY_PROPOSAL_STORE_NAME,
-  CONSISTENCY_EVENT_STORE_NAME,
   CONSISTENCY_ALIAS_STORE_NAME,
   STATE_MUTATION_EVENT_STORE_NAME,
   ACTOR_RESOLUTION_STORE_NAME,
@@ -215,16 +217,10 @@ export function upgradeDatabase(db: IDBDatabase, transaction: IDBTransaction): v
     });
   }
 
-  if (!db.objectStoreNames.contains(CONSISTENCY_PROPOSAL_STORE_NAME)) {
-    db.createObjectStore(CONSISTENCY_PROPOSAL_STORE_NAME, {
-      keyPath: 'id'
-    });
-  }
-
-  if (!db.objectStoreNames.contains(CONSISTENCY_EVENT_STORE_NAME)) {
-    db.createObjectStore(CONSISTENCY_EVENT_STORE_NAME, {
-      keyPath: 'id'
-    });
+  for (const storeName of RETIRED_STORE_NAMES) {
+    if (db.objectStoreNames.contains(storeName)) {
+      db.deleteObjectStore(storeName);
+    }
   }
 
   if (!db.objectStoreNames.contains(CONSISTENCY_ALIAS_STORE_NAME)) {
