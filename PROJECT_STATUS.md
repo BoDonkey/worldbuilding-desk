@@ -724,6 +724,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   Continuity-corpus tests pin write plans, actor bindings, replay ordering,
   stale-source rejection, reusable item links, and anchor/timeline behavior.
   The hook is 786 lines (previously 1,417), with each new service below 600.
+  Since slice 3.66 a pickup and a use share one capture step: a character no
+  longer in the project is reported as an error for both (a pickup used to do
+  nothing), and the item's compendium entry is the resolver's exact match,
+  else the entry linked to the item record, never one that belongs to a
+  different item than the one the author chose.
   Existing limitation preserved by characterization: timeline edit/expiration
   still look up sheet/legacy actor IDs, so canonical-only actor IDs may report
   that the character must be added to the roster despite already being present.
