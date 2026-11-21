@@ -10,7 +10,8 @@ import {CHARACTER_SHEET_STORE_NAME, openDb} from '../storage/db';
 import {
   classifyCharacterIdentities,
   createCharacterLinkResolver,
-  inferLegacyCategoryKind
+  inferLegacyCategoryKind,
+  isCharacterCategory
 } from './characterIdentity';
 import {
   buildCharacterIdentityResolutionQueue,
@@ -67,6 +68,15 @@ const sheet = (
   createdAt: 1,
   updatedAt: 1,
   ...options
+});
+
+describe('isCharacterCategory', () => {
+  it('follows the category kind, not its name or slug', () => {
+    expect(isCharacterCategory(category())).toBe(true);
+    expect(isCharacterCategory(category({slug: 'cast', name: 'Heroes'}))).toBe(true);
+    expect(isCharacterCategory(category({kind: 'general', slug: 'characters', name: 'Characters'}))).toBe(false);
+    expect(isCharacterCategory(category({kind: 'general', slug: 'peoples', name: 'Peoples of the North'}))).toBe(false);
+  });
 });
 
 describe('character identity classifier', () => {

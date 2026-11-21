@@ -1,5 +1,5 @@
 import type {EntityCategory, WorldEntity} from '../../entityTypes';
-import {isCharacterCategory} from '../worldBible/worldBibleSummary';
+import {isCharacterCategory} from '../characters/characterIdentity';
 import type {ConsistencyAlias} from '../storage';
 import {withNumberVariants} from './numberVariants';
 

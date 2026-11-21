@@ -7,6 +7,7 @@ import {
   type ConsistencyReviewItem
 } from '../../services/consistency/reviewReadiness';
 import {buildCharacterCaptureAliasList} from '../../services/worldBible/worldBibleCanonicalization';
+import {isCharacterLikeCategory} from '../../services/workspace/workspaceView';
 import styles from './WorkspaceReview.module.css';
 import {WorldCategorySelect} from './WorldCategorySelect';
 
@@ -68,15 +69,6 @@ const getDetectionReason = (
     label: 'Review clue',
     title: 'Review found a pattern that may need canon cleanup.'
   };
-
-const isCharacterLikeCategory = (category: {slug: string; name: string} | null) => {
-  if (!category) return false;
-  const slug = category.slug.toLowerCase();
-  const name = category.name.toLowerCase();
-  return ['character', 'characters', 'npc', 'person', 'people'].some(
-    (hint) => slug.includes(hint) || name.includes(hint)
-  );
-};
 
 export interface WorkspaceReviewIssueItemProps {
   item: ConsistencyReviewItem;

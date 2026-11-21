@@ -15,13 +15,6 @@ const CATEGORY_SUMMARY_PRIORITY: Record<string, string[]> = {
   concepts: ['description', 'notes']
 };
 
-export const CHARACTER_CATEGORY_HINTS = [
-  'character',
-  'characters',
-  'npc',
-  'person',
-  'people'
-];
 const ITEM_CATEGORY_NAMES = new Set(['item', 'items']);
 export const CHARACTER_NOTES_FIELD = 'notes';
 export const CHARACTER_IDENTITY_FIELD_KEYS = ['age', 'role'];
@@ -36,10 +29,6 @@ const compactEntityCardText = (value: string, maxLength = 140): string => {
   const compact = value.replace(/\s+/g, ' ').trim();
   if (compact.length <= maxLength) return compact;
   return `${compact.slice(0, maxLength).trim()}...`;
-};
-
-export const isCharacterCategory = (category: EntityCategory): boolean => {
-  return category.kind === 'character';
 };
 
 export const isItemCategory = (category: EntityCategory): boolean =>
