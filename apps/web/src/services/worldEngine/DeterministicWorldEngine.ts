@@ -2,8 +2,7 @@ import type {
   ConsistencyEngineService,
   ExtractProposalInput,
   ExtractedProposal,
-  GuardrailIssue,
-  ValidationResult
+  GuardrailIssue
 } from '../consistency';
 import {
   ObservationProposalSchema,
@@ -141,12 +140,5 @@ export class DeterministicWorldEngine implements WorldEngine {
     input: ReviewClassificationInput
   ): Promise<ReviewClassification> {
     return classifyIssue(input.issue, input.sourceText);
-  }
-
-  async applyAcceptedProposal(
-    proposal: ExtractedProposal,
-    validation: ValidationResult
-  ): Promise<void> {
-    await this.consistencyEngine.applyProposal(proposal, validation);
   }
 }

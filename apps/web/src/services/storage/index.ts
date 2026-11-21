@@ -31,8 +31,6 @@ export {
   ZONE_AFFINITY_PROGRESS_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
-  CONSISTENCY_PROPOSAL_STORE_NAME,
-  CONSISTENCY_EVENT_STORE_NAME,
   CONSISTENCY_ALIAS_STORE_NAME,
   STATE_MUTATION_EVENT_STORE_NAME,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
@@ -90,7 +88,6 @@ export * from './repositories/mechanicsDraftStorage';
 export * from './repositories/characterStorage';
 export * from './repositories/compendiumStorage';
 export * from './repositories/compendiumWorldStorage';
-export * from './repositories/consistencyStorage';
 export * from './repositories/corkboardStorage';
 export * from './repositories/entityStorage';
 export * from './repositories/itemStateStorage';

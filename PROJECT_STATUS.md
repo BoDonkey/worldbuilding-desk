@@ -163,7 +163,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   units are shown side by side. Maps travel in backups (copy remaps their
   ids) and portable export (`maps/maps.csv`, `maps/unit-conversions.csv`,
   `placements` in place frontmatter and CSV). Project storage schema 12,
-  backup snapshot schema 14, IndexedDB version 31.
+  backup snapshot schema 14, IndexedDB version 31 (32 since slice 3.63,
+  which deleted the write-only `consistency_proposals` and
+  `consistency_events` stores; scene review no longer writes a log).
 - Map surface (slice 4.80). **Open** on a map in **Maps and distances**
   imports a background image (PNG, JPEG, WebP, or GIF; up to 10 MB and 16384
   pixels a side, refused with a message naming the limit) and shows it with

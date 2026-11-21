@@ -1,4 +1,3 @@
-import { saveGuardrailEvent, saveProposal } from '../storage';
 import type {
   ExtractProposalInput,
   ExtractedProposal,
@@ -222,9 +221,7 @@ export function buildExtractedProposal(
 
 export class ConsistencyEngineService {
   async extractProposal(input: ExtractProposalInput): Promise<ExtractedProposal> {
-    const proposal = buildExtractedProposal(input);
-    await saveProposal(proposal);
-    return proposal;
+    return buildExtractedProposal(input);
   }
 
   async validateProposal(proposal: ExtractedProposal): Promise<ValidationResult> {
@@ -289,31 +286,6 @@ export class ConsistencyEngineService {
       issues
     };
 
-    await saveGuardrailEvent({
-      id: crypto.randomUUID(),
-      proposalId: proposal.id,
-      projectId: proposal.projectId,
-      kind: result.allowCommit ? 'validation_passed' : 'validation_blocked',
-      payload: {
-        issues,
-        validation: result
-      },
-      createdAt: Date.now()
-    });
-
     return result;
-  }
-
-  async applyProposal(proposal: ExtractedProposal, validation: ValidationResult): Promise<void> {
-    await saveGuardrailEvent({
-      id: crypto.randomUUID(),
-      proposalId: proposal.id,
-      projectId: proposal.projectId,
-      kind: 'apply',
-      payload: {
-        validation
-      },
-      createdAt: Date.now()
-    });
   }
 }

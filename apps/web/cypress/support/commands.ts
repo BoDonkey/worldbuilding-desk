@@ -34,8 +34,6 @@ const STORE_NAMES = [
   'zone_affinity_progress',
   'settlement_modules',
   'settlement_state',
-  'consistency_proposals',
-  'consistency_events',
   'consistency_aliases',
   'state_mutation_events',
   'mechanics_drafts',

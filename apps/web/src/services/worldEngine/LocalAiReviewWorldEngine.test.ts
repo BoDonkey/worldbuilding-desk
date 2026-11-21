@@ -29,8 +29,7 @@ const baseEngine = {
       observations: [],
       issueAnnotations: [{...deterministicNote, source: 'deterministic', engineLabel: 'Deterministic'}]
     }) as unknown as WorldEngineReviewResult,
-  classifyReviewItem: async () => deterministicNote,
-  applyAcceptedProposal: async () => undefined
+  classifyReviewItem: async () => deterministicNote
 } satisfies WorldEngine;
 
 const reply = JSON.stringify([

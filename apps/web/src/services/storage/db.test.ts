@@ -8,6 +8,7 @@ import {
   openDb,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   PROJECT_STORE_NAME,
+  RETIRED_STORE_NAMES,
   WORLD_CANVAS_STORE_NAME
 } from './db';
 
@@ -72,5 +73,39 @@ describe('openDb structural upgrade', () => {
         .get('legacy-project')
     );
     expect(storedProject).toMatchObject({id: 'legacy-project', name: 'Legacy'});
+  });
+});
+
+describe('retired consistency log stores (DB_VERSION 32)', () => {
+  it('deletes the write-only log stores and their records, and keeps project records', async () => {
+    await deleteTestDatabase();
+    const v31 = indexedDB.open(DB_NAME, 31);
+    v31.onupgradeneeded = () => {
+      v31.result.createObjectStore(PROJECT_STORE_NAME, {keyPath: 'id'});
+      for (const storeName of RETIRED_STORE_NAMES) {
+        v31.result.createObjectStore(storeName, {keyPath: 'id'});
+      }
+    };
+    const oldDb = await requestToPromise(v31);
+    const write = oldDb.transaction([PROJECT_STORE_NAME, ...RETIRED_STORE_NAMES], 'readwrite');
+    write.objectStore(PROJECT_STORE_NAME).put({id: 'p1', name: 'Kept', createdAt: 1, updatedAt: 1});
+    for (const storeName of RETIRED_STORE_NAMES) {
+      write.objectStore(storeName).put({id: `${storeName}-1`, projectId: 'p1', text: 'A full scene copy'});
+    }
+    await new Promise<void>((resolve, reject) => {
+      write.oncomplete = () => resolve();
+      write.onerror = () => reject(write.error);
+    });
+    oldDb.close();
+
+    openedDb = await openDb();
+    expect(openedDb.version).toBe(32);
+    for (const storeName of RETIRED_STORE_NAMES) {
+      expect(openedDb.objectStoreNames.contains(storeName)).toBe(false);
+    }
+    const kept = await requestToPromise(
+      openedDb.transaction(PROJECT_STORE_NAME, 'readonly').objectStore(PROJECT_STORE_NAME).get('p1')
+    );
+    expect(kept).toMatchObject({id: 'p1', name: 'Kept'});
   });
 });

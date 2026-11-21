@@ -1,9 +1,4 @@
-import type {
-  ExtractProposalInput,
-  ExtractedProposal,
-  GuardrailIssue,
-  ValidationResult
-} from '../consistency';
+import type {ExtractProposalInput, GuardrailIssue} from '../consistency';
 import type {ProjectAISettings} from '../../entityTypes';
 import {LLMService} from '../llm/LLMService';
 import {getInstalledOllamaModels} from '../llm/ollamaModels';
@@ -239,13 +234,6 @@ export class LocalAiReviewWorldEngine implements WorldEngine {
       summary: annotation.summary ?? baseClassification.summary,
       evidence: annotation.evidence ?? baseClassification.evidence
     });
-  }
-
-  async applyAcceptedProposal(
-    proposal: ExtractedProposal,
-    validation: ValidationResult
-  ): Promise<void> {
-    await this.baseEngine.applyAcceptedProposal(proposal, validation);
   }
 
   private async generateIssueAnnotations(
