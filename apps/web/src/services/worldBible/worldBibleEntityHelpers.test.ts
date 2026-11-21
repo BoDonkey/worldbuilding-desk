@@ -3,7 +3,6 @@ import {
   convertPlainTextToRichHtml,
   extractPlainTextFromRichText,
   extractStructuredSummaryFromRichText,
-  isRichTextEffectivelyEmpty,
   normalizeRichTextValue,
   parseAlternativeNames
 } from './worldBibleEntityHelpers';
@@ -26,8 +25,6 @@ describe('worldBibleEntityHelpers', () => {
     expect(extractPlainTextFromRichText('<p>Alpha <strong>Beta</strong></p>')).toBe(
       'Alpha Beta'
     );
-    expect(isRichTextEffectivelyEmpty('<p></p>')).toBe(true);
-    expect(isRichTextEffectivelyEmpty('<p><br></p>')).toBe(true);
   });
 
   it('preserves lightweight structure for summary excerpts', () => {

@@ -292,6 +292,3 @@ export const extractStructuredSummaryFromRichText = (value: string): string => {
     .replace(/\s+/g, ' ')
     .trim();
 };
-
-export const isRichTextEffectivelyEmpty = (value: string): boolean =>
-  extractPlainTextFromRichText(value).length === 0;

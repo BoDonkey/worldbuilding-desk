@@ -42,9 +42,6 @@ export const inferCompendiumDomain = (categories: EntityCategory[], entity: Worl
   return 'custom';
 };
 
-export const getCategorySlug = (categories: EntityCategory[], categoryId: string): string =>
-  categories.find((category) => category.id === categoryId)?.slug ?? '';
-
 /** The next review item after the current one, else the one before it. */
 export const pickNextReviewItem = (queue: ReviewQueueItem[], currentEntityId: string): ReviewQueueItem | null => {
   const currentIndex = queue.findIndex((item) => item.entity.id === currentEntityId);

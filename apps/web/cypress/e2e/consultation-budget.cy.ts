@@ -175,3 +175,6 @@ describe('AI consultation budget', () => {
     cy.contains('button', 'Add 10 more for today').should('be.visible');
   });
 });
+
+// A module, so its top-level names stay out of other specs' scope.
+export {};

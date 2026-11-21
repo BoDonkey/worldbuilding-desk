@@ -108,8 +108,3 @@ export function moveProjectBrowserContentToStorage(projectId: string): void {
     }
   }
 }
-
-/** Test-only. */
-export function resetProjectBrowserStorageForTests(): void {
-  memory.clear();
-}

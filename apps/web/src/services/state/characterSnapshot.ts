@@ -345,18 +345,3 @@ export function describeCharacterSnapshotChanges(
 
   return changes;
 }
-
-/** One-line summaries for compact surfaces such as the editor's hover card. */
-export function summarizeCharacterSnapshot(
-  snapshot: CharacterSnapshot,
-  limit = 4
-): {resources: string[]; stats: string[]; statuses: string[]; location?: string} {
-  return {
-    resources: snapshot.resources
-      .slice(0, limit)
-      .map((resource) => `${resource.label} ${resource.current}/${resource.max}`),
-    stats: snapshot.stats.slice(0, limit).map((stat) => `${stat.label} ${stat.value}`),
-    statuses: snapshot.statuses,
-    location: snapshot.location
-  };
-}

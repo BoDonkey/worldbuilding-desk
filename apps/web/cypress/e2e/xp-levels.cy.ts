@@ -119,3 +119,6 @@ describe('XP and levels through the scene ledger (3.34a)', () => {
     });
   });
 });
+
+// A module, so its top-level names stay out of other specs' scope.
+export {};

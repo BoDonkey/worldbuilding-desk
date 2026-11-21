@@ -7,6 +7,8 @@ import {
   mapImportedTextToFields,
   markdownToRichHtml,
   reconcileImportSectionDestinations,
+  isExistingFieldMatch,
+  slugifyFieldKey,
   stripMarkdownComments
 } from './worldBibleImportParsing';
 import type {WorldBibleImportSectionDraft} from './worldBibleImportParsing';
@@ -321,3 +323,23 @@ describe('getPlannedNewFieldLabels (5.17)', () => {
     expect(planned.get('characters')).toEqual(['Traits']);
   });
 });
+
+describe('slugifyFieldKey (3.65)', () => {
+  const field = (label: string): EntityCategory['fieldSchema'][number] => ({key: slugifyFieldKey(label), label, type: 'textarea'});
+
+  it('keeps letters and digits from any script and gives the same key every time', () => {
+    expect(slugifyFieldKey('  Early Life & Training ')).toBe('early_life_training');
+    expect(slugifyFieldKey('背景')).toBe('背景');
+    expect(slugifyFieldKey('背景')).toBe(slugifyFieldKey('背景'));
+    expect(slugifyFieldKey('Café Notes')).toBe('café_notes');
+    expect(slugifyFieldKey('!!!')).toBe('field');
+  });
+
+  it('matches a non-Latin heading to its own field on re-import, and not to a different one', () => {
+    // Before 3.65 every non-Latin heading slugged to a fresh random id, so a
+    // re-import never matched and added the field again.
+    expect(isExistingFieldMatch(field('背景'), '背景')).toBe(true);
+    expect(isExistingFieldMatch(field('背景'), '能力')).toBe(false);
+  });
+});
+

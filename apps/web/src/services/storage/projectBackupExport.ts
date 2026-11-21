@@ -1,17 +1,7 @@
 import {buildProjectSnapshot, serializeProjectSnapshot} from './projectSnapshotService';
 import {buildSingleFileZip} from '../../utils/zip';
 import {encryptBackup, ENCRYPTED_BACKUP_EXTENSION} from './backupEncryption';
-import {triggerBytesDownload} from '../../utils/downloadJson';
-
-function sanitizeFileNamePart(value: string): string {
-  const cleaned = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-_]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return cleaned || 'project';
-}
+import {sanitizeFileNamePart, triggerBytesDownload} from '../../utils/downloadJson';
 
 /**
  * Downloads a project backup: a zip, or with a passphrase an encrypted

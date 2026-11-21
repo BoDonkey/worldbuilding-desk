@@ -92,15 +92,18 @@ const seed = () => {
   cy.reload();
 };
 
-type StoredPlace = {id: string; place?: {placements?: Array<{mapId: string; x: number; y: number}>}};
+type Placement = {mapId: string; x: number; y: number};
+type StoredPlace = {id: string; place?: {placements?: Placement[]}};
+/** The place's pin on the Region map, if any. */
 const placementOf = (placeId: string) =>
-  withStores<StoredPlace | undefined>(['entities'], 'readonly', (tx, done) => {
+  withStores<Placement | undefined>(['entities'], 'readonly', (tx, done) => {
     const request = tx.objectStore('entities').get(placeId);
-    request.onsuccess = () => done(request.result as StoredPlace | undefined);
-  }).then((record) => record?.place?.placements?.find((placement) => placement.mapId === 'map-region'));
+    request.onsuccess = () => done((request.result as StoredPlace | undefined)
+      ?.place?.placements?.find((placement) => placement.mapId === 'map-region'));
+  });
 
 /** A 400 × 200 PNG drawn in the browser. */
-const mapPng = (): Cypress.Chainable<Cypress.Buffer> =>
+const mapPng = (): Cypress.Chainable<InstanceType<typeof Cypress.Buffer>> =>
   cy.window().then((win) => {
     const canvas = win.document.createElement('canvas');
     canvas.width = 400;

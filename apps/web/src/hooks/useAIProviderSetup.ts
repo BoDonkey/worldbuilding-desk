@@ -115,12 +115,11 @@ export function useAIProviderSetup(
   };
 
   const handleProviderChange = (provider: AIProviderId) => {
-    const nextConfigs = {...aiSettings.configs};
-    if (!nextConfigs[provider]) {
-      nextConfigs[provider] = {
-        ...(PROVIDER_DEFAULT_BASE_URLS[provider] ? {baseUrl: PROVIDER_DEFAULT_BASE_URLS[provider]} : {})
-      } as any;
-    }
+    // A provider chosen for the first time starts with its default address, if it has one.
+    const defaultBaseUrl = PROVIDER_DEFAULT_BASE_URLS[provider];
+    const nextConfigs: ProjectAISettings['configs'] = aiSettings.configs[provider]
+      ? {...aiSettings.configs}
+      : {...aiSettings.configs, [provider]: defaultBaseUrl ? {baseUrl: defaultBaseUrl} : {}};
 
     setDiagnostics(null);
 

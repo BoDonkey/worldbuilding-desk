@@ -3,7 +3,6 @@ import type {EntityCategory, WorldEntity} from '../../entityTypes';
 import type {ReviewQueueItem} from '../consistency';
 import {formatAlternativeNames, parseAlternativeNames} from './worldBibleEntityHelpers';
 import {
-  getCategorySlug,
   inferCompendiumDomain,
   isCharacterLikeEntity,
   isLocationLikeEntity,
@@ -58,10 +57,6 @@ describe('category classification', () => {
     expect(inferCompendiumDomain([category('c-s', 'stores')], entity('a', 'c-s'))).toBe('mineral');
   });
 
-  it('looks up a category slug, or an empty string', () => {
-    expect(getCategorySlug(CATEGORIES, 'c-place')).toBe('places');
-    expect(getCategorySlug(CATEGORIES, 'gone')).toBe('');
-  });
 });
 
 describe('pickNextReviewItem', () => {

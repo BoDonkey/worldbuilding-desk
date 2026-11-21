@@ -121,9 +121,19 @@ const looksLikeImportSectionHeading = (
   return true;
 };
 
+/**
+ * A field key from a label: lowercase letters and digits from any script,
+ * with everything else as one `_` (slice 3.65). Stable, so the same heading
+ * gives the same key on every import. It used to keep only a-z and 0-9 and
+ * fall back to a random id, so a heading such as "背景" never matched its own
+ * field and each re-import added another.
+ */
 export const slugifyFieldKey = (value: string): string =>
-  value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') ||
-  crypto.randomUUID();
+  value
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '_')
+    .replace(/^_+|_+$/g, '') || 'field';
 
 const escapeRegExp = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

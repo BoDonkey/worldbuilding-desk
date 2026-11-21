@@ -55,7 +55,7 @@ const move = (projectId: string, order: number, locationName: string, placeId?: 
   createdAt: order
 });
 
-const seed = (moves: (projectId: string) => unknown[]) => {
+const seed = (moves: (projectId: string) => Array<{id: string}>) => {
   cy.window().its('localStorage').invoke('getItem', 'activeProject').then((value) => {
     const projectId = JSON.parse(String(value)).id as string;
     // Default categories get random ids, so the seeded records need their own.

@@ -9,7 +9,6 @@ import {
   parentPlaceOptions,
   placeAncestors,
   placeParentProblem,
-  placePathLabel,
   placesById
 } from './places';
 
@@ -60,9 +59,8 @@ describe('containment', () => {
     expect(isPlaceWithin('farm', 'city', places)).toBe(false);
   });
 
-  it('lists direct children by name and builds a path label', () => {
+  it('lists direct children by name', () => {
     expect(childPlaces('region', places).map((entry) => entry.id)).toEqual(['farm', 'city']);
-    expect(placePathLabel('tavern', places)).toBe('Tavern › Dock District › Varn › The Reach');
   });
 
   it('stops at missing parents and stored cycles instead of looping', () => {

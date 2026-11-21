@@ -63,6 +63,9 @@ export function ConsumableEffectEditor({
           delta: String(effect.delta)
         }))
       : [newEffect(ruleset)]);
+    // Reset the form when a different or newly saved entry arrives (id and
+    // updatedAt), not on every edit that only changes the entry's identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id, entry.updatedAt, ruleset]);
 
   const save = () => {

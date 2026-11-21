@@ -79,7 +79,7 @@ export function WorkspaceSceneDrawer({
   const openAITextReport = useWorkspaceUiStore((state) => state.openAITextReport);
   return (
     <>
-      <div style={{marginBottom: '1rem'}}>
+      <div className={styles.sceneToolbar}>
         <button
           type='button'
           onClick={handleNewDocument}
@@ -91,7 +91,7 @@ export function WorkspaceSceneDrawer({
           type='button'
           onClick={openImportPicker}
           disabled={isImportingDocuments}
-          style={{marginLeft: '0.5rem'}}
+          className={styles.sceneToolbarButton}
         >
           {isImportingDocuments ? 'Importing...' : 'Import'}
         </button>
@@ -121,7 +121,7 @@ export function WorkspaceSceneDrawer({
           type='button'
           onClick={() => openExportModalWithDrawerHandling('markdown')}
           disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
+          className={styles.sceneToolbarButton}
         >
           Export MD
         </button>
@@ -129,7 +129,7 @@ export function WorkspaceSceneDrawer({
           type='button'
           onClick={() => openExportModalWithDrawerHandling('docx')}
           disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
+          className={styles.sceneToolbarButton}
         >
           Export DOCX
         </button>
@@ -137,7 +137,7 @@ export function WorkspaceSceneDrawer({
           type='button'
           onClick={() => openExportModalWithDrawerHandling('epub')}
           disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
+          className={styles.sceneToolbarButton}
         >
           Export EPUB
         </button>
@@ -145,7 +145,7 @@ export function WorkspaceSceneDrawer({
           type='button'
           onClick={openAITextReport}
           disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
+          className={styles.sceneToolbarButton}
         >
           AI text report
         </button>
@@ -197,7 +197,7 @@ export function WorkspaceSceneDrawer({
       )}
 
       {documents.length === 0 && (
-        <p style={{fontStyle: 'italic'}}>
+        <p className={styles.sceneEmptyNote}>
           No scenes yet. Create one to start writing.
         </p>
       )}
@@ -212,19 +212,10 @@ export function WorkspaceSceneDrawer({
           >
             <div
               onClick={() => handleSelectDocument(doc)}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
+              className={styles.sceneListItemRow}
             >
               <span
-                style={{
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  maxWidth: '160px'
-                }}
+                className={styles.sceneListItemTitle}
               >
                 {doc.title || 'Untitled scene'}
               </span>

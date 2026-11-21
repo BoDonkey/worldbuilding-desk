@@ -279,7 +279,9 @@ export function planSelectionConsumptionCapture({
       createdAt: existingDefinition?.createdAt ?? now,
       updatedAt: now
     }
-    : existingDefinition && sourceEntityId && !existingDefinition.sourceEntityId
+    // As for a pickup (3.65, author): an unlinked entry is linked to the item
+    // record only when the author asks to save the item as reusable.
+    : input.saveReusable && existingDefinition && sourceEntityId && !existingDefinition.sourceEntityId
       ? {...existingDefinition, sourceEntityId, updatedAt: now}
       : undefined;
   const commands = input.commands.map((command) => command.type.startsWith('inventory_')

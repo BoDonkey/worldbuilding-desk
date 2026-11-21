@@ -83,13 +83,6 @@ export const childPlaces = (placeId: string, places: PlacesById): WorldEntity[] 
     .filter((candidate) => candidate.place?.parentId === placeId && candidate.id !== placeId)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-/** "Tavern › District › City": the place and its ancestors, outermost last. */
-export const placePathLabel = (placeId: string, places: PlacesById): string =>
-  [places.get(placeId), ...placeAncestors(placeId, places)]
-    .filter((place): place is WorldEntity => Boolean(place))
-    .map((place) => place.name)
-    .join(' › ');
-
 export interface PlaceConnectionView {
   connection: PlaceConnection;
   /** The record that stores the connection. */

@@ -63,6 +63,20 @@ describe('scene roster item write plans', () => {
       .toContain('no longer in the project');
   });
 
+  it.each([
+    ['pickup', planSelectionInventoryCapture, captureContext, pickupInput],
+    ['use', planSelectionConsumptionCapture, consumeContext, consumeInput]
+  ] as const)('%s: links an unlinked entry to the item record only when saved as reusable (3.65)', (_label, build, context, input) => {
+    const known = {id: 'known', projectId: 'corpus', categoryId: 'items', name: 'Pale Draught', fields: {}, links: [], createdAt: 1, updatedAt: 1};
+    const plan = (extra: {saveReusable: boolean; reusableEntityId?: string}) =>
+      build({...context, entities: [known], compendiumEntries: [definition], input: {...input, ...extra}} as never)!.value!.plan;
+    // Matched by name only: a use used to link the entry here without asking.
+    expect(plan({saveReusable: false}).compendiumEntryToSave).toBeUndefined();
+    expect(plan({saveReusable: false, reusableEntityId: 'known'}).compendiumEntryToSave).toBeUndefined();
+    expect(plan({saveReusable: true, reusableEntityId: 'known'}).compendiumEntryToSave)
+      .toEqual({...definition, sourceEntityId: 'known', updatedAt: 100});
+  });
+
   describe('compendium entry lookup (3.66: resolver match first, then the item record)', () => {
     const item = (id: string, name = 'Pale Draught') =>
       ({id, projectId: 'corpus', categoryId: 'items', name, fields: {}, links: [], createdAt: 1, updatedAt: 1});
