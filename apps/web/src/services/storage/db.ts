@@ -83,6 +83,20 @@ export const PROJECT_SCOPED_STORE_NAMES = [
   MAP_STORE_NAME
 ] as const;
 
+/**
+ * Project-scoped stores a backup leaves out, each with its reason. Every other
+ * project-scoped store is backed up (slice 3.64): a new store goes in the
+ * backup or here, and `projectBackupStores.test.ts` fails until it does.
+ * - Project review runs: review output, not canon; a restored project re-runs
+ *   review (see `repositories/projectReviewRunStorage.ts`).
+ */
+export const BACKUP_EXCLUDED_STORE_NAMES: readonly string[] = [PROJECT_REVIEW_RUN_STORE_NAME];
+
+/** The project-scoped stores a backup carries and an import writes. */
+export const BACKED_UP_STORE_NAMES: readonly string[] = PROJECT_SCOPED_STORE_NAMES.filter(
+  (storeName) => !BACKUP_EXCLUDED_STORE_NAMES.includes(storeName)
+);
+
 /** Index on `projectId` used by project-scoped reads (DB_VERSION 29). */
 export const PROJECT_ID_INDEX = 'projectId';
 
