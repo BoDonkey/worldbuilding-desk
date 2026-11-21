@@ -27,6 +27,7 @@ import type {
 } from '../characters/characterIdentity';
 import {
   ACTOR_RESOLUTION_STORE_NAME,
+  BACKED_UP_STORE_NAMES,
   openDb,
   CATEGORY_STORE_NAME,
   CORKBOARD_CHAPTER_CARD_STORE_NAME,
@@ -290,42 +291,7 @@ async function saveProjectScopedRecords(params: {
   existingSettingsId: string | null;
 }): Promise<void> {
   const db = await openDb();
-  const tx = db.transaction(
-    [
-      SETTINGS_STORE_NAME,
-      CATEGORY_STORE_NAME,
-      ENTITY_STORE_NAME,
-      WRITING_STORE_NAME,
-      SCRATCHPAD_STORE_NAME,
-      WORLD_CANVAS_STORE_NAME,
-      CORKBOARD_CHAPTER_CARD_STORE_NAME,
-      CHARACTER_STORE_NAME,
-      CHARACTER_SHEET_STORE_NAME,
-      CONSISTENCY_ALIAS_STORE_NAME,
-      ACTOR_RESOLUTION_STORE_NAME,
-      CHARACTER_IDENTITY_REPORT_STORE_NAME,
-      LORE_DOCUMENT_STORE_NAME,
-      LORE_DOCUMENT_LINK_STORE_NAME,
-      LORE_ENTITY_PROPOSAL_STORE_NAME,
-      LORE_FACT_PROPOSAL_STORE_NAME,
-      CANONICAL_FACT_STORE_NAME,
-      CANON_DECISION_CLUSTER_STORE_NAME,
-      CANON_DECISION_SUPPRESSION_STORE_NAME,
-      COMPENDIUM_ENTRY_STORE_NAME,
-      COMPENDIUM_MILESTONE_STORE_NAME,
-      COMPENDIUM_RECIPE_STORE_NAME,
-      COMPENDIUM_PROGRESS_STORE_NAME,
-      COMPENDIUM_ACTION_LOG_STORE_NAME,
-      ZONE_AFFINITY_PROFILE_STORE_NAME,
-      ZONE_AFFINITY_PROGRESS_STORE_NAME,
-      SETTLEMENT_MODULE_STORE_NAME,
-      SETTLEMENT_STATE_STORE_NAME,
-      STATE_MUTATION_EVENT_STORE_NAME,
-      MECHANICS_DRAFT_STORE_NAME,
-      MAP_STORE_NAME
-    ],
-    'readwrite'
-  );
+  const tx = db.transaction([...BACKED_UP_STORE_NAMES], 'readwrite');
 
   const putMany = <T>(storeName: string, values: T[]) =>
     Promise.all(values.map((value) => requestToPromise(tx.objectStore(storeName).put(value))));

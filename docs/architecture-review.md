@@ -331,7 +331,11 @@ refuses, before any write, an import that would overwrite another project's
 record.
 
 Project backup is the portability boundary. Derived RAG/Shodh data may be
-rebuilt from primary records.
+rebuilt from primary records. Every project-scoped store is either backed up
+or named, with its reason, in `BACKUP_EXCLUDED_STORE_NAMES`
+(`services/storage/db.ts`, slice 3.64). The import writes
+`BACKED_UP_STORE_NAMES`, and `projectBackupStores.test.ts` fails when a new
+store is in neither list or is dropped by export or import.
 
 Project deletion removes the manifest and all project-owned records in the
 main database in one transaction. The legacy ruleset database is separate:
