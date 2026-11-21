@@ -395,7 +395,7 @@ messages).
 | 3.63 | Drop the write-only consistency log (K2) | 3 | S | Done `a72cc1a` — DB_VERSION 32; `applyAcceptedProposal` removed with it (it only logged) |
 | 3.64 | Backup store list in one place (K3) | 3 | XS | Done `50b2db9` — local Cypress: world-canvas renderer crashed after mutation edits to watched files (passed alone after a dev-server reload); second full run clean |
 | 3.65 | Cleanliness tidy-up sweep (K5, K8) | 3 | XS | — |
-| 3.66 | Scene item plans: one lookup (K4) | 3 | S | — |
+| 3.66 | Scene item plans: one lookup (K4) | 3 | S | Done `440c59d` — missing character is an error for pickups too; resolver entry skipped when it belongs to another item |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -922,11 +922,18 @@ check, unless one of those files changes).
   reports type errors in nine specs (redeclared constants, loose
   `cy.wrap` types) that no CI check runs, and `STORE_NAMES` in
   `cypress/support/commands.ts` is unused. Fix the errors, and add the
-  check to CI only if it stays cheap. Unit-only tier except the drawer
-  styles.
+  check to CI only if it stays cheap. Found in 3.66 (author: add here):
+  in `sceneRosterItemPlans.ts` a pickup links an unlinked compendium entry
+  to its item record only when **save reusable** is ticked, while a use
+  links it either way; make them agree, with a test. Unit-only tier except
+  the drawer styles.
 - **3.66 Scene item plans: one lookup.** K4. Decide the two edge cases
   first (missing subject; how the compendium definition is found), then
   share the common step in `sceneRosterItemPlans.ts` with tests for each.
+  - **Decided (author, 2026-11-21).** A character no longer in the
+    project is an error for pickups too, as it already was for uses. The
+    compendium entry is the item resolver's exact match first, then the
+    entry linked to the item record.
 
 ### Phase 4 — Places, positions, and maps (before beta)
 

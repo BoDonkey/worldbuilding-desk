@@ -50,11 +50,49 @@ describe('scene roster item write plans', () => {
     expect(build({...context, documents: []})).toBeNull();
   });
 
-  it('pins distinct acquire/consume no-op and wrong-action guards', () => {
+  it('pins distinct acquire/consume wrong-action guards', () => {
     expect(planSelectionInventoryCapture({...consumeContext, input: pickupInput})?.error).toContain('consumption proposal');
     expect(planSelectionConsumptionCapture({...captureContext, input: consumeInput})).toBeNull();
-    expect(planSelectionInventoryCapture({...captureContext, stateSubjects: [], input: pickupInput})).toBeNull();
-    expect(planSelectionConsumptionCapture({...consumeContext, stateSubjects: [], input: consumeInput})?.error).toContain('World Bible canon');
+  });
+
+  it('reports a character that is no longer in the project for both actions (3.66)', () => {
+    // The pickup used to return nothing, so the author's click did nothing.
+    expect(planSelectionInventoryCapture({...captureContext, stateSubjects: [], input: pickupInput})?.error)
+      .toContain('no longer in the project');
+    expect(planSelectionConsumptionCapture({...consumeContext, stateSubjects: [], input: consumeInput})?.error)
+      .toContain('no longer in the project');
+  });
+
+  describe('compendium entry lookup (3.66: resolver match first, then the item record)', () => {
+    const item = (id: string, name = 'Pale Draught') =>
+      ({id, projectId: 'corpus', categoryId: 'items', name, fields: {}, links: [], createdAt: 1, updatedAt: 1});
+
+    it.each([
+      ['pickup', planSelectionInventoryCapture, captureContext, pickupInput],
+      ['use', planSelectionConsumptionCapture, consumeContext, consumeInput]
+    ] as const)('%s: finds the entry linked to the chosen item even when its name differs', (_label, build, context, input) => {
+      const renamed = {...definition, id: 'renamed-definition', name: 'Draught of the Pale Moon', sourceEntityId: 'chosen'};
+      const plan = build({...context, entities: [item('chosen')], compendiumEntries: [renamed], input: {...input, reusableEntityId: 'chosen'}} as never)!.value!.plan;
+      expect(plan.event.commands.find((command) => command.type.startsWith('inventory_'))).toMatchObject({
+        sourceEntityId: 'chosen', definitionId: 'renamed-definition'
+      });
+    });
+
+    it.each([
+      ['pickup', planSelectionInventoryCapture, captureContext, pickupInput],
+      ['use', planSelectionConsumptionCapture, consumeContext, consumeInput]
+    ] as const)('%s: does not attach the resolver match when it belongs to a different item than the one chosen', (_label, build, context, input) => {
+      const otherItems = {...definition, sourceEntityId: 'matched-by-name'};
+      const plan = build({
+        ...context,
+        entities: [item('matched-by-name'), item('chosen', 'Moon Draught')],
+        compendiumEntries: [otherItems],
+        input: {...input, reusableEntityId: 'chosen'}
+      } as never)!.value!.plan;
+      const command = plan.event.commands.find((entry) => entry.type.startsWith('inventory_'));
+      expect(command).toMatchObject({sourceEntityId: 'chosen'});
+      expect(command).not.toMatchObject({definitionId: otherItems.id});
+    });
   });
 
   it('consumes the corpus baseline once and supersedes only the reviewed proposal', () => {
