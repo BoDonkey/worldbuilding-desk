@@ -395,7 +395,7 @@ messages).
 | 3.63 | Drop the write-only consistency log (K2) | 3 | S | Done `a72cc1a` — DB_VERSION 32; `applyAcceptedProposal` removed with it (it only logged) |
 | 3.64 | Backup store list in one place (K3) | 3 | XS | Done `50b2db9` — local Cypress: world-canvas renderer crashed after mutation edits to watched files (passed alone after a dev-server reload); second full run clean |
 | 3.65 | Cleanliness tidy-up sweep (K5, K8) | 3 | XS | — |
-| 3.66 | Scene item plans: one lookup (K4) | 3 | S | WIP |
+| 3.66 | Scene item plans: one lookup (K4) | 3 | S | Done `440c59d` — missing character is an error for pickups too; resolver entry skipped when it belongs to another item |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
