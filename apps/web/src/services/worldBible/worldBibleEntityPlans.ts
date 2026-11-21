@@ -3,6 +3,7 @@ import type {ReviewQueueItem} from '../consistency';
 import {buildCanonicalAliasList, deriveFirstNameAlias} from './worldBibleCanonicalization';
 import {normalizeRichTextValue} from './worldBibleEntityHelpers';
 import {isLocationCategory} from './locationCategory';
+import {isCharacterCategory} from '../characters/characterIdentity';
 
 export {isLocationCategory};
 
@@ -12,17 +13,13 @@ export {isLocationCategory};
  * draft produces. The hook keeps persistence, indexing, and React state.
  */
 
-const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
-
 const findCategory = (categories: EntityCategory[], entity: WorldEntity) =>
   categories.find((item) => item.id === entity.categoryId);
 
-/** Character-like by slug or name; used for wording, not for capability gating. */
+/** True when the record's category is a character category (its `kind`, not its name). */
 export const isCharacterLikeEntity = (categories: EntityCategory[], entity: WorldEntity): boolean => {
   const category = findCategory(categories, entity);
-  const slug = (category?.slug ?? '').toLowerCase();
-  const categoryName = (category?.name ?? '').toLowerCase();
-  return CHARACTER_CATEGORY_HINTS.some((hint) => slug.includes(hint) || categoryName.includes(hint));
+  return Boolean(category && isCharacterCategory(category));
 };
 
 export const isLocationLikeEntity = (categories: EntityCategory[], entity: WorldEntity): boolean =>
@@ -83,9 +80,8 @@ export interface EntityDraftInput {
 export const planEntityDraft = (input: EntityDraftInput): {entity: WorldEntity; aliases: string[]} => {
   const {id, now, existing, name, fieldValues, alternativeNamesKey, normalizeName, parseAlternativeNames} = input;
   const manualAlternativeNames = parseAlternativeNames(fieldValues[alternativeNamesKey] || '');
-  const activeCategorySlug = input.category.slug.toLowerCase();
   const shouldSuggestFirstNameAlias =
-    CHARACTER_CATEGORY_HINTS.some((hint) => activeCategorySlug.includes(hint)) &&
+    isCharacterCategory(input.category) &&
     (!existing || !existing.aliasesReviewedAt);
   const suggestedAliases = shouldSuggestFirstNameAlias
     ? [deriveFirstNameAlias(name)].filter((alias): alias is string => typeof alias === 'string')

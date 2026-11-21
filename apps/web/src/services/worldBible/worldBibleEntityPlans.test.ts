@@ -13,15 +13,21 @@ import {
 } from './worldBibleEntityPlans';
 import {normalizeNameExact} from '../names/nameMatching';
 
-const category = (id: string, slug: string, name = slug, fieldSchema: EntityCategory['fieldSchema'] = []): EntityCategory =>
-  ({id, projectId: 'p', slug, name, fieldSchema, createdAt: 1}) as EntityCategory;
+const category = (
+  id: string,
+  slug: string,
+  name = slug,
+  fieldSchema: EntityCategory['fieldSchema'] = [],
+  kind: EntityCategory['kind'] = 'general'
+): EntityCategory => ({id, projectId: 'p', kind, slug, name, fieldSchema, createdAt: 1});
 
 const entity = (id: string, categoryId: string, overrides: Partial<WorldEntity> = {}): WorldEntity =>
   ({id, projectId: 'p', categoryId, name: id, fields: {}, links: [], createdAt: 1, updatedAt: 1, ...overrides}) as WorldEntity;
 
 const CATEGORIES = [
-  category('c-npc', 'npcs'),
-  category('c-cast', 'cast', 'Main People'),
+  category('c-npc', 'npcs', 'npcs', [], 'character'),
+  category('c-heroes', 'heroes', 'Heroes', [], 'character'),
+  category('c-peoples', 'peoples', 'Peoples of the North'),
   category('c-place', 'places'),
   category('c-beast', 'creatures'),
   category('c-herb', 'herbalism'),
@@ -31,9 +37,11 @@ const CATEGORIES = [
 ];
 
 describe('category classification', () => {
-  it('treats a record as character-like by category slug or name, and location-like by slug only', () => {
+  it('treats a record as character-like by category kind, and location-like by slug only', () => {
     expect(isCharacterLikeEntity(CATEGORIES, entity('a', 'c-npc'))).toBe(true);
-    expect(isCharacterLikeEntity(CATEGORIES, entity('a', 'c-cast'))).toBe(true);
+    // The kind decides, whatever the category is called.
+    expect(isCharacterLikeEntity(CATEGORIES, entity('a', 'c-heroes'))).toBe(true);
+    expect(isCharacterLikeEntity(CATEGORIES, entity('a', 'c-peoples'))).toBe(false);
     expect(isCharacterLikeEntity(CATEGORIES, entity('a', 'c-place'))).toBe(false);
     expect(isCharacterLikeEntity(CATEGORIES, entity('a', 'missing'))).toBe(false);
     expect(isLocationLikeEntity(CATEGORIES, entity('a', 'c-place'))).toBe(true);
@@ -70,7 +78,7 @@ describe('pickNextReviewItem', () => {
 
 describe('planEntityDraft', () => {
   const KEY = 'alternativeNames';
-  const characters = category('c-npc', 'npcs', 'NPCs', [{key: 'bio', label: 'Bio', type: 'textarea'}] as EntityCategory['fieldSchema']);
+  const characters = category('c-npc', 'npcs', 'NPCs', [{key: 'bio', label: 'Bio', type: 'textarea'}], 'character');
   const places = category('c-place', 'places');
   const base = (overrides: Partial<EntityDraftInput> = {}): EntityDraftInput => ({
     id: 'e1',
@@ -105,6 +113,13 @@ describe('planEntityDraft', () => {
     expect(aliases).toEqual([]);
     expect(KEY in created.fields).toBe(false);
     expect(created.aliasesReviewedAt).toBeUndefined();
+  });
+
+  it('suggests the first-name alias by category kind, not by the category name', () => {
+    const heroes = category('c-heroes', 'heroes', 'Heroes', [], 'character');
+    const peoples = category('c-peoples', 'peoples', 'Peoples of the North');
+    expect(planEntityDraft(base({category: heroes})).aliases).toEqual(['Sera']);
+    expect(planEntityDraft(base({category: peoples})).aliases).toEqual([]);
   });
 
   it('stores place data when given and leaves the key out otherwise', () => {

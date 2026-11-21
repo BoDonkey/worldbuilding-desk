@@ -20,7 +20,7 @@ import {
   normalizeRichTextValue,
   parseAlternativeNames
 } from '../../../services/worldBible/worldBibleEntityHelpers';
-import {isCharacterCategory} from '../../../services/worldBible/worldBibleSummary';
+import {isCharacterCategory} from '../../../services/characters/characterIdentity';
 import {isLocationCategory} from '../../../services/worldBible/worldBibleEntityPlans';
 
 export type RecordAuthoringMode = 'idle' | 'manual';
