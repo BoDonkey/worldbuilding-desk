@@ -340,7 +340,7 @@ messages).
 | 4.86 | Planning chat proposes outline changes | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.85, before 6.1 |
 | 4.87 | Export a chosen set of characters | 4 | S | — from 2026-11-22 dogfood |
 | 4.88 | Feature toggles that fit the project mode | 4 | S | — from 2026-11-22 dogfood; General Fiction shape needs author confirmation |
-| 4.89 | Spacing pass: stacked controls and inline labels | 4 | XS | — from 2026-11-22 dogfood; inline-label locations still to collect |
+| 4.89 | Spacing pass: stacked controls and inline labels | 4 | XS | — from 2026-11-22 dogfood |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
@@ -1224,10 +1224,17 @@ Movement checks are review findings, never blocks.
     `EditorAppearanceControl`'s container has no bottom margin. Make section
     bodies a flex column with one gap so stacked controls are spaced
     consistently, and drop the one-off margins that then double up.
-  - **To collect.** Labels sitting tight against inputs to their right; the
-    author is gathering the screens. Fix them with the same shared rule
-    (one label-to-input gap), not per-field margins. No spacing tokens exist in
-    `theme.css`; add shared ones only if more than one file needs the value.
+  - **Known case 2 (screenshot 2026-11-22).** Settings → **Highlight
+    visibility**: the select sits on the same line as its label with no gap.
+    `.fieldLabel` is `display: block`, so the inline select follows the text;
+    its `margin-top: 0.35rem` shows the intent was a stacked label. Make
+    `.fieldLabel` a flex column with a small gap; this also fixes **Mode**
+    under Project Mode and the other Settings `fieldLabel` uses. The Settings
+    `.helperText` under a field should keep a little space from the field above.
+  - **Sweep.** Check the other `fieldLabel` classes (Projects, backup import,
+    Source Note editor) for the same inline pattern and fix with the same
+    rule, not per-field margins. No spacing tokens exist in `theme.css`; add
+    shared ones only if more than one file needs the value.
   - **Verify.** Lint and unit tests; before/after screenshots of each fixed
     screen in both themes at desktop and narrow widths.
 
