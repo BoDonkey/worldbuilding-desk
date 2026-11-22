@@ -339,6 +339,8 @@ messages).
 | 4.85 | Corkboard planning chat (read-only) | 4 | M | — pre-beta (author decision, 2026-11-22; v1 scope exception, before 6.1); from 2026-11-22 dogfood |
 | 4.86 | Planning chat proposes outline changes | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.85, before 6.1 |
 | 4.87 | Export a chosen set of characters | 4 | S | — from 2026-11-22 dogfood |
+| 4.88 | Feature toggles that fit the project mode | 4 | S | — from 2026-11-22 dogfood; General Fiction shape needs author confirmation |
+| 4.89 | Spacing pass: stacked controls and inline labels | 4 | XS | — from 2026-11-22 dogfood; inline-label locations still to collect |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
@@ -1190,6 +1192,44 @@ Movement checks are review findings, never blocks.
     Unit test that the route passes exactly the selected entity ids; e2e that
     exports two of three characters and re-imports the file into a second
     project with only those two present.
+
+- **4.88 Feature toggles that fit the project mode.** From the 2026-11-22
+  dogfood run: Settings → Feature Toggles shows four checkboxes even in a
+  General Fiction project, where all four default off and the mode already
+  decides what the project is.
+  - **Found while checking.** Two of the four do nothing.
+    `getProjectCapabilities` (`projectMode.ts`) computes
+    `canUseRuntimeModifiers` and `canUseSettlementAndZoneSystems`, but no
+    component, hook, or command reads either. **Enable Game Systems** gates
+    sheets, Compendium, stat pins, and Workspace mechanics; **Enable Rule
+    Authoring** gates the Ruleset route.
+  - **Behavior.** Remove the two dead toggles from the UI and the capability
+    type; keep their stored values readable so old settings and backups still
+    load (no schema change). In General Fiction, replace the section with one
+    line: mechanics and rulesets are off in this mode; switch Project Mode to
+    LitRPG to use them. If a General Fiction project already has either
+    remaining toggle on, keep showing the toggles so the author can turn them
+    off. LitRPG keeps both, with one sentence each on what they show.
+    Author to confirm the General Fiction shape before building; the
+    alternative is a collapsed **Advanced** disclosure instead of hiding.
+  - **Verify.** Fast battery. Unit tests that capabilities no longer expose
+    the removed flags and that old settings with them still normalize; route
+    test for both modes, including General Fiction with Game Systems on.
+
+- **4.89 Spacing pass: stacked controls and inline labels.** From the
+  2026-11-22 dogfood run.
+  - **Known case.** Settings → Reading & Editor: the **Source Notes open in**
+    buttons sit flush against the Inline feedback box below.
+    `.sectionBody` (`styles/SettingsRoute.module.css`) is a plain block, and
+    `EditorAppearanceControl`'s container has no bottom margin. Make section
+    bodies a flex column with one gap so stacked controls are spaced
+    consistently, and drop the one-off margins that then double up.
+  - **To collect.** Labels sitting tight against inputs to their right; the
+    author is gathering the screens. Fix them with the same shared rule
+    (one label-to-input gap), not per-field margins. No spacing tokens exist in
+    `theme.css`; add shared ones only if more than one file needs the value.
+  - **Verify.** Lint and unit tests; before/after screenshots of each fixed
+    screen in both themes at desktop and narrow widths.
 
 ### Phase 5 — Release engineering
 
