@@ -1329,11 +1329,11 @@ Movement checks are review findings, never blocks.
     a native dialog (stored in the data folder, path-checked so names cannot
     escape it), and prunes only files matching the backup name pattern. No
     general file access.
-  - **Protected projects (decision needed).** The passphrase is never stored,
-    so a locked project cannot be backed up and an encrypted copy cannot be
-    made unattended. Default: skip protected projects, list them as skipped,
-    and keep them on 4.93 reminders. Alternative for the author to choose: a
-    separate backup passphrase entered once per session.
+  - **Protected projects.** The passphrase is never stored, so a locked
+    project cannot be backed up and an encrypted copy cannot be made
+    unattended. Author decision (2026-11-22): skip protected projects, list
+    them as skipped in the run result, and keep them on 4.93 reminders. A
+    per-session backup passphrase was considered and not chosen.
   - **Browser build.** Not offered; 4.93 reminders cover it.
   - **Verify.** Full-coverage tier plus desktop unit tests for the path
     guard and pruning; packaged desktop e2e that a scheduled run writes a
