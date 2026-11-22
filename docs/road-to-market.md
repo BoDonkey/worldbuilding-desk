@@ -33,7 +33,9 @@ dashboard and the writing coach described below, and — added 2026-09-26 —
 the character lab, and — added 2026-10-03 — optional password-protected
 project vaults, and — added 2026-11-07 — separate per-project switches for
 AI coaching and AI prose, both off by default, and author-editable AI
-actions in the selection menu (5.18, 5.19).
+actions in the selection menu (5.18, 5.19), and — added 2026-11-22 — a
+Corkboard planning chat whose outline changes are proposals the author
+accepts (4.85, 4.86).
 
 **Privacy promise.** Project data and manuscripts are stored locally.
 SagaSpine does not send diagnostic telemetry and does not use author
@@ -46,8 +48,8 @@ Ollama or configured workflow is fully offline.
 
 Explicitly **post-v1**: AI item-authoring slices beyond the manual
 description-first path, ruleset-domain adapters, app-wide search expansion,
-Scratchpad organization, *authored* Corkboard expansion (the *derived*
-dashboard panels of 4.19 are v1), executable ruleset generation, carry
+Scratchpad organization, other *authored* Corkboard expansion (the *derived*
+dashboard panels of 4.19 and the 4.85/4.86 planning chat are v1), executable ruleset generation, carry
 weight/encumbrance, nonfiction product work, persona/game-engine ecosystems
 beyond the character lab,
 Zod 4 migration, and the craft library beyond tranche 1 (which continues as a
@@ -151,7 +153,7 @@ run when a result was reused or coverage was focused.
 1. **Claim it.** Set the slice to `WIP` on the status board below before
    starting. Respect the open dependencies: 1.1's
    fresh-build trust run before 6.1; 5.2's macOS signing and 5.7 before the
-   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; 3.32
+   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; 4.85 then 4.86 before 6.1; 3.32
    after 5.19; 3.38 and 3.46 before 4.79; the 3.38–3.42 trust group
    before 6.1; Phase 6 strictly ordered. Finished
    slices' ordering is in the archived snapshot.
@@ -334,8 +336,8 @@ messages).
 | 4.82 | Ordinary assistant rolling summaries | 4 | M | — post-beta candidate; after the relevant 3.32 assistant/context seam |
 | 4.83 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
 | 4.84 | Workspace dialogs open above the context drawer | 4 | S | Done `1a7765e` |
-| 4.85 | Corkboard planning chat (read-only) | 4 | M | — candidate from 2026-11-22 dogfood; v1 scope lists authored Corkboard expansion as post-v1, so it needs author promotion before beta |
-| 4.86 | Planning chat proposes outline changes | 4 | M | — after 4.85; same scope decision |
+| 4.85 | Corkboard planning chat (read-only) | 4 | M | — pre-beta (author decision, 2026-11-22; v1 scope exception, before 6.1); from 2026-11-22 dogfood |
+| 4.86 | Planning chat proposes outline changes | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.85, before 6.1 |
 | 4.87 | Export a chosen set of characters | 4 | S | — from 2026-11-22 dogfood |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
