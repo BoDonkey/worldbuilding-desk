@@ -341,9 +341,9 @@ messages).
 | 4.87 | Export a chosen set of characters | 4 | S | — from 2026-11-22 dogfood |
 | 4.88 | Feature toggles that fit the project mode | 4 | S | — from 2026-11-22 dogfood; General Fiction hides the toggles (author decision, 2026-11-22) |
 | 4.89 | Spacing pass: stacked controls and inline labels | 4 | XS | — from 2026-11-22 dogfood |
-| 4.90 | Editor text options: paragraph style, narrow width, more fonts | 4 | S | — from 2026-11-22 dogfood; not a beta gate unless promoted |
-| 4.91 | Focus mode | 4 | M | — from 2026-11-22 dogfood; not a beta gate unless promoted |
-| 4.92 | Typewriter scrolling | 4 | S | — from 2026-11-22 dogfood; not a beta gate unless promoted |
+| 4.90 | Editor text options: paragraph style, narrow width, more fonts | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
+| 4.91 | Focus mode | 4 | M | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
+| 4.92 | Typewriter scrolling | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
