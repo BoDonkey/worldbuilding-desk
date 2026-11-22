@@ -153,7 +153,7 @@ run when a result was reused or coverage was focused.
 1. **Claim it.** Set the slice to `WIP` on the status board below before
    starting. Respect the open dependencies: 1.1's
    fresh-build trust run before 6.1; 5.2's macOS signing and 5.7 before the
-   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; 4.85 then 4.86 before 6.1; 3.32
+   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; 4.85 then 4.86 before 6.1; 4.93 then 4.94 before 6.1; 3.32
    after 5.19; 3.38 and 3.46 before 4.79; the 3.38–3.42 trust group
    before 6.1; Phase 6 strictly ordered. Finished
    slices' ordering is in the archived snapshot.
@@ -344,6 +344,8 @@ messages).
 | 4.90 | Editor text options: paragraph style, narrow width, more fonts | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.91 | Focus mode | 4 | M | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.92 | Typewriter scrolling | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
+| 4.93 | Backup reminder | 4 | S | — pre-beta (author decision, 2026-11-22); before 6.1 |
+| 4.94 | Scheduled automatic backups to a chosen folder (desktop) | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.93, before 6.1 |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
@@ -1290,6 +1292,53 @@ Movement checks are review findings, never blocks.
   - **Verify.** Unit test for the scroll target calculation; e2e in a long
     scene that the caret line stays within a band while typing and that a
     manual scroll is not undone until typing resumes.
+
+- **4.93 Backup reminder.** From the 2026-11-22 dogfood run. Projects
+  save continuously to IndexedDB in the app's data folder, but the only copy
+  outside it is a manual **Export Backup**, and nothing reminds the author.
+  The only automatic backups are the pre-migration ones, kept in the same
+  database. A lost or wiped data folder loses every project.
+  - **Behavior.** Record when each project was last backed up (export
+    succeeded; later also 4.94's automatic runs) on the project record, and
+    carry it through backup/restore. Projects shows **Last backup: 9 days
+    ago** / **Never backed up** on each project card. After a threshold
+    (default 7 days, and only once the project has real content) a quiet
+    reminder appears on Projects and at the top of the Workspace with
+    **Back up now** (the existing export dialog) and **Remind me later**
+    (snoozes for a day). Never modal, never blocks writing. Settings sets the
+    threshold or turns reminders off.
+  - **Browser.** The web build also calls `navigator.storage.persist()` once
+    and, if refused, says in the reminder that the browser may clear data.
+  - **Verify.** Fast battery. Unit tests for the threshold, snooze, empty
+    projects, and the timestamp surviving backup/restore; e2e that exporting
+    clears the reminder.
+
+- **4.94 Scheduled automatic backups to a chosen folder (desktop).** After
+  4.93. Settings → Backups: choose a folder (for example one synced by
+  iCloud Drive, Dropbox, or OneDrive), a schedule (daily, or on quit), and
+  how many copies to keep per project (default 10).
+  - **Behavior.** On schedule, for each project with changes since its last
+    backup, build the same snapshot as **Export Backup** and write
+    `<project>-backup-<date-time>.zip` into `<folder>/<project>/`, then prune
+    the oldest beyond the limit. Runs in the background without blocking
+    writing; the result (time, file, or a plain error such as folder missing)
+    shows in Settings and updates 4.93's last-backup time. A missing folder
+    pauses backups and the 4.93 reminder says why.
+  - **IPC.** One narrow channel: the renderer sends bytes and a file name;
+    the main process writes only inside the folder the author picked through
+    a native dialog (stored in the data folder, path-checked so names cannot
+    escape it), and prunes only files matching the backup name pattern. No
+    general file access.
+  - **Protected projects (decision needed).** The passphrase is never stored,
+    so a locked project cannot be backed up and an encrypted copy cannot be
+    made unattended. Default: skip protected projects, list them as skipped,
+    and keep them on 4.93 reminders. Alternative for the author to choose: a
+    separate backup passphrase entered once per session.
+  - **Browser build.** Not offered; 4.93 reminders cover it.
+  - **Verify.** Full-coverage tier plus desktop unit tests for the path
+    guard and pruning; packaged desktop e2e that a scheduled run writes a
+    restorable backup, that restore of it matches the project, and that
+    pruning keeps the newest N.
 
 ### Phase 5 — Release engineering
 
