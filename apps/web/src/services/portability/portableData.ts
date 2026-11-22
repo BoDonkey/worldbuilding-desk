@@ -10,7 +10,7 @@ import type {
   WorldMap
 } from '../../entityTypes';
 import type {ConsistencyAlias} from '../storage';
-import {triggerBytesDownload} from '../../utils/downloadJson';
+import {sanitizeFileNamePart, triggerBytesDownload} from '../../utils/downloadJson';
 import {buildZip, type ZipEntryInput} from '../../utils/zip';
 import {
   connectionsForPlace,
@@ -65,13 +65,7 @@ export interface PortableMarkdownDraft {
 
 const textEncoder = new TextEncoder();
 
-export const sanitizePathPart = (value: string): string =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-_]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '') || 'untitled';
+export const sanitizePathPart = (value: string): string => sanitizeFileNamePart(value, 'untitled');
 
 const yamlValue = (value: unknown): string => JSON.stringify(value);
 

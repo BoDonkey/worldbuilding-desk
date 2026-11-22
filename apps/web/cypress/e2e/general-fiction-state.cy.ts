@@ -74,12 +74,14 @@ function seedGeneralFictionCharacter(
   }));
 }
 
-function readStateEvents(): Cypress.Chainable<Array<{
+type StoredStateEvent = {
   status: string;
   sceneId: string;
   commands: Array<{type: string; actorId: string; locationName?: string}>;
-}>> {
-  return cy.window().then((win) => new Cypress.Promise((resolve, reject) => {
+};
+
+function readStateEvents(): Cypress.Chainable<StoredStateEvent[]> {
+  return cy.window().then((win) => new Cypress.Promise<StoredStateEvent[]>((resolve, reject) => {
     const request = win.indexedDB.open(DB_NAME, DB_VERSION);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {

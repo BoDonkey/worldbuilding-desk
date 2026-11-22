@@ -249,7 +249,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   reconcile with the category whenever its fields change, so a field
   created by one import in a batch becomes a normal field choice for the
   rest; renaming an entry keeps chosen destinations. Characters show the
-  category's custom fields on Canon, saved or not.
+  category's custom fields on Canon, saved or not. Since slice 3.65 a new
+  field's key keeps letters and digits from any script, so a heading such as
+  "背景" matches its own field on re-import instead of adding another
+  (non-Latin headings used to get a random key each time).
+  Every way of making a World Bible type also gives it a key by one rule
+  (letters and digits from any script); a type named only in non-Latin
+  letters used to be refused when made from a review suggestion, and an
+  edited type keeps its stored key while its name is unchanged.
 - Character import suggestions deterministically strip the exact record name
   (including possessive and separator variants) from a heading when a useful
   label remains. A **New field** destination exposes an editable, validated
@@ -728,7 +735,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   longer in the project is reported as an error for both (a pickup used to do
   nothing), and the item's compendium entry is the resolver's exact match,
   else the entry linked to the item record, never one that belongs to a
-  different item than the one the author chose.
+  different item than the one the author chose. Since slice 3.65 an unlinked
+  entry is linked to the item record only when the author saves the item as
+  reusable, for a use as for a pickup (a use used to link it either way, even
+  to a record matched only by name).
   Existing limitation preserved by characterization: timeline edit/expiration
   still look up sheet/legacy actor IDs, so canonical-only actor IDs may report
   that the character must be added to the roster despite already being present.

@@ -2,6 +2,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {useLocation} from 'react-router';
 import type {EntityCategory} from '../../entityTypes';
 import {deleteCategory, saveCategory} from '../../services/storage';
+import {categorySlugForName} from '../../services/worldBible/categoryAuthoring';
 import CategoryEditor from '../CategoryEditor';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {useEscapeToClose} from '../../hooks/useEscapeToClose';
@@ -69,7 +70,7 @@ export function CategoryManager({
       projectId,
       kind: 'general',
       name: newCatName,
-      slug: newCatName.toLowerCase().replace(/\s+/g, '-'),
+      slug: categorySlugForName(newCatName),
       fieldSchema: [
         {key: 'description', label: 'Description', type: 'textarea'}
       ],

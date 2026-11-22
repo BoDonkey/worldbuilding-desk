@@ -1,7 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {WritingDocument} from '../../entityTypes';
 import {
-  countStaleReviewItems,
   hashReviewInputs,
   hashSceneContent,
   markStaleReviewItems,
@@ -115,6 +114,5 @@ describe('incremental review planning', () => {
     });
     expect(marked.map((item) => Boolean(item.staleSinceReview))).toEqual([false, true, true]);
     expect(marked[0]).toBe(items[0]);
-    expect(countStaleReviewItems(marked)).toBe(2);
   });
 });

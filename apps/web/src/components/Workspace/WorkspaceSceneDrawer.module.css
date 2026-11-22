@@ -1,5 +1,30 @@
 /* Scene drawer: scene list, import controls, and the scene state timeline. */
 
+.sceneToolbar {
+  margin-bottom: 1rem;
+}
+
+.sceneToolbarButton {
+  margin-left: 0.5rem;
+}
+
+.sceneEmptyNote {
+  font-style: italic;
+}
+
+.sceneListItemRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sceneListItemTitle {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
 .sceneList {
   list-style: none;
   padding: 0;

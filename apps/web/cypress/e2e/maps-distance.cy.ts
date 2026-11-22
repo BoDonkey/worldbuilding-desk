@@ -129,7 +129,7 @@ describe('Maps, placements, and distance', () => {
     cy.contains('button', 'Save Changes').click();
     cy.contains('[role="status"]', 'Entry updated.').should('be.visible');
 
-    readStore<{name: string; parentPlacement?: {mapId: string; x: number; y: number}}>('maps').then((maps) => {
+    readStore<{id: string; name: string; parentPlacement?: {mapId: string; x: number; y: number}}>('maps').then((maps) => {
       const region = maps.find((map) => map.name === 'Region');
       const city = maps.find((map) => map.name === 'Varn city');
       expect(city?.parentPlacement).to.deep.eq({mapId: region?.id, x: 60, y: 80});

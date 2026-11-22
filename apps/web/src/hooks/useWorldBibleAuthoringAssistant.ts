@@ -15,6 +15,7 @@ import {
   normalizeRichTextValue,
   parseAlternativeNames
 } from '../services/worldBible/worldBibleEntityHelpers';
+import {slugifyFieldKey} from '../services/worldBible/worldBibleImportParsing';
 
 export type AiHelperActionTarget =
   | 'name'
@@ -55,13 +56,6 @@ interface UseWorldBibleAuthoringAssistantOptions {
   ) => void;
   setFeedback: Dispatch<SetStateAction<WorldBibleFeedback | null>>;
 }
-
-const slugifyFieldKey = (value: string): string =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '') || 'section';
 
 export const deriveAiSectionLabel = (selectedText: string): string => {
   const firstLine = selectedText

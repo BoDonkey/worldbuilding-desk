@@ -21,4 +21,3 @@ export type {
   CharacterStateReplayBaseline
 } from '@worldbuilding-desk/rules-engine';
 
-export type TrackedFieldKind = 'resource' | 'stat';

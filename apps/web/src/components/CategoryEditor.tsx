@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import type {EntityCategory, FieldDefinition} from '../entityTypes';
 import {saveCategory} from '../services/storage';
+import {categorySlugForName} from '../services/worldBible/categoryAuthoring';
 import styles from '../assets/components/CategoryEditor.module.css';
 
 interface CategoryEditorProps {
@@ -95,7 +96,8 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
       ...category,
       kind,
       name: name.trim(),
-      slug: name.toLowerCase().replace(/\s+/g, '-'),
+      // An unchanged name keeps its stored key, which other records match on.
+      slug: categorySlugForName(name, category),
       fieldSchema: fields
     };
 

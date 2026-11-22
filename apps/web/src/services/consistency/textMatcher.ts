@@ -27,10 +27,6 @@ export const normalizeCanonText = (value: string): string =>
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-export const isPossessiveFormOf = (value: string, canonSurface: string): boolean =>
-  normalizeCanonText(value) === normalizeCanonText(canonSurface) &&
-  /(?:['’]s|s['’])$/i.test(value.trim());
-
 export const isInProgressCanonPrefix = (
   value: string,
   canonSurfaces: string[]

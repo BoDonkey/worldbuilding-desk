@@ -77,7 +77,3 @@ export function markStaleReviewItems(params: {
     return stale === Boolean(item.staleSinceReview) ? item : {...item, staleSinceReview: stale};
   });
 }
-
-export function countStaleReviewItems(items: ConsistencyReviewItem[]): number {
-  return items.reduce((count, item) => count + (item.staleSinceReview ? 1 : 0), 0);
-}

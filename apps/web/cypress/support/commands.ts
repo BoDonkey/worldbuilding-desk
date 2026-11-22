@@ -1,47 +1,8 @@
 import {
-  ACTOR_RESOLUTION_STORE_NAME,
-  CHARACTER_IDENTITY_REPORT_STORE_NAME,
   DB_NAME,
   DB_VERSION,
-  upgradeDatabase,
-  PROJECT_MIGRATION_BACKUP_STORE_NAME
+  upgradeDatabase
 } from '../../src/services/storage/db';
-
-const STORE_NAMES = [
-  'entities',
-  'entityCategories',
-  'projects',
-  'writingDocuments',
-  'scratchpads',
-  'world_canvases',
-  'corkboard_chapter_cards',
-  'projectSettings',
-  'lore_documents',
-  'lore_document_links',
-  'lore_fact_proposals',
-  'lore_entity_proposals',
-  'canonical_facts',
-  'canon_decision_clusters',
-  'canon_decision_suppressions',
-  'characters',
-  'character_sheets',
-  'compendium_entries',
-  'compendium_milestones',
-  'compendium_recipes',
-  'compendium_progress',
-  'compendium_action_logs',
-  'zone_affinity_profiles',
-  'zone_affinity_progress',
-  'settlement_modules',
-  'settlement_state',
-  'consistency_aliases',
-  'state_mutation_events',
-  'mechanics_drafts',
-  'maps',
-  PROJECT_MIGRATION_BACKUP_STORE_NAME,
-  ACTOR_RESOLUTION_STORE_NAME,
-  CHARACTER_IDENTITY_REPORT_STORE_NAME
-] as const;
 
 // Keep equal to CURRENT_PROJECT_SCHEMA_VERSION in
 // src/services/storage/projectSchemaMigrations.ts (guarded by

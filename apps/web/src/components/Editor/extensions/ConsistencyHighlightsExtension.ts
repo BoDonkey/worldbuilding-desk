@@ -20,7 +20,3 @@ export interface ConsistencyHighlightIssue {
   inlineMode?: WorkspaceReviewInlineMode;
 }
 
-export interface KnownHighlightSurface {
-  id: string;
-  surface: string;
-}

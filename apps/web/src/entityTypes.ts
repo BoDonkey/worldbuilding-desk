@@ -1,7 +1,5 @@
 import type { WorldRuleset } from '@worldbuilding-desk/rules-engine';
 
-export type EntityType = 'character' | 'location' | 'item' | 'rule';
-
 export interface EntityFields {
   notes?: string;
   [key: string]: unknown;
@@ -385,7 +383,6 @@ export interface CharacterTrackedEntry {
   definitionId?: string;
 }
 
-// apps/web/src/entityTypes.ts
 export interface CharacterSheet {
   id: string;
   projectId: string;

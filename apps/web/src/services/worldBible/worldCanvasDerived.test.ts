@@ -7,9 +7,7 @@ import type {
 } from '../../entityTypes';
 import {
   deriveWorldCanvasReferencePalette,
-  mapCategoryToLens,
-  summarizeLens,
-  summarizeOtherRecords
+  mapCategoryToLens
 } from './worldCanvasDerived';
 import {createEmptyWorldCanvas, linkSketchEntity, openLens} from './worldCanvasService';
 
@@ -80,51 +78,6 @@ describe('worldCanvasDerived', () => {
     expect(categories.map(mapCategoryToLens)).toEqual([
       'people', 'places', 'factions', null
     ]);
-    expect(summarizeOtherRecords({
-      categories,
-      entities: [entity('key', 'relics', 'Emberglass Key')]
-    })).toEqual(['Emberglass Key']);
-  });
-
-  it('summarizes mapped records and Source Notes by kind and record link', () => {
-    const categories = [category('characters', 'characters', 'character')];
-    const entities = [
-      entity('brannic', 'characters', 'Brannic Halloway'),
-      entity('sera', 'characters', 'Sera Kestrel')
-    ];
-    const loreDocuments = [
-      note('sera-note', 'Character Dossier — Sera Kestrel', 'character_dossier'),
-      note('linked-note', 'Brannic at the Salt Door', 'general_lore')
-    ];
-    expect(summarizeLens(
-      {kind: 'people'},
-      {
-        categories,
-        entities,
-        loreDocuments,
-        links: [link('link-1', 'linked-note', 'brannic')]
-      }
-    )).toEqual({
-      recordNames: ['Brannic Halloway', 'Sera Kestrel'],
-      recordCount: 2,
-      sourceNoteTitles: ['Brannic at the Salt Door', 'Character Dossier — Sera Kestrel'],
-      sourceNoteCount: 2
-    });
-  });
-
-  it('excludes mechanics-only records from general-fiction derived summaries', () => {
-    const mechanics = category(
-      'mechanics',
-      'problems-power-cannot-solve',
-      'general',
-      'system-negative-space'
-    );
-    const categories = [mechanics];
-    expect(summarizeOtherRecords({
-      categories,
-      entities: [entity('problem', mechanics.id, 'Magic debt')],
-      hidesSystemCategories: true
-    })).toEqual([]);
   });
 
   it('separates author pins from deterministic suggestions and dedupes linked notes', () => {

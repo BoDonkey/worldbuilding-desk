@@ -4,7 +4,6 @@ import {
   buildCharacterSnapshot,
   describeCharacterSnapshotChanges,
   getSceneOrder,
-  summarizeCharacterSnapshot,
   type CharacterSnapshotPosition
 } from './characterSnapshot';
 import {
@@ -164,20 +163,6 @@ describe('describeCharacterSnapshotChanges', () => {
       {kind: 'resource', id: 'stamina', label: 'Stamina', from: null, to: {current: 4, max: 8}},
       {kind: 'status', name: 'Poisoned', change: 'added'}
     ]);
-  });
-});
-
-describe('summarizeCharacterSnapshot', () => {
-  it('formats compact lines and respects the limit', () => {
-    const snapshot = snapshotAt({kind: 'scene', sceneOrder: 1, moment: 'ending'});
-
-    expect(summarizeCharacterSnapshot(snapshot)).toEqual({
-      resources: ['Health 29/45', 'Mana 10/10'],
-      stats: ['Strength 12', 'Agility 16'],
-      statuses: ['Rested', 'Invigorated', 'Party synergy grants +1 effective level.'],
-      location: 'The Stair'
-    });
-    expect(summarizeCharacterSnapshot(snapshot, 1).stats).toEqual(['Strength 12']);
   });
 });
 

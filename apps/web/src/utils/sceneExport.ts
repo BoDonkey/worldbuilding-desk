@@ -1,17 +1,7 @@
 import type {WritingDocument} from '../entityTypes';
 import {htmlTextContent} from './textHelpers';
 import {buildZip} from './zip';
-import {triggerBytesDownload} from './downloadJson';
-
-function sanitizeFileNamePart(value: string): string {
-  const cleaned = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-_]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return cleaned || 'project';
-}
+import {sanitizeFileNamePart, triggerBytesDownload} from './downloadJson';
 
 function htmlToPlainTextWithParagraphs(html: string): string {
   const normalized = html
@@ -205,16 +195,6 @@ export function buildScenesDocx(params: {
   ]);
 }
 
-function sanitizeId(value: string): string {
-  const cleaned = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-_]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return cleaned || 'item';
-}
-
 function buildSceneChapterXhtml(scene: WritingDocument, index: number): string {
   const title = scene.title.trim() || `Untitled scene ${index + 1}`;
   const blocks = sceneTextBlocks(scene);
@@ -247,7 +227,7 @@ export function buildScenesEpub(params: {
   const escapedProjectName = escapeXml(params.projectName);
 
   const chapterEntries = params.scenes.map((scene, index) => {
-    const sceneBase = sanitizeId(scene.title || `scene-${index + 1}`);
+    const sceneBase = sanitizeFileNamePart(scene.title || `scene-${index + 1}`, 'item');
     const chapterFile = `text/${String(index + 1).padStart(3, '0')}-${sceneBase}.xhtml`;
     const chapterId = `chapter-${index + 1}`;
     const navLabel = scene.title.trim() || `Untitled scene ${index + 1}`;

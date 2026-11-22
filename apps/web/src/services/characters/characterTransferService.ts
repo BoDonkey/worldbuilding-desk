@@ -14,10 +14,9 @@ import {
   getCanonicalFactsByProject,
   getCharacterSheetsByProject,
   readJsonFile,
-  sanitizeFileNamePart,
   saveCharacterTransferImport
 } from '../storage';
-import {triggerJsonDownload} from '../../utils/downloadJson';
+import {sanitizeFileNamePart, triggerJsonDownload} from '../../utils/downloadJson';
 import {
   classifyCharacterIdentities,
   createCharacterLinkResolver,

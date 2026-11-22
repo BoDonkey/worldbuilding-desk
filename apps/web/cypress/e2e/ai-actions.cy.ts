@@ -104,3 +104,6 @@ describe('Custom AI actions', () => {
     cy.contains('button', 'Check against canon').should('not.exist');
   });
 });
+
+// A module, so its top-level names stay out of other specs' scope.
+export {};
