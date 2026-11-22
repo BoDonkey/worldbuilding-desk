@@ -1,4 +1,5 @@
 import type {SaveStatus} from '../../hooks/useWorkspaceDocuments';
+import {dispatchWorkspaceCommand} from '../../commands/workspaceCommands';
 import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
 import styles from './WorkspaceEditorFooter.module.css';
 
@@ -19,8 +20,9 @@ interface WorkspaceEditorFooterProps {
 }
 
 /**
- * The bar under the editor: save now, promote to the parent series, extract
- * memory, the save status and word count, and the drawer and tool buttons.
+ * The bar under the editor: save now, scene snapshots, promote to the parent
+ * series, extract memory, the save status and word count, and the drawer and
+ * tool buttons.
  */
 export function WorkspaceEditorFooter({
   saveStatus,
@@ -44,6 +46,16 @@ export function WorkspaceEditorFooter({
         disabled={saveStatus === 'saving'}
       >
         Save now
+      </button>
+      <button
+        type='button'
+        title='Take snapshot (Cmd/Ctrl+Shift+S)'
+        onClick={() => dispatchWorkspaceCommand('take-snapshot')}
+      >
+        Take snapshot
+      </button>
+      <button type='button' onClick={() => dispatchWorkspaceCommand('open-snapshots')}>
+        Snapshots
       </button>
       {canPromoteToParent && (
         <button

@@ -346,7 +346,7 @@ messages).
 | 4.92 | Typewriter scrolling | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.93 | Backup reminder | 4 | S | — pre-beta (author decision, 2026-11-22); before 6.1 |
 | 4.94 | Scheduled automatic backups to a chosen folder (desktop) | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.93, before 6.1 |
-| 4.95 | Scene snapshots: save, compare, restore | 4 | M | — pre-beta (author decision, 2026-11-22); before 6.1 |
+| 4.95 | Scene snapshots: save, compare, restore | 4 | M | WIP — pre-beta (author decision, 2026-11-22); before 6.1 |
 | 4.96 | Draft milestones (snapshot the whole manuscript) | 4 | S | — pre-beta (author decision, 2026-11-22); after 4.95, before 6.1 |
 | 4.97 | Rewrite beside the original | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.95, before 6.1 |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
@@ -1379,6 +1379,12 @@ Movement checks are review findings, never blocks.
   text). Restoring a whole milestone is not offered; restore scene by scene
   through 4.95, so a draft can never silently overwrite later work.
   Milestones keep their snapshots out of automatic pruning.
+  - **Deleted scenes.** Author decision (2026-11-22): deleting a scene keeps
+    its snapshots, so an author can go back on a bad decision. 4.95 already
+    keeps them, takes a `before-delete` snapshot of the scene's last text,
+    and stores the scene title on each snapshot. 4.96 makes them reachable: a deleted scene that has
+    snapshots is listed (with its title as of its newest snapshot), and
+    restoring one recreates the scene from that snapshot.
   - **Verify.** Fast battery plus Workspace Cypress; e2e that saves a
     milestone, edits two scenes, opens the milestone, sees the old text, and
     exports it.

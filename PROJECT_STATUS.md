@@ -88,6 +88,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   scene import with deferred consistency review; inline review and lore
   highlights; the Review drawer; and editable item/state proposals in
   mechanics-enabled projects.
+- Scene snapshots (slice 4.95): take, compare, restore, and copy saved copies
+  of a scene; automatic ones before AI revisions, before restores, and on the
+  first edit each day. A new `scene_snapshots` store (IndexedDB version 33),
+  carried by backups (snapshot schema 15; older apps refuse it), project
+  deletion, and vault protection. Never canon, never sent to AI or read by
+  review or retrieval.
 - Full current behavior:
   [`docs/status-writing-workspace.md`](docs/status-writing-workspace.md).
   Update it, not this file, when Workspace behavior changes.

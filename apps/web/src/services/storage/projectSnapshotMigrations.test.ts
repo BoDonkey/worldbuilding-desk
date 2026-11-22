@@ -91,7 +91,7 @@ const legacySnapshot = () => ({
 
 describe('migrateProjectSnapshotPayload', () => {
   it('accepts the current snapshot schema unchanged', () => {
-    const snapshot = {schemaVersion: 14, project: {id: 'project-1'}};
+    const snapshot = {schemaVersion: 15, project: {id: 'project-1'}};
     expect(migrateProjectSnapshotPayload(snapshot)).toBe(snapshot);
   });
 
@@ -109,7 +109,7 @@ describe('migrateProjectSnapshotPayload', () => {
       }
     });
     expect(migrated).toMatchObject({
-      schemaVersion: 14,
+      schemaVersion: 15,
       project: {storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
       data: {
         canonicalFacts: [{validFromSceneId: 'scene-2', validUntilSceneId: 'scene-4'}],
@@ -134,7 +134,7 @@ describe('migrateProjectSnapshotPayload', () => {
       counts: {scratchpads: 1}
     });
 
-    expect(snapshot.schemaVersion).toBe(14);
+    expect(snapshot.schemaVersion).toBe(15);
     expect(snapshot.data.mechanicsDrafts).toEqual([]);
     expect(snapshot.counts.mechanicsDrafts).toBe(0);
     expect(snapshot.data.scratchpads).toEqual([
@@ -158,7 +158,7 @@ describe('migrateProjectSnapshotPayload', () => {
       counts: {}
     });
 
-    expect(snapshot.schemaVersion).toBe(14);
+    expect(snapshot.schemaVersion).toBe(15);
     expect(snapshot.data.worldCanvases).toEqual([]);
     expect(snapshot.counts.worldCanvases).toBe(0);
   });
@@ -176,7 +176,7 @@ describe('migrateProjectSnapshotPayload', () => {
       counts: {worldCanvases: 1}
     });
 
-    expect(snapshot.schemaVersion).toBe(14);
+    expect(snapshot.schemaVersion).toBe(15);
     expect(snapshot.data.worldCanvases[0]).toMatchObject({schemaVersion: 2, premise: 'A city forgets.', openThreads: [{id: 'q1', text: 'The river remembers.', status: 'settled'}]});
     expect(snapshot.data.worldCanvases[0].lenses[0].sketches[0]).toMatchObject({text: 'The crater sings.', linkedSourceNoteIds: ['note-1'], linkedEntityIds: ['entity-1'], createdAt: 4, updatedAt: 4});
   });
@@ -195,7 +195,7 @@ describe('migrateProjectSnapshotPayload', () => {
       counts: {}
     });
 
-    expect(snapshot.schemaVersion).toBe(14);
+    expect(snapshot.schemaVersion).toBe(15);
     expect(snapshot.project.storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
     expect(snapshot.data.ruleset?.rules).toEqual([
       {id: 'rule-ok', name: 'Long Rest', category: 'time', enabled: true, priority: 100, tags: [], effects: []}
@@ -214,10 +214,10 @@ describe('migrateProjectSnapshotPayload', () => {
       data: {ruleset, stateMutationEvents}
     });
     expect(migrated).toEqual({
-      schemaVersion: 14,
+      schemaVersion: 15,
       project: {id: 'project-1', storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
-      data: {ruleset, stateMutationEvents, maps: []},
-      counts: {maps: 0}
+      data: {ruleset, stateMutationEvents, maps: [], sceneSnapshots: []},
+      counts: {maps: 0, sceneSnapshots: 0}
     });
   });
 
@@ -229,10 +229,10 @@ describe('migrateProjectSnapshotPayload', () => {
       data: {entities}
     });
     expect(migrated).toEqual({
-      schemaVersion: 14,
+      schemaVersion: 15,
       project: {id: 'project-1', storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
-      data: {entities, maps: []},
-      counts: {maps: 0}
+      data: {entities, maps: [], sceneSnapshots: []},
+      counts: {maps: 0, sceneSnapshots: 0}
     });
   });
 
@@ -244,11 +244,34 @@ describe('migrateProjectSnapshotPayload', () => {
       counts: {entities: 0}
     });
     expect(fresh).toEqual({
-      schemaVersion: 14,
+      schemaVersion: 15,
       project: {id: 'project-1', storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
-      data: {entities: [], maps: []},
-      counts: {entities: 0, maps: 0}
+      data: {entities: [], maps: [], sceneSnapshots: []},
+      counts: {entities: 0, maps: 0, sceneSnapshots: 0}
     });
+  });
+
+  it('adds an empty scene snapshot collection while migrating schema 14 and keeps existing ones', () => {
+    const fresh = migrateProjectSnapshotPayload({
+      schemaVersion: 14,
+      project: {id: 'project-1', storageSchemaVersion: 12},
+      data: {maps: []},
+      counts: {maps: 0}
+    });
+    expect(fresh).toEqual({
+      schemaVersion: 15,
+      project: {id: 'project-1', storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
+      data: {maps: [], sceneSnapshots: []},
+      counts: {maps: 0, sceneSnapshots: 0}
+    });
+    const kept = [{id: 'snap-1', sceneId: 'scene-1', content: '<p>Before.</p>', kind: 'manual'}];
+    const carried = migrateProjectSnapshotPayload({
+      schemaVersion: 14,
+      project: {id: 'project-1'},
+      data: {sceneSnapshots: kept}
+    }) as {data: {sceneSnapshots: unknown[]}; counts: {sceneSnapshots: number}};
+    expect(carried.data.sceneSnapshots).toEqual(kept);
+    expect(carried.counts.sceneSnapshots).toBe(1);
   });
 
   it('links schema 12 positions to the one place their name or alias means', () => {
@@ -274,7 +297,7 @@ describe('migrateProjectSnapshotPayload', () => {
         stateMutationEvents: [move('a', 'the Archive'), move('b', 'North Gate'), move('c', 'Old Mill')]
       }
     }) as {schemaVersion: number; data: {stateMutationEvents: StateMutationEvent[]}};
-    expect(migrated.schemaVersion).toBe(14);
+    expect(migrated.schemaVersion).toBe(15);
     expect(migrated.data.stateMutationEvents.map((event) => event.commands[0])).toEqual([
       {type: 'location_set', actorId: 'entity-sera', locationName: 'the Archive', placeId: 'archive'},
       {type: 'location_set', actorId: 'entity-sera', locationName: 'North Gate'},
@@ -283,15 +306,15 @@ describe('migrateProjectSnapshotPayload', () => {
   });
 
   it('rejects snapshots created by a newer app with an actionable error', () => {
-    expect(() => migrateProjectSnapshotPayload({schemaVersion: 15})).toThrow(
+    expect(() => migrateProjectSnapshotPayload({schemaVersion: 16})).toThrow(
       'Update the app before importing it.'
     );
-    expect(() => normalizeProjectSnapshot({schemaVersion: 15})).toThrow(
+    expect(() => normalizeProjectSnapshot({schemaVersion: 16})).toThrow(
       'Update the app before importing it.'
     );
     expect(() =>
       normalizeProjectSnapshot({
-        schemaVersion: 14,
+        schemaVersion: 15,
         project: {id: 'project-1', name: 'Future', storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION + 1}
       })
     ).toThrow(`Backup project data uses storage schema ${CURRENT_PROJECT_SCHEMA_VERSION + 1}`);
@@ -300,7 +323,7 @@ describe('migrateProjectSnapshotPayload', () => {
   it('classifies v1 character identities and adds complete v2 backup fields', () => {
     const snapshot = normalizeProjectSnapshot(legacySnapshot());
 
-    expect(snapshot.schemaVersion).toBe(14);
+    expect(snapshot.schemaVersion).toBe(15);
     expect(snapshot.data.categories[0].kind).toBe('character');
     expect(snapshot.data.characters[0].entityId).toBe('entity-mira');
     expect(snapshot.data.characterSheets[0].characterEntityId).toBe('entity-mira');
@@ -362,7 +385,7 @@ describe('migrateProjectSnapshotPayload', () => {
       counts: {corkboardChapterCards: 1}
     });
 
-    expect(snapshot.schemaVersion).toBe(14);
+    expect(snapshot.schemaVersion).toBe(15);
     expect(snapshot.project.storageSchemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
     expect(snapshot.data.corkboardChapterCards[0].sceneIds).toEqual(['scene-1', 'scene-2']);
     expect(snapshot.data.categories[0].recordType).toBe('system-negative-space');

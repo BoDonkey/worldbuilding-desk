@@ -32,6 +32,35 @@ export interface WritingDocument {
   updatedAt: number;
 }
 
+/**
+ * Why a scene snapshot was taken (slice 4.95). `manual` is Take snapshot; the
+ * rest are automatic: before an AI revision is applied, before another
+ * snapshot is restored, the first edit of a scene each day, and just before
+ * the scene is deleted (deleting a scene keeps its snapshots).
+ */
+export type SceneSnapshotKind = 'manual' | 'before-ai' | 'before-restore' | 'daily' | 'before-delete';
+
+/**
+ * A saved copy of a scene's text (slice 4.95). The author's own words, kept
+ * for comparing and restoring: never canon, never sent to a model, never read
+ * by review or retrieval.
+ */
+export interface SceneSnapshot {
+  id: string;
+  projectId: string;
+  /** The `WritingDocument` it is a copy of, which may since have been deleted. */
+  sceneId: string;
+  /** The scene's title when the snapshot was taken, to name a deleted scene. */
+  sceneTitle?: string;
+  /** The scene's HTML as it was. */
+  content: string;
+  /** The author's name for it ("Draft 1"); automatic snapshots have none. */
+  name?: string;
+  kind: SceneSnapshotKind;
+  wordCount: number;
+  createdAt: number;
+}
+
 export interface ScratchpadDocument {
   id: string;
   projectId: string;

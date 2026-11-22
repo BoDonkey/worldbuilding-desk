@@ -76,7 +76,7 @@ describe('openDb structural upgrade', () => {
   });
 });
 
-describe('retired consistency log stores (DB_VERSION 32)', () => {
+describe('retired consistency log stores (DB_VERSION 32+)', () => {
   it('deletes the write-only log stores and their records, and keeps project records', async () => {
     await deleteTestDatabase();
     const v31 = indexedDB.open(DB_NAME, 31);
@@ -99,7 +99,7 @@ describe('retired consistency log stores (DB_VERSION 32)', () => {
     oldDb.close();
 
     openedDb = await openDb();
-    expect(openedDb.version).toBe(32);
+    expect(openedDb.version).toBe(DB_VERSION);
     for (const storeName of RETIRED_STORE_NAMES) {
       expect(openedDb.objectStoreNames.contains(storeName)).toBe(false);
     }

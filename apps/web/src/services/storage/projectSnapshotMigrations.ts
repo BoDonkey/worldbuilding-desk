@@ -13,7 +13,7 @@ import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
 import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
 
 export const MIN_SUPPORTED_PROJECT_SNAPSHOT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 14;
+export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 15;
 
 export interface ProjectSnapshotMigration {
   fromVersion: number;
@@ -281,6 +281,24 @@ export function migrateProjectSnapshotV13ToV14(
   };
 }
 
+/**
+ * 4.95: backups carry scene snapshots. Older backups have none; the new
+ * version makes older apps refuse backups whose snapshots they would drop.
+ */
+export function migrateProjectSnapshotV14ToV15(
+  snapshot: Record<string, unknown>
+): Record<string, unknown> {
+  const data = asRecord(snapshot.data);
+  const sceneSnapshots = asArray(data.sceneSnapshots);
+  return {
+    ...snapshot,
+    schemaVersion: 15,
+    project: {...asRecord(snapshot.project), storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
+    data: {...data, sceneSnapshots},
+    counts: {...asRecord(snapshot.counts), sceneSnapshots: sceneSnapshots.length}
+  };
+}
+
 const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
   {
     fromVersion: 1,
@@ -346,6 +364,11 @@ const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
     fromVersion: 13,
     toVersion: 14,
     migrate: migrateProjectSnapshotV13ToV14
+  },
+  {
+    fromVersion: 14,
+    toVersion: 15,
+    migrate: migrateProjectSnapshotV14ToV15
   }
 ];
 

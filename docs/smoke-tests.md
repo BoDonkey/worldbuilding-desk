@@ -81,12 +81,17 @@ Procedure:
    import an image, and pin a place on it; in the copy confirm the image
    shows with the pin in the same spot. Give the city map a hex grid (slice
    4.81) and confirm the copy keeps it and **Distance to** still counts hexes.
+9. Scene snapshots (slice 4.95). Before exporting, take a named snapshot of a
+   scene, edit the scene, and restore the snapshot. In the copy, open that
+   scene's **Snapshots**: the named snapshot and the automatic "before a
+   restore" one are listed with the same times and text, and **Restore** on
+   the automatic one brings back the edited text.
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated
 Scratchpad, Corkboard cards missing plot points, order, or scene links, changed/missing
 World Canvas content, any Canvas-only idea appearing as canon or indexed
-context, or an unfinished mechanics draft missing after reload or import, or
+context, missing or changed scene snapshots, or an unfinished mechanics draft missing after reload or import, or
 returning after Cancel, or an encrypted backup that opens with a wrong
 passphrase, shows readable project text, or reads anything before unlocking.
 

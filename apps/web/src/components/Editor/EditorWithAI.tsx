@@ -1,4 +1,5 @@
 import type {SceneRevision} from '../../services/assistant/sceneRevision';
+import type {SceneContentReplacement} from '../../services/editor/sceneSnapshots';
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 import type {Editor as TipTapEditorInstance} from '@tiptap/react';
 import TipTapEditor from '../TipTapEditor';
@@ -67,6 +68,8 @@ interface EditorWithAIProps {
   toolbarActions?: Array<{id: string; label: string; onClick: () => void}>;
   textToInsert?: string | null;
   sceneRevision?: SceneRevision;
+  /** Restore of a scene snapshot (slice 4.95). */
+  contentReplacement?: SceneContentReplacement | null;
   insertContext?: {from: number; to: number} | null;
   /** Present when a model wrote `textToInsert`; the insert is then marked as AI text. */
   insertProvenance?: AITextProvenance;
@@ -121,6 +124,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   insertContext = null,
   insertProvenance,
   sceneRevision,
+  contentReplacement = null,
   onTextInserted,
   selectionQuickSnippets,
   knownLoreHighlights = [],
@@ -431,6 +435,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           sceneRevision={sceneRevision}
           revisionProjectId={projectId}
           revisionDocumentId={documentId}
+          contentReplacement={contentReplacement}
           presentStatBlockToken={presentStatBlockToken}
         />
         {selectionBubble && (

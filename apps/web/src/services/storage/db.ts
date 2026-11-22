@@ -4,7 +4,7 @@ import {wrapVaultDatabase} from './vault/vaultDatabase';
 import {isVaultRegistryLoaded, loadVaultRegistry} from './vault/vaultRegistry';
 
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 32;
+export const DB_VERSION = 33;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
@@ -47,6 +47,8 @@ export const PROJECT_REVIEW_RUN_STORE_NAME = 'project_review_runs';
 export const MECHANICS_DRAFT_STORE_NAME = 'mechanics_drafts';
 /** Maps of the world: unit, scale, and where each sits on a larger map (DB_VERSION 31). */
 export const MAP_STORE_NAME = 'maps';
+/** Saved copies of a scene's text: Take snapshot and the automatic ones (DB_VERSION 33). */
+export const SCENE_SNAPSHOT_STORE_NAME = 'scene_snapshots';
 
 export const PROJECT_SCOPED_STORE_NAMES = [
   CATEGORY_STORE_NAME,
@@ -80,7 +82,8 @@ export const PROJECT_SCOPED_STORE_NAMES = [
   CHARACTER_IDENTITY_REPORT_STORE_NAME,
   PROJECT_REVIEW_RUN_STORE_NAME,
   MECHANICS_DRAFT_STORE_NAME,
-  MAP_STORE_NAME
+  MAP_STORE_NAME,
+  SCENE_SNAPSHOT_STORE_NAME
 ] as const;
 
 /**
@@ -276,8 +279,14 @@ export function upgradeDatabase(db: IDBDatabase, transaction: IDBTransaction): v
     db.createObjectStore(MAP_STORE_NAME, {keyPath: 'id'});
   }
 
+  if (!db.objectStoreNames.contains(SCENE_SNAPSHOT_STORE_NAME)) {
+    db.createObjectStore(SCENE_SNAPSHOT_STORE_NAME, {keyPath: 'id'});
+  }
+
   // world_canvases and project_review_runs already have a unique index.
-  // mechanics_drafts and maps get their projectId index here too.
+  // mechanics_drafts, maps, and scene_snapshots get their projectId index here too.
+  // (Snapshots are read by project and filtered by scene: a locked vault
+  // record keeps only id and projectId readable, so a sceneId index would not work.)
   for (const storeName of PROJECT_INDEXED_STORE_NAMES) {
     const store = transaction.objectStore(storeName);
     if (!store.indexNames.contains(PROJECT_ID_INDEX)) {
