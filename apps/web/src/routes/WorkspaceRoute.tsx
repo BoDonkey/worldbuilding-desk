@@ -79,6 +79,7 @@ import {WorkspaceCharacterLabDialogs} from '../components/Workspace/WorkspaceCha
 import {WorkspaceSceneDraftEntry} from '../components/Workspace/WorkspaceSceneDraftEntry';
 import {useSceneSnapshots} from '../hooks/useSceneSnapshots';
 import {WorkspaceSnapshotsModal} from '../components/Workspace/WorkspaceSnapshotsModal';
+import {WorkspaceDraftsModal} from '../components/Workspace/WorkspaceDraftsModal';
 
 type FeedbackTone = 'success' | 'error';
 
@@ -182,7 +183,7 @@ function WorkspaceRoute() {
     handleExportScenes,
     handleSave,
     handleDelete,
-    handleContentChange
+    handleContentChange, handleRestoreDeletedScene
   } = useWorkspaceDocuments({
     activeProject,
     documentsLoaded,
@@ -195,7 +196,7 @@ function WorkspaceRoute() {
   });
   const sceneCursor = useWorkspaceSceneCursor(selectedId);
   const sceneSnapshots = useSceneSnapshots({projectId: activeProject?.id ?? null, sceneId: selectedId, sceneTitle: title, isSceneReady: isSelectedDocumentInitialized,
-    content, savedContent: selectedDocument?.content ?? null, requestConfirm});
+    content, savedContent: selectedDocument?.content ?? null});
   const {
     sceneCursorPosition,
     sceneRosterStateMoment,
@@ -973,6 +974,9 @@ function WorkspaceRoute() {
       />
 
       <WorkspaceSnapshotsModal controller={sceneSnapshots} sceneTitle={title} currentContent={content} />
+      <WorkspaceDraftsModal projectId={activeProject.id} projectName={activeProject.name} documents={documents}
+        openScene={selectedId && isSelectedDocumentInitialized ? {id: selectedId, title, content} : null}
+        onOpenScene={handleSelectDocument} onRestoreDeletedScene={handleRestoreDeletedScene} />
 
       <WorkspaceMemoryModal
         isOpen={isMemoryDialogOpen}

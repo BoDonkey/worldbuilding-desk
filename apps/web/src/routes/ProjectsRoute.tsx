@@ -1,3 +1,4 @@
+import {ProjectDraftMilestoneButton} from '../components/Projects/ProjectDraftMilestoneButton';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
 import {useNavigate} from 'react-router';
@@ -621,6 +622,14 @@ function ProjectsRoute() {
                     ? 'Exporting...'
                     : 'Export Backup'}
                 </button>
+
+                {vault.vaultStateOf(project.id) !== 'locked' && (
+                  <ProjectDraftMilestoneButton
+                    projectId={project.id}
+                    projectName={project.name}
+                    className={styles.backupButton}
+                  />
+                )}
 
                 <button
                   type='button'

@@ -5,6 +5,8 @@ export type WorkspaceCommandId =
   | 'save-scene'
   | 'take-snapshot'
   | 'open-snapshots'
+  | 'save-draft-milestone'
+  | 'open-drafts'
   | 'open-scratchpad'
   | 'open-corkboard'
   | 'toggle-left-drawer'

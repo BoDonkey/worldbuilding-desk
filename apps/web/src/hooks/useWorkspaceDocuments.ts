@@ -6,7 +6,7 @@ import type {
   RefObject,
   SetStateAction
 } from 'react';
-import type {Project, WritingDocument, WorkspaceImportMode} from '../entityTypes';
+import type {Project, SceneSnapshot, WritingDocument, WorkspaceImportMode} from '../entityTypes';
 import {
   deleteWritingDocument,
   getNextWritingDocumentOrder,
@@ -78,15 +78,20 @@ interface UseWorkspaceDocumentsParams {
 }
 
 /** The delete confirm's message; says what happens to the scene's state changes. */
-export const describeSceneDeletion = (acceptedStateChangeCount: number): string => {
-  const base = 'This scene will be permanently removed from the project.';
+export const describeSceneDeletion = (acceptedStateChangeCount: number, hasText = true): string => {
+  // Slice 4.96: the text is kept as a snapshot and can be restored from Drafts.
+  const base = hasText
+    ? 'This scene will be removed from the project. Its text is kept as a snapshot, ' +
+      'so Drafts → Deleted scenes can bring it back.'
+    : 'This empty scene will be removed from the project.';
   if (acceptedStateChangeCount === 0) return base;
   const changes =
     acceptedStateChangeCount === 1
       ? '1 accepted state change'
       : `${acceptedStateChangeCount} accepted state changes`;
   return `${base} It holds ${changes} (positions, items, or stats). ` +
-    'They will be invalidated, so later scenes no longer include them.';
+    'They will be invalidated, so later scenes no longer include them, and restoring the scene ' +
+    'does not bring them back.';
 };
 
 type WorkspaceDocumentInitialization =
@@ -314,7 +319,7 @@ export const useWorkspaceDocuments = ({
   ]);
 
   const handleNewDocument = useCallback(async (
-    options?: {title?: string; select?: boolean}
+    options?: {title?: string; select?: boolean; id?: string; content?: string}
   ): Promise<WritingDocument | null> => {
     if (!activeProject) return null;
 
@@ -323,10 +328,10 @@ export const useWorkspaceDocuments = ({
     try {
       const now = Date.now();
       const doc: WritingDocument = {
-        id: crypto.randomUUID(),
+        id: options?.id ?? crypto.randomUUID(),
         projectId: activeProject.id,
         title: options?.title?.trim() || 'Untitled scene',
-        content: '<p></p>',
+        content: options?.content ?? '<p></p>',
         order: getNextWritingDocumentOrder(documents),
         createdAt: now,
         updatedAt: now
@@ -340,7 +345,7 @@ export const useWorkspaceDocuments = ({
         setEditorScrollResetToken((prev) => prev + 1);
         setSaveStatus('saved');
         setLastSavedAt(Date.now());
-        setWordCount(0);
+        setWordCount(countWords(doc.content));
       }
       if (!options?.title) {
         setFeedback({tone: 'success', message: 'Created a new scene.'});
@@ -696,7 +701,10 @@ export const useWorkspaceDocuments = ({
         : 0;
       requestConfirm({
         title: `Delete "${doc.title || 'Untitled scene'}"?`,
-        message: describeSceneDeletion(stateChangeCount),
+        message: describeSceneDeletion(
+          stateChangeCount,
+          countWords(doc.id === selectedId ? content : doc.content) > 0
+        ),
         confirmLabel: 'Delete',
         variant: 'danger',
         onConfirm: async () => {
@@ -762,6 +770,31 @@ export const useWorkspaceDocuments = ({
       setWordCount(countWords(html));
     },
     [clearGuardrailIssues, closeConsistencyPopover]
+  );
+
+  /**
+   * Slice 4.96: recreates a deleted scene under its old id (so its snapshots
+   * belong to it again) at the end of the manuscript with the snapshot's
+   * text, then saves it as Save now does, so it is indexed and reviewed.
+   */
+  const handleRestoreDeletedScene = useCallback(
+    async (snapshot: SceneSnapshot): Promise<WritingDocument | null> => {
+      if (documents.some((doc) => doc.id === snapshot.sceneId)) {
+        setFeedback({tone: 'error', message: 'That scene has not been deleted.'});
+        return null;
+      }
+      const title = snapshot.sceneTitle?.trim() || 'Restored scene';
+      const doc = await handleNewDocument({title, id: snapshot.sceneId, content: snapshot.content});
+      if (!doc) return null;
+      try {
+        await persistDocRef.current?.(doc, {source: 'workspace-save'});
+      } catch (error) {
+        console.error('Unable to index the restored scene.', error);
+      }
+      setFeedback({tone: 'success', message: `Restored "${title}" from its snapshot.`});
+      return doc;
+    },
+    [documents, handleNewDocument, persistDocRef, setFeedback]
   );
 
   const scheduleAutosave = useCallback(
@@ -857,6 +890,7 @@ export const useWorkspaceDocuments = ({
     handleExportScenes,
     handleSave,
     handleDelete,
-    handleContentChange
+    handleContentChange,
+    handleRestoreDeletedScene
   };
 };

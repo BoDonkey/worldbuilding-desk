@@ -86,6 +86,9 @@ Procedure:
    scene's **Snapshots**: the named snapshot and the automatic "before a
    restore" one are listed with the same times and text, and **Restore** on
    the automatic one brings back the edited text.
+10. Draft milestones (slice 4.96). Before exporting, save a draft milestone.
+   In the copy, **Drafts** lists it with the same scene and word counts, and
+   the whole draft shows the text as it was.
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated

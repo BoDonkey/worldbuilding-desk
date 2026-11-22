@@ -171,6 +171,21 @@ export const createAppCommands = ({
       run: () => dispatchWorkspaceCommand('open-snapshots')
     },
     {
+      id: 'workspace-save-draft-milestone',
+      label: 'Workspace: Save Draft Milestone',
+      section: 'Workspace',
+      keywords: ['draft', 'milestone', 'snapshot', 'manuscript', 'version'],
+      description: 'Save a snapshot of every scene at once, such as "Draft 1 complete".',
+      run: () => dispatchWorkspaceCommand('save-draft-milestone')
+    },
+    {
+      id: 'workspace-open-drafts',
+      label: 'Workspace: Open Drafts',
+      section: 'Workspace',
+      keywords: ['draft', 'milestone', 'deleted', 'restore', 'scene', 'export'],
+      run: () => dispatchWorkspaceCommand('open-drafts')
+    },
+    {
       id: 'workspace-open-scratchpad',
       label: 'Workspace: Open Scratchpad',
       section: 'Workspace',

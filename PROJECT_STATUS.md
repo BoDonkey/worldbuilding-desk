@@ -94,6 +94,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   carried by backups (snapshot schema 15; older apps refuse it), project
   deletion, and vault protection. Never canon, never sent to AI or read by
   review or retrieval.
+- Draft milestones (slice 4.96): **Save draft milestone** (Workspace Drafts,
+  command palette, or a project card) snapshots every scene at once; **Drafts**
+  opens a milestone read-only with per-scene compare and exports its text.
+  Deleted scenes with snapshots are listed there and can be restored. No
+  schema change: a milestone is a set of `milestone` snapshots.
 - Full current behavior:
   [`docs/status-writing-workspace.md`](docs/status-writing-workspace.md).
   Update it, not this file, when Workspace behavior changes.
