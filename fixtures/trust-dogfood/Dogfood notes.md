@@ -112,3 +112,10 @@ replay. The runbook names internal commands instead of providing an
 author-facing journey, while the application exposes multiple overlapping  
 entry points. E1–E5 were not run. — author dogfood 2026-08-23
 
+
+## Run of 2026-11-22
+
+- [UX friction; mental model] Corkboard/Draft scenes — "Link current scene" on a chapter card appeared to attach the whole chapter. Working as designed: it links the open document, and the fast-path loader imports each chapter as one scene, so the "scene" is the whole chapter. Nothing in the Workspace corkboard dialog says that a card is the plan and scenes are separate documents (the explanatory line shows only on the full Corkboard route). Fix folded into roadmap 4.85. — author dogfood 2026-11-22
+- [product gap] Corkboard/AI planning — No way to talk to the model about the chapter arc or get help planning scenes and beats (beats = a card's plot points; scenes = draft documents). Writing coach sees only dashboard measurements, Draft this scene reads one card's summary and plot points, and the Workspace assistant never reads chapter cards. Drafted as roadmap 4.85 (read-only planning chat) and 4.86 (chat proposes outline changes for review). — author dogfood 2026-11-22
+- [UX friction; purpose unclear] Character packages — Unclear whether packages are meant for a book series. They copy characters (canon, aliases, facts, optional sheets) into another project; a series sharing one world is meant to use Parent project on Projects, which shares canon read-only. The page does not say this. Drafted in roadmap 4.87 (copy fix). — author dogfood 2026-11-22
+- [missing capability] Character packages — Export is all characters or one at a time from World Bible; no way to pick a subset. The export service already accepts a list of entity ids; the route has no picker. Drafted as roadmap 4.87. — author dogfood 2026-11-22

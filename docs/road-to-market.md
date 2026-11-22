@@ -334,6 +334,9 @@ messages).
 | 4.82 | Ordinary assistant rolling summaries | 4 | M | — post-beta candidate; after the relevant 3.32 assistant/context seam |
 | 4.83 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
 | 4.84 | Workspace dialogs open above the context drawer | 4 | S | Done `1a7765e` |
+| 4.85 | Corkboard planning chat (read-only) | 4 | M | — candidate from 2026-11-22 dogfood; v1 scope lists authored Corkboard expansion as post-v1, so it needs author promotion before beta |
+| 4.86 | Planning chat proposes outline changes | 4 | M | — after 4.85; same scope decision |
+| 4.87 | Export a chosen set of characters | 4 | S | — from 2026-11-22 dogfood |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
@@ -1111,6 +1114,80 @@ Movement checks are review findings, never blocks.
     1,000px wide that opens `Record change here` from the scene roster with
     the drawer open and types into the dialog without forcing. Then remove
     the wide-viewport workaround in `general-fiction-state.cy.ts`.
+
+- **4.85 Corkboard planning chat (read-only).** From the 2026-11-22
+  dogfood run. Today no AI surface reads the outline: the Writing coach sees
+  only deterministic dashboard measurements
+  (`summarizeStoryDashboardForCoach`), Draft this scene reads one linked
+  card's summary and plot points (`sceneGoalFromCards`), and the Workspace
+  assistant never reads chapter cards. The author wants to talk through the
+  chapter arc and plan individual scenes.
+  - **Behavior.** A chat panel on the Corkboard with a scope picker: **Whole
+    board** (every chapter card in order: title, status, summary, plot
+    points, linked scene titles and word counts) or **This card** (that card
+    in full plus its neighbours' titles and summaries). Retrieved World Bible
+    records and accepted facts join through the existing assistant retrieval,
+    labeled by trust tier as in the assistant. Scene prose is not sent by
+    default; at most a bounded excerpt of linked scenes, disclosed.
+  - **Trust boundary.** Read-only. Replies are conversation, never canon, card
+    edits, or manuscript text; nothing on the board changes from this slice.
+  - **AI plumbing.** Follows the AI coaching switch. Requests go through
+    `useFeatureModelRun` under a new `ConsultationFeature`
+    (`corkboard-planning`), with route disclosure, Stop, and consultation
+    accounting. Conversation is session-local and project-scoped, like the
+    Workspace assistant.
+  - **Also fix (small).** Say what a card is in the Workspace corkboard
+    dialog: a card is the plan, scenes are separate documents, and Link
+    current scene links the open document. The fixture's one-scene-per-
+    chapter import made linking look like it attached the whole chapter.
+  - **Verify.** Fast battery plus Corkboard Cypress specs. Unit tests for the
+    prompt builder (both scopes, ordering, empty plot points, missing linked
+    scenes, size bounds) and that no write path is reachable; e2e with a
+    stubbed provider that asks a question in each scope.
+
+- **4.86 Planning chat proposes outline changes.** After 4.85. A **Propose
+  changes** action on a planning-chat reply asks the model for structured
+  edits, shown through `AIProposalPreview` and accepted one at a time.
+  - **Proposal kinds.** Board: reorder cards, add a chapter card, revise a
+    card summary. Card: add, revise, or reorder plot points. Scenes: split a
+    card's plot points into planned scenes with goals; accepting one creates
+    an empty scene linked to the card (the existing Create linked scene path),
+    ready for Draft this scene or writing.
+  - **Validation.** Deterministic code checks the response schema, that every
+    referenced card, plot point, and scene id exists in this project and is
+    unchanged since the proposal was made (revision check), and length
+    bounds. Invalid or stale proposals are dropped with a plain message.
+    Accepted edits go through `useWorkspaceCorkboard`'s existing card and
+    plot-point actions; no new persistence path. Nothing touches canon,
+    mechanics, state, or scene prose.
+  - **Verify.** Full-coverage tier. Unit tests for the parser and validator
+    (unknown ids, stale revision, oversized text, mixed valid/invalid
+    batches); e2e that accepts one proposal of each kind and dismisses one,
+    and that the board is unchanged until acceptance.
+
+- **4.87 Export a chosen set of characters.** From the 2026-11-22 dogfood
+  run. Character packages (More → Character packages) offers only
+  **Export all characters** / **Export all with sheets**; one character
+  exports from its World Bible detail. There is nothing in between. The
+  service already takes a subset (`exportCharactersJson({entityIds})` in
+  `services/characters/characterTransferService.ts`); only the route lacks a
+  picker.
+  - **Behavior.** On `CharacterPackagesRoute`, a searchable checklist of the
+    project's World Bible characters (name, aliases, whether a sheet exists)
+    with Select all / Clear, a selected count, and **Export selected** (with
+    and without sheets). Keep Export all as is. Records still in the
+    `Needs canon link` queue are listed but not selectable, with the reason,
+    matching the existing export rules.
+  - **Also fix (copy).** The lead says what packages are for: copying
+    characters into another project, for example a standalone book or a
+    new project that reuses a cast. For a series that shares one world, point
+    to **Parent project** on Projects, which shares canon read-only instead of
+    copying it (`docs/domain-model.md`: inheritance covers canon only, not
+    sheets or state).
+  - **Verify.** Fast battery plus the character-package Cypress coverage.
+    Unit test that the route passes exactly the selected entity ids; e2e that
+    exports two of three characters and re-imports the file into a second
+    project with only those two present.
 
 ### Phase 5 — Release engineering
 
