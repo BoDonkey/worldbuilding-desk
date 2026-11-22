@@ -346,6 +346,9 @@ messages).
 | 4.92 | Typewriter scrolling | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.93 | Backup reminder | 4 | S | — pre-beta (author decision, 2026-11-22); before 6.1 |
 | 4.94 | Scheduled automatic backups to a chosen folder (desktop) | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.93, before 6.1 |
+| 4.95 | Scene snapshots: save, compare, restore | 4 | M | — from 2026-11-22 dogfood; priority pending author decision |
+| 4.96 | Draft milestones (snapshot the whole manuscript) | 4 | S | — after 4.95; priority pending author decision |
+| 4.97 | Rewrite beside the original | 4 | M | — after 4.95; priority pending author decision |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
@@ -1339,6 +1342,63 @@ Movement checks are review findings, never blocks.
     guard and pruning; packaged desktop e2e that a scheduled run writes a
     restorable backup, that restore of it matches the project, and that
     pruning keeps the newest N.
+
+- **4.95 Scene snapshots: save, compare, restore.** From the 2026-11-22
+  dogfood run. There is no version history for scenes: the editor's undo
+  lasts only for the session, the only automatic copies are pre-migration
+  backups, and Export Backup feels final. The model is Scrivener's
+  snapshots.
+  - **Behavior.** **Take snapshot** on a scene (button, command palette, and
+    shortcut) saves its full text with a time and an optional name ("Draft 1",
+    "before cutting the dream"). Automatic snapshots, marked as such: before
+    any AI replacement is applied (the scene revision preview), before
+    restoring another snapshot, and the first time a scene is edited each day.
+    A **Snapshots** panel lists them per scene; selecting one shows it
+    read-only beside the current text, with a **Compare** toggle that marks
+    words added and removed since the snapshot. **Restore** replaces the
+    scene text after taking an automatic snapshot of the current text, so a
+    restore is itself undoable. **Copy** puts a snapshot's text on the
+    clipboard to salvage a passage without restoring. Named snapshots are
+    kept until deleted; automatic ones are pruned to the newest 20 per scene.
+  - **Trust and data.** Snapshots are the author's own text, never canon,
+    never sent to AI or used in review or retrieval. Restoring triggers the
+    normal re-review of the scene like any edit. New project-owned store:
+    carried by backup/restore and project deletion (one list, per 3.64),
+    covered by vault protection, and counted in the backup size.
+  - **Verify.** Full-coverage tier; DB_VERSION bump, so packaged desktop e2e
+    and a grep for pinned versions. Unit tests for the word diff, pruning,
+    and restore-takes-a-snapshot; e2e that takes, compares, restores, and
+    then restores back.
+
+- **4.96 Draft milestones.** After 4.95. **Save draft milestone** on the
+  Workspace (and Projects) takes a named snapshot of every scene at once
+  ("Draft 1 complete") and records the milestone with its date, scene count,
+  and word count. A **Drafts** list shows milestones; opening one shows the
+  manuscript as it was, read-only, with per-scene compare against now, and
+  **Export this draft** (the existing manuscript export, from the milestone's
+  text). Restoring a whole milestone is not offered; restore scene by scene
+  through 4.95, so a draft can never silently overwrite later work.
+  Milestones keep their snapshots out of automatic pruning.
+  - **Verify.** Fast battery plus Workspace Cypress; e2e that saves a
+    milestone, edits two scenes, opens the milestone, sees the old text, and
+    exports it.
+
+- **4.97 Rewrite beside the original.** After 4.95. Select a passage and
+  choose **Rewrite beside original** (selection menu and command palette).
+  A split view shows the original passage read-only on one side and an
+  editable copy on the other; the rest of the scene stays in place. **Use
+  rewrite** replaces the passage (after an automatic 4.95 snapshot);
+  **Keep both** saves the rewrite as a named alternative on the scene to come
+  back to; **Discard** closes it. Saved alternatives list in the Snapshots
+  panel by passage. No AI involved; the existing AI selection actions may
+  later open their output in the same view.
+  - **Rules.** If the original passage changes while the rewrite is open,
+    **Use rewrite** asks again rather than replacing the wrong text (the
+    same stale-range check as the scene revision preview). Undo after
+    **Use rewrite** restores the original.
+  - **Verify.** Fast battery plus Workspace Cypress; e2e that rewrites a
+    paragraph, keeps both, comes back, and uses the alternative; unit test
+    for the stale-range refusal.
 
 ### Phase 5 — Release engineering
 
