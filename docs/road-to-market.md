@@ -341,6 +341,9 @@ messages).
 | 4.87 | Export a chosen set of characters | 4 | S | — from 2026-11-22 dogfood |
 | 4.88 | Feature toggles that fit the project mode | 4 | S | — from 2026-11-22 dogfood; General Fiction hides the toggles (author decision, 2026-11-22) |
 | 4.89 | Spacing pass: stacked controls and inline labels | 4 | XS | — from 2026-11-22 dogfood |
+| 4.90 | Editor text options: paragraph style, narrow width, more fonts | 4 | S | — from 2026-11-22 dogfood; not a beta gate unless promoted |
+| 4.91 | Focus mode | 4 | M | — from 2026-11-22 dogfood; not a beta gate unless promoted |
+| 4.92 | Typewriter scrolling | 4 | S | — from 2026-11-22 dogfood; not a beta gate unless promoted |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
@@ -1238,6 +1241,55 @@ Movement checks are review findings, never blocks.
     shared ones only if more than one file needs the value.
   - **Verify.** Lint and unit tests; before/after screenshots of each fixed
     screen in both themes at desktop and narrow widths.
+
+- **4.90 Editor text options: paragraph style, narrow width, more fonts.**
+  From the 2026-11-22 dogfood run; the author wants each one switchable.
+  Today Settings → Editor Appearance offers font size, text style (serif,
+  sans, dyslexia-friendly), width (Focused 760px, Wide 980px), line spacing,
+  surface, and the Source Notes view. Each is a `data-*` attribute on the
+  root that sets a CSS variable (`AccessibilityContext`, `styles/theme.css`),
+  saved in `localStorage` (per device, not per project). Follow that pattern.
+  - **Paragraph style.** Spaced (today: a blank line between paragraphs) or
+    Indented (first-line indent, no gap between paragraphs, no indent on the
+    first paragraph after a heading or scene break). Applies to the
+    manuscript and Source Notes visual editors only; export is unaffected.
+  - **Width.** Add **Narrow** (about 640px) before Focused and Wide.
+  - **Fonts.** Add a few more bundled-or-system stacks (for example a
+    monospace and a second serif), plus **Custom**: a typed font-family name
+    the computer already has, with a live preview line and a fallback to the
+    current stack when the font is missing. A system font picker
+    (`queryLocalFonts`) only if it works in the Electron renderer without a
+    new IPC channel; otherwise the typed name is enough.
+  - **Verify.** Fast battery. Unit tests for storage defaults and unknown
+    stored values; screenshots of each option in both themes; e2e that a
+    choice survives reload.
+
+- **4.91 Focus mode.** From the 2026-11-22 dogfood run. A Workspace toggle
+  (button, command palette entry, keyboard shortcut, and Escape to leave)
+  that hides the navigation rail, scene list, context drawer, and editor
+  toolbar, leaving the scene and a minimal word count. Remembered per device
+  like the appearance settings, with an option in Editor Appearance for
+  whether it starts on.
+  - **Rules.** Nothing is lost while hidden: autosave, review, and
+    highlights keep running (highlights follow the existing visibility
+    setting). Dialogs and the selection menu still open. Hovering or moving
+    to the left edge does not reveal the rail; leaving is explicit.
+    Accessible: the toggle's state is announced, focus stays in the editor.
+  - **Verify.** Fast battery plus Workspace Cypress specs; e2e that enters
+    focus mode, types, leaves with Escape, and finds the text saved and the
+    panels restored as they were.
+
+- **4.92 Typewriter scrolling.** From the 2026-11-22 dogfood run. An Editor
+  Appearance option that keeps the line being typed at a fixed height
+  (about a third of the way down) by scrolling the editor as you type or
+  move the caret, in the manuscript editor. Off by default.
+  - **Rules.** Scroll only on typing and keyboard caret moves, never on
+    mouse selection or when the author scrolls away to read; add bottom
+    padding so the last line can reach the fixed height. Respect
+    `prefers-reduced-motion` (jump, do not animate). Works in focus mode.
+  - **Verify.** Unit test for the scroll target calculation; e2e in a long
+    scene that the caret line stays within a band while typing and that a
+    manual scroll is not undone until typing resumes.
 
 ### Phase 5 — Release engineering
 
