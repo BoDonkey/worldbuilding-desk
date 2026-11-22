@@ -436,6 +436,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           revisionProjectId={projectId}
           revisionDocumentId={documentId}
           contentReplacement={contentReplacement}
+          rewriteExtensions={config?.extensions}
           presentStatBlockToken={presentStatBlockToken}
         />
         {selectionBubble && (

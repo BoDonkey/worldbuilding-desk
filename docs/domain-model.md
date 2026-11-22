@@ -646,6 +646,12 @@ _Status: implemented (Slices 4.42–4.45, 2026-09-27)._
   milestone's name. They are never pruned. A deleted scene is a `sceneId`
   that has snapshots but no `writing_documents` record; restoring it
   recreates the document under that id, so its snapshots belong to it again.
+- A passage alternative (slice 4.97) is an `alternative`-kind snapshot whose
+  `content` is the rewrite of one passage, with `passage.original` (the
+  passage's HTML) and `passage.originalText` (its text, paragraphs separated
+  by a blank line), by which it is found in the scene again. Using a rewrite
+  first takes a `before-rewrite` snapshot of the whole scene. Alternatives
+  are never pruned and never count as the scene's newest text.
 
 ### Prose-proximate item and state handoff
 

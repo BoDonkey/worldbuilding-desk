@@ -7,6 +7,7 @@ export type WorkspaceCommandId =
   | 'open-snapshots'
   | 'save-draft-milestone'
   | 'open-drafts'
+  | 'rewrite-beside-original'
   | 'open-scratchpad'
   | 'open-corkboard'
   | 'toggle-left-drawer'

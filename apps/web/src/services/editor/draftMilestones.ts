@@ -6,6 +6,7 @@ import {
   saveSceneSnapshots
 } from '../storage';
 import {countWords} from '../../utils/textHelpers';
+import {isPassageAlternative} from './sceneSnapshots';
 
 /*
  * Draft milestones (slice 4.96): "Draft 1 complete" saves a named snapshot of
@@ -129,7 +130,8 @@ export function findDeletedScenes(
   const live = new Set(documents.map((doc) => doc.id));
   const bySceneId = new Map<string, SceneSnapshot[]>();
   for (const snapshot of snapshots) {
-    if (live.has(snapshot.sceneId)) continue;
+    // A passage alternative is not the scene's text, so it cannot restore one.
+    if (live.has(snapshot.sceneId) || isPassageAlternative(snapshot)) continue;
     const group = bySceneId.get(snapshot.sceneId) ?? [];
     group.push(snapshot);
     bySceneId.set(snapshot.sceneId, group);

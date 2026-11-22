@@ -29,6 +29,10 @@ interface SnapshotCompareProps {
   snapshotHtml: string;
   /** The scene now, or null when it has since been deleted. */
   currentHtml: string | null;
+  /** The right pane's heading; a passage alternative shows its rewrite there. */
+  currentHeading?: string;
+  /** What Compare's counts describe. */
+  summaryLabel?: string;
   actions?: ReactNode;
 }
 
@@ -37,7 +41,9 @@ interface SnapshotCompareProps {
  * marks the words removed since the snapshot and the words added. Give it a
  * `key` per snapshot so Compare resets.
  */
-export function SnapshotCompare({snapshotHeading, snapshotHtml, currentHtml, actions}: SnapshotCompareProps) {
+export function SnapshotCompare({
+  snapshotHeading, snapshotHtml, currentHtml, currentHeading = 'Current text', summaryLabel = 'Since this snapshot', actions
+}: SnapshotCompareProps) {
   const [isComparing, setComparing] = useState(false);
   const comparison = useMemo(
     () => (isComparing && currentHtml !== null ? compareSnapshotWithCurrent(snapshotHtml, currentHtml) : null),
@@ -60,7 +66,7 @@ export function SnapshotCompare({snapshotHeading, snapshotHtml, currentHtml, act
         </label>
         {comparison && (
           <span className={styles.summary} data-testid='snapshot-compare-summary'>
-            Since this snapshot: {wordLabel(comparison.added)} added, {wordLabel(comparison.removed)} removed.
+            {summaryLabel}: {wordLabel(comparison.added)} added, {wordLabel(comparison.removed)} removed.
           </span>
         )}
         {actions && <div className={styles.detailActions}>{actions}</div>}
@@ -73,7 +79,7 @@ export function SnapshotCompare({snapshotHeading, snapshotHtml, currentHtml, act
           </div>
         </div>
         <div className={styles.pane}>
-          <h4 className={styles.paneHeading}>Current text</h4>
+          <h4 className={styles.paneHeading}>{currentHeading}</h4>
           <div className={styles.text} data-testid='snapshot-current-text'>
             {currentHtml === null
               ? <p className={styles.deletedNote}>This scene has since been deleted.</p>

@@ -1,7 +1,9 @@
 import type {SceneRevision} from '../services/assistant/sceneRevision';
 import type {SceneContentReplacement} from '../services/editor/sceneSnapshots';
 import {SceneRevisionPreview} from './Editor/SceneRevisionPreview';
-import type {Editor, Extension} from '@tiptap/core';
+import {PassageRewritePanel} from './Editor/PassageRewritePanel';
+import {usePassageRewrite} from '../hooks/usePassageRewrite';
+import type {AnyExtension, Editor, Extension} from '@tiptap/core';
 import {EditorContent, useEditor} from '@tiptap/react';
 import {useEffect, useRef} from 'react';
 import type {InlineHighlightsMode} from '../entityTypes';
@@ -70,6 +72,8 @@ interface TipTapEditorProps {
   revisionDocumentId?: string;
   /** Restore: replaces the text of scene `revisionDocumentId` once per token. */
   contentReplacement?: SceneContentReplacement | null;
+  /** Rewrite beside original (4.97): the scene schema without Workspace decorations. */
+  rewriteExtensions?: AnyExtension[];
   onTextInserted?: () => void;
   insertContext?: {from: number; to: number} | null;
   /** Present when a model wrote `textToInsert`; the insert is then marked as AI text. */
@@ -315,6 +319,7 @@ function TipTapEditor({
   revisionProjectId,
   revisionDocumentId,
   contentReplacement,
+  rewriteExtensions,
   onTextInserted,
   insertContext,
   insertProvenance,
@@ -521,6 +526,10 @@ function TipTapEditor({
     onTextInserted?.();
   }, [textToInsert, editor, insertContext, insertProvenance, onTextInserted, sceneRevision]);
 
+  const passageRewrite = usePassageRewrite({
+    editor, projectId: revisionProjectId, documentId: revisionDocumentId
+  });
+
   if (!editor) return null;
 
   return (
@@ -532,6 +541,12 @@ function TipTapEditor({
         projectId={revisionProjectId ?? ''}
         documentId={revisionDocumentId ?? ''}
         onClose={() => onTextInserted?.()}
+      />}
+      {passageRewrite.session && <PassageRewritePanel
+        key={passageRewrite.session.token}
+        session={passageRewrite.session}
+        controller={passageRewrite}
+        extensions={rewriteExtensions ?? config.extensions}
       />}
       <MenuBar
         editor={editor}

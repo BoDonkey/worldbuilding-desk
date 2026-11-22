@@ -12,6 +12,24 @@
 - Active projects now route directly into the writing workspace.
 - Scene/context drawers now default closed so the editor remains primary.
 - Scene creation, deletion, autosave, and export.
+- Rewrite beside the original (slice 4.97). Select a passage and choose
+  **Rewrite beside original** in the selection menu (right-click) or the
+  command palette (which uses the current selection). A panel above the
+  editor shows the passage read-only beside an editable copy with the same
+  formatting; the scene stays editable. **Use rewrite** replaces the passage
+  in one change (Undo brings the original back), after saving the scene as
+  an automatic "before a rewrite was used" snapshot. The passage's range
+  follows edits elsewhere in the scene, and text typed right before or after
+  it stays outside it; if the passage itself is edited, the panel says so,
+  **Use rewrite** is disabled, and **Keep both** or **Discard** remain.
+  **Keep both** saves the rewrite, with an optional name (default
+  "Alternative: “first words…”"), as a passage alternative listed in the
+  scene's **Snapshots** under **Passage alternatives**, grouped by passage.
+  There it shows the original passage beside the rewrite with **Compare**,
+  **Open beside original** (finds the passage by its text; refused if it is
+  no longer in the scene exactly once), **Copy**, and **Delete**.
+  Alternatives are never pruned, never restore the whole scene, and are not
+  listed as deleted scenes. No model is involved.
 - Draft milestones (slice 4.96). **Save draft milestone** (the **Drafts**
   dialog from the scene drawer, the command palette, or **Save draft
   milestone** on a Projects card) takes a snapshot of every scene at once,

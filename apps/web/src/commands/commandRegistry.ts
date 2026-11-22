@@ -186,6 +186,14 @@ export const createAppCommands = ({
       run: () => dispatchWorkspaceCommand('open-drafts')
     },
     {
+      id: 'workspace-rewrite-beside-original',
+      label: 'Workspace: Rewrite Beside Original',
+      section: 'Workspace',
+      keywords: ['rewrite', 'alternative', 'passage', 'selection', 'revise', 'version'],
+      description: 'Rewrite the selected passage in a copy beside it, then use it or keep both.',
+      run: () => dispatchWorkspaceCommand('rewrite-beside-original')
+    },
+    {
       id: 'workspace-open-scratchpad',
       label: 'Workspace: Open Scratchpad',
       section: 'Workspace',

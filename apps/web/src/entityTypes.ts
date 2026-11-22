@@ -39,7 +39,8 @@ export interface WritingDocument {
  * the scene is deleted (deleting a scene keeps its snapshots). `milestone`
  * snapshots are taken of every scene at once by a draft milestone (4.96).
  */
-export type SceneSnapshotKind = 'manual' | 'before-ai' | 'before-restore' | 'daily' | 'before-delete' | 'milestone';
+export type SceneSnapshotKind =
+  'manual' | 'before-ai' | 'before-restore' | 'daily' | 'before-delete' | 'milestone' | 'before-rewrite' | 'alternative';
 
 /**
  * A saved copy of a scene's text (slice 4.95). The author's own words, kept
@@ -60,6 +61,8 @@ export interface SceneSnapshot {
   kind: SceneSnapshotKind;
   /** Draft milestone (4.96): its id and the scene's order then; `name` is the milestone's. */
   milestone?: {id: string; order: number};
+  /** Passage alternative (4.97): `content` is the rewrite; the original HTML and text to find it by. */
+  passage?: {original: string; originalText: string};
   wordCount: number;
   createdAt: number;
 }
