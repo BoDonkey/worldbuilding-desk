@@ -339,7 +339,7 @@ messages).
 | 4.85 | Corkboard planning chat (read-only) | 4 | M | — pre-beta (author decision, 2026-11-22; v1 scope exception, before 6.1); from 2026-11-22 dogfood |
 | 4.86 | Planning chat proposes outline changes | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.85, before 6.1 |
 | 4.87 | Export a chosen set of characters | 4 | S | — from 2026-11-22 dogfood |
-| 4.88 | Feature toggles that fit the project mode | 4 | S | — from 2026-11-22 dogfood; General Fiction shape needs author confirmation |
+| 4.88 | Feature toggles that fit the project mode | 4 | S | — from 2026-11-22 dogfood; General Fiction hides the toggles (author decision, 2026-11-22) |
 | 4.89 | Spacing pass: stacked controls and inline labels | 4 | XS | — from 2026-11-22 dogfood |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
@@ -1210,8 +1210,9 @@ Movement checks are review findings, never blocks.
     LitRPG to use them. If a General Fiction project already has either
     remaining toggle on, keep showing the toggles so the author can turn them
     off. LitRPG keeps both, with one sentence each on what they show.
-    Author to confirm the General Fiction shape before building; the
-    alternative is a collapsed **Advanced** disclosure instead of hiding.
+    Author decision (2026-11-22): hide in General Fiction, not a collapsed
+    Advanced disclosure; the replacement line must say how to turn
+    mechanics on (switch Project Mode to LitRPG).
   - **Verify.** Fast battery. Unit tests that capabilities no longer expose
     the removed flags and that old settings with them still normalize; route
     test for both modes, including General Fiction with Game Systems on.
