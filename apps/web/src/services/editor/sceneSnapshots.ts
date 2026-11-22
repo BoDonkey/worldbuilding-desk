@@ -4,6 +4,7 @@ import {manuscriptPlainText} from '../state/manuscriptCustody';
 import {countWords} from '../../utils/textHelpers';
 import {countWordChanges, diffWords, tokenizeWords, type WordDiffOp} from './wordDiff';
 
+
 /*
  * Scene snapshots (slice 4.95): saved copies of a scene's text to compare
  * and restore, modelled on Scrivener's. They are the author's own text:
@@ -25,15 +26,17 @@ export interface SceneContentReplacement {
   token: number;
 }
 
+/** Automatic snapshots are pruned; the author's own and draft milestones' never are. */
 export const isAutomaticSnapshot = (snapshot: Pick<SceneSnapshot, 'kind'>): boolean =>
-  snapshot.kind !== 'manual';
+  snapshot.kind !== 'manual' && snapshot.kind !== 'milestone';
 
 const KIND_LABELS: Record<SceneSnapshotKind, string> = {
   manual: 'Snapshot',
   'before-ai': 'Automatic: before an AI revision',
   'before-restore': 'Automatic: before a restore',
   daily: 'Automatic: first edit of the day',
-  'before-delete': 'Automatic: before the scene was deleted'
+  'before-delete': 'Automatic: before the scene was deleted',
+  milestone: 'Draft milestone'
 };
 
 export const describeSnapshotKind = (kind: SceneSnapshotKind): string => KIND_LABELS[kind];
@@ -185,3 +188,12 @@ export function compareSnapshotWithCurrent(snapshotHtml: string, currentHtml: st
 /** The snapshot as plain text with paragraph breaks, for Copy. */
 export const snapshotPlainText = (snapshot: Pick<SceneSnapshot, 'content'>): string =>
   manuscriptPlainText(snapshot.content);
+
+/** A text's words, all unmarked, for showing without Compare. */
+export const plainWordOps = (html: string): WordDiffOp[] =>
+  tokenizeWords(manuscriptPlainText(html)).map((token) => ({kind: 'same', token}));
+
+export const formatSnapshotTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleString(undefined, {dateStyle: 'medium', timeStyle: 'short'});
+
+export const wordLabel = (count: number) => `${count.toLocaleString()} ${count === 1 ? 'word' : 'words'}`;

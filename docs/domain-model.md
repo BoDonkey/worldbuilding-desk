@@ -640,6 +640,12 @@ _Status: implemented (Slices 4.42–4.45, 2026-09-27)._
   Deleting a scene keeps its snapshots and first takes a `before-delete` one
   of its last text; only project deletion removes them. Manual and
   `before-delete` snapshots are always taken, even of unchanged text.
+- A draft milestone (slice 4.96) is not a record of its own: it is the set of
+  `milestone`-kind snapshots sharing `milestone.id`, one per scene, with
+  `milestone.order` the scene's manuscript position then and `name` the
+  milestone's name. They are never pruned. A deleted scene is a `sceneId`
+  that has snapshots but no `writing_documents` record; restoring it
+  recreates the document under that id, so its snapshots belong to it again.
 
 ### Prose-proximate item and state handoff
 

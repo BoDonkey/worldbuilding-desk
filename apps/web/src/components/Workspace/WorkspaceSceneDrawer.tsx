@@ -1,6 +1,7 @@
 import type {WritingDocument, WorkspaceImportMode} from '../../entityTypes';
 import type {WorkspaceImportSummary} from '../../store/workspaceUiStore';
 import {useWorkspaceUiStore} from '../../store/workspaceUiStore';
+import {dispatchWorkspaceCommand} from '../../commands/workspaceCommands';
 import styles from './WorkspaceSceneDrawer.module.css';
 
 interface WorkspaceSceneTimelineEntry {
@@ -140,6 +141,13 @@ export function WorkspaceSceneDrawer({
           className={styles.sceneToolbarButton}
         >
           Export EPUB
+        </button>
+        <button
+          type='button'
+          onClick={() => dispatchWorkspaceCommand('open-drafts')}
+          className={styles.sceneToolbarButton}
+        >
+          Drafts
         </button>
         <button
           type='button'

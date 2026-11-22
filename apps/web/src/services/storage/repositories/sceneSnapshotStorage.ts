@@ -25,6 +25,31 @@ export async function getSceneSnapshots(projectId: string, sceneId: string): Pro
     .sort((a, b) => b.createdAt - a.createdAt || b.id.localeCompare(a.id));
 }
 
+/** Every snapshot in the project, of open and deleted scenes. */
+export async function getProjectSceneSnapshots(projectId: string): Promise<SceneSnapshot[]> {
+  return readProjectRecords<SceneSnapshot>(SCENE_SNAPSHOT_STORE_NAME, projectId);
+}
+
+/** Saves several snapshots in one transaction (a draft milestone). */
+export async function saveSceneSnapshots(snapshots: readonly SceneSnapshot[]): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(SCENE_SNAPSHOT_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(SCENE_SNAPSHOT_STORE_NAME);
+  for (const snapshot of snapshots) store.put(snapshot);
+  await transactionToPromise(tx);
+  emitSceneSnapshotsChanged();
+}
+
+/** Deletes several snapshots in one transaction. */
+export async function deleteSceneSnapshots(ids: readonly string[]): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(SCENE_SNAPSHOT_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(SCENE_SNAPSHOT_STORE_NAME);
+  for (const id of ids) store.delete(id);
+  await transactionToPromise(tx);
+  emitSceneSnapshotsChanged();
+}
+
 /** Saves `snapshot` and deletes `pruneIds` in one transaction. */
 export async function saveSceneSnapshot(snapshot: SceneSnapshot, pruneIds: readonly string[] = []): Promise<void> {
   const db = await openDb();

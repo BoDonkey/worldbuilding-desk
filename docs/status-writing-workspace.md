@@ -12,6 +12,25 @@
 - Active projects now route directly into the writing workspace.
 - Scene/context drawers now default closed so the editor remains primary.
 - Scene creation, deletion, autosave, and export.
+- Draft milestones (slice 4.96). **Save draft milestone** (the **Drafts**
+  dialog from the scene drawer, the command palette, or **Save draft
+  milestone** on a Projects card) takes a snapshot of every scene at once,
+  with a name (default "Draft of <date>"); the open scene is taken as edited,
+  Projects takes scenes as last saved. **Drafts** lists milestones newest
+  first with date, scene count, and word count. Opening one shows the whole
+  draft read-only, or one scene beside its current text with **Compare**;
+  scenes changed or deleted since are marked. **Export this draft** writes
+  the milestone's text as Markdown, DOCX, or EPUB with the existing manuscript
+  export. A whole milestone is never restored at once: each milestone
+  snapshot is in that scene's **Snapshots**, where **Restore** works as
+  usual. Milestone snapshots are never pruned; **Delete milestone** removes
+  them and leaves the scenes alone. **Deleted scenes** lists scenes that
+  have snapshots but no longer exist (titled from the newest snapshot);
+  **Restore scene from this snapshot** recreates the scene under its old id,
+  at the end of the manuscript, with that text, and saves it as Save now
+  does. Accepted state changes the scene held are not brought back. The
+  delete confirmation says the text is kept (or that an empty scene is
+  simply removed).
 - Scene snapshots (slice 4.95). **Take snapshot** (editor footer, command
   palette, or Cmd/Ctrl+Shift+S) saves the open scene's text with the time and
   an optional name. Automatic snapshots are taken before an AI scene revision

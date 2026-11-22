@@ -36,9 +36,10 @@ export interface WritingDocument {
  * Why a scene snapshot was taken (slice 4.95). `manual` is Take snapshot; the
  * rest are automatic: before an AI revision is applied, before another
  * snapshot is restored, the first edit of a scene each day, and just before
- * the scene is deleted (deleting a scene keeps its snapshots).
+ * the scene is deleted (deleting a scene keeps its snapshots). `milestone`
+ * snapshots are taken of every scene at once by a draft milestone (4.96).
  */
-export type SceneSnapshotKind = 'manual' | 'before-ai' | 'before-restore' | 'daily' | 'before-delete';
+export type SceneSnapshotKind = 'manual' | 'before-ai' | 'before-restore' | 'daily' | 'before-delete' | 'milestone';
 
 /**
  * A saved copy of a scene's text (slice 4.95). The author's own words, kept
@@ -57,6 +58,8 @@ export interface SceneSnapshot {
   /** The author's name for it ("Draft 1"); automatic snapshots have none. */
   name?: string;
   kind: SceneSnapshotKind;
+  /** Draft milestone (4.96): its id and the scene's order then; `name` is the milestone's. */
+  milestone?: {id: string; order: number};
   wordCount: number;
   createdAt: number;
 }

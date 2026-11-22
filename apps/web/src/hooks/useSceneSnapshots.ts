@@ -7,7 +7,6 @@ import {
   localDayKey,
   prepareSnapshotRestore,
   snapshotPlainText,
-  snapshotTitle,
   takeDailySceneSnapshotIfNeeded,
   takeSceneSnapshot,
   type SceneContentReplacement
@@ -15,7 +14,6 @@ import {
 import {describeError} from '../services/errors';
 import {pushAppToast} from '../store/notificationStore';
 import {copyText} from '../utils/clipboard';
-import type {ConfirmRequest} from './useConfirmDialog';
 
 interface UseSceneSnapshotsOptions {
   projectId: string | null;
@@ -28,7 +26,6 @@ interface UseSceneSnapshotsOptions {
   content: string;
   /** The scene's text as last saved, or null when no scene is open. */
   savedContent: string | null;
-  requestConfirm: (request: ConfirmRequest) => void;
 }
 
 /** True for Cmd/Ctrl+Shift+S, the Take snapshot shortcut. */
@@ -48,8 +45,7 @@ export function useSceneSnapshots({
   sceneTitle,
   isSceneReady,
   content,
-  savedContent,
-  requestConfirm
+  savedContent
 }: UseSceneSnapshotsOptions) {
   const [isOpen, setOpen] = useState(false);
   const [snapshots, setSnapshots] = useState<SceneSnapshot[]>([]);
@@ -149,21 +145,14 @@ export function useSceneSnapshots({
     );
   }, []);
 
-  const removeSnapshot = useCallback((snapshot: SceneSnapshot) => {
-    requestConfirm({
-      title: `Delete "${snapshotTitle(snapshot)}"?`,
-      message: 'This snapshot will be deleted. The scene itself is not changed.',
-      confirmLabel: 'Delete snapshot',
-      variant: 'danger',
-      onConfirm: async () => {
-        try {
-          await deleteSceneSnapshot(snapshot.id);
-        } catch (error) {
-          pushAppToast({tone: 'error', message: describeError(error, 'Unable to delete the snapshot.')});
-        }
-      }
-    });
-  }, [requestConfirm]);
+  /** Deletes without asking; the dialog confirms first. */
+  const removeSnapshot = useCallback(async (snapshot: SceneSnapshot) => {
+    try {
+      await deleteSceneSnapshot(snapshot.id);
+    } catch (error) {
+      pushAppToast({tone: 'error', message: describeError(error, 'Unable to delete the snapshot.')});
+    }
+  }, []);
 
   // Command palette, footer button, and shortcut.
   useEffect(() => {

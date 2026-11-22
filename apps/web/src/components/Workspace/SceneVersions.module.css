@@ -1,4 +1,4 @@
-/* Scene snapshots dialog (slice 4.95). */
+/* Scene snapshots (4.95) and Drafts (4.96) dialogs, and their compare panes. */
 
 .card {
   padding: 1.25rem;
@@ -189,4 +189,66 @@
   .card {
     overflow-y: auto;
   }
+}
+
+.sectionHeading {
+  margin: 0.5rem 0 0.15rem;
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.sceneList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.sceneChip {
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--surface-border-soft);
+  background: var(--surface-panel);
+}
+
+.sceneChip[aria-pressed='true'] {
+  border-color: var(--color-accent-soft-border);
+  background: var(--color-accent-soft-bg);
+}
+
+.sceneChipNote {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.deletedNote {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.wholeDraft h5 {
+  margin: 1em 0 0.4em;
+  font-family: system-ui, sans-serif;
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.sidebar .list {
+  max-height: none;
+  overflow: visible;
 }

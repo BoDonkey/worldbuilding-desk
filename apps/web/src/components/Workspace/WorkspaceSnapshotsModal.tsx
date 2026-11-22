@@ -1,13 +1,13 @@
-import {useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import type {SceneSnapshot} from '../../entityTypes';
 import type {SceneSnapshotsController} from '../../hooks/useSceneSnapshots';
+import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {useEscapeToClose} from '../../hooks/useEscapeToClose';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
-import {compareSnapshotWithCurrent, snapshotTitle} from '../../services/editor/sceneSnapshots';
-import {manuscriptPlainText} from '../../services/state/manuscriptCustody';
-import {PARAGRAPH_BREAK_TOKEN, tokenizeWords, type WordDiffOp} from '../../services/editor/wordDiff';
+import {formatSnapshotTime, snapshotTitle, wordLabel} from '../../services/editor/sceneSnapshots';
 import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
-import styles from './WorkspaceSnapshotsModal.module.css';
+import {SnapshotCompare} from './SnapshotCompare';
+import styles from './SceneVersions.module.css';
 
 interface WorkspaceSnapshotsModalProps {
   controller: SceneSnapshotsController;
@@ -15,35 +15,6 @@ interface WorkspaceSnapshotsModalProps {
   /** The open scene as edited. */
   currentContent: string;
 }
-
-const formatTime = (timestamp: number) =>
-  new Date(timestamp).toLocaleString(undefined, {dateStyle: 'medium', timeStyle: 'short'});
-
-const wordLabel = (count: number) => `${count.toLocaleString()} ${count === 1 ? 'word' : 'words'}`;
-
-/** Paragraphs of word tokens; `marked` words are wrapped as added or removed. */
-function renderTokens(ops: WordDiffOp[]): ReactNode {
-  const paragraphs: WordDiffOp[][] = [[]];
-  for (const op of ops) {
-    if (op.token === PARAGRAPH_BREAK_TOKEN) paragraphs.push([]);
-    else paragraphs[paragraphs.length - 1].push(op);
-  }
-  return paragraphs
-    .filter((paragraph) => paragraph.length > 0)
-    .map((paragraph, index) => (
-      <p key={index}>
-        {paragraph.map((op, opIndex) => {
-          const space = opIndex > 0 ? ' ' : '';
-          if (op.kind === 'added') return <span key={opIndex}>{space}<ins className={styles.added}>{op.token}</ins></span>;
-          if (op.kind === 'removed') return <span key={opIndex}>{space}<del className={styles.removed}>{op.token}</del></span>;
-          return <span key={opIndex}>{space}{op.token}</span>;
-        })}
-      </p>
-    ));
-}
-
-const plainOps = (html: string): WordDiffOp[] =>
-  tokenizeWords(manuscriptPlainText(html)).map((token) => ({kind: 'same', token}));
 
 /**
  * The Snapshots dialog (slice 4.95): take a named snapshot, list the scene's
@@ -55,27 +26,19 @@ export function WorkspaceSnapshotsModal({controller, sceneTitle, currentContent}
   const dialogRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isComparing, setComparing] = useState(false);
-  useEscapeToClose(close, isOpen);
-  useFocusTrap(dialogRef, isOpen);
+  const {requestConfirm, confirmDialog, isConfirmOpen} = useConfirmDialog();
+  useEscapeToClose(close, isOpen && !isConfirmOpen);
+  useFocusTrap(dialogRef, isOpen && !isConfirmOpen);
 
   useEffect(() => {
     if (!isOpen) {
       setName('');
       setSelectedId(null);
-      setComparing(false);
     }
   }, [isOpen]);
 
   const selected: SceneSnapshot | null =
     snapshots.find((snapshot) => snapshot.id === selectedId) ?? snapshots[0] ?? null;
-  const comparison = useMemo(
-    () => (isOpen && selected && isComparing ? compareSnapshotWithCurrent(selected.content, currentContent) : null),
-    [currentContent, isComparing, isOpen, selected]
-  );
-  const snapshotOps = useMemo(() => (selected ? plainOps(selected.content) : []), [selected]);
-  const currentOps = useMemo(() => (isOpen ? plainOps(currentContent) : []), [currentContent, isOpen]);
-
   if (!isOpen) return null;
 
   const handleTake = async () => {
@@ -86,6 +49,7 @@ export function WorkspaceSnapshotsModal({controller, sceneTitle, currentContent}
   };
 
   return (
+    <>
     <div className={workspaceStyles.modalOverlay} onClick={close} role='presentation'>
       <div
         ref={dialogRef}
@@ -137,7 +101,7 @@ export function WorkspaceSnapshotsModal({controller, sceneTitle, currentContent}
                 >
                   <span className={styles.listTitle}>{snapshotTitle(snapshot)}</span>
                   <span className={styles.listMeta}>
-                    {formatTime(snapshot.createdAt)} · {wordLabel(snapshot.wordCount)}
+                    {formatSnapshotTime(snapshot.createdAt)} · {wordLabel(snapshot.wordCount)}
                   </span>
                 </button>
               </li>
@@ -145,48 +109,27 @@ export function WorkspaceSnapshotsModal({controller, sceneTitle, currentContent}
           </ul>
 
           {selected && (
-            <section className={styles.detail} aria-label='Selected snapshot'>
-              <div className={styles.detailBar}>
-                <label className={styles.compareToggle}>
-                  <input
-                    type='checkbox'
-                    checked={isComparing}
-                    onChange={(event) => setComparing(event.target.checked)}
-                  />
-                  Compare
-                </label>
-                {comparison && (
-                  <span className={styles.summary} data-testid='snapshot-compare-summary'>
-                    Since this snapshot: {wordLabel(comparison.added)} added, {wordLabel(comparison.removed)} removed.
-                  </span>
-                )}
-                <div className={styles.detailActions}>
-                  <button type='button' disabled={isWorking} onClick={() => void controller.restoreSnapshot(selected)}>
-                    Restore
-                  </button>
-                  <button type='button' onClick={() => void controller.copySnapshot(selected)}>Copy</button>
-                  <button type='button' className={styles.dangerButton} onClick={() => controller.removeSnapshot(selected)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-              <div className={styles.panes}>
-                <div className={styles.pane}>
-                  <h4 className={styles.paneHeading}>
-                    {snapshotTitle(selected)} · {formatTime(selected.createdAt)}
-                  </h4>
-                  <div className={styles.text} data-testid='snapshot-text'>
-                    {renderTokens(comparison ? comparison.snapshot : snapshotOps)}
-                  </div>
-                </div>
-                <div className={styles.pane}>
-                  <h4 className={styles.paneHeading}>Current text</h4>
-                  <div className={styles.text} data-testid='snapshot-current-text'>
-                    {renderTokens(comparison ? comparison.current : currentOps)}
-                  </div>
-                </div>
-              </div>
-            </section>
+            <SnapshotCompare
+              key={selected.id}
+              snapshotHeading={`${snapshotTitle(selected)} · ${formatSnapshotTime(selected.createdAt)}`}
+              snapshotHtml={selected.content}
+              currentHtml={currentContent}
+              actions={<>
+                <button type='button' disabled={isWorking} onClick={() => void controller.restoreSnapshot(selected)}>
+                  Restore
+                </button>
+                <button type='button' onClick={() => void controller.copySnapshot(selected)}>Copy</button>
+                <button type='button' className={styles.dangerButton} onClick={() => requestConfirm({
+                  title: `Delete "${snapshotTitle(selected)}"?`,
+                  message: 'This snapshot will be deleted. The scene itself is not changed.',
+                  confirmLabel: 'Delete snapshot',
+                  variant: 'danger',
+                  onConfirm: () => controller.removeSnapshot(selected)
+                })}>
+                  Delete
+                </button>
+              </>}
+            />
           )}
         </div>
 
@@ -195,5 +138,7 @@ export function WorkspaceSnapshotsModal({controller, sceneTitle, currentContent}
         </div>
       </div>
     </div>
+    {confirmDialog}
+    </>
   );
 }

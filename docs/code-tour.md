@@ -220,7 +220,9 @@ The trust boundary in action: the model proposes, the author approves.
    applies it as one undoable change, and only if the scene still matches what
    the model saw. The text is marked as AI text (`extensions/AITextMark.ts`),
    and the scene as it was is kept as an automatic snapshot
-   (`takeSceneSnapshot`, `services/editor/sceneSnapshots.ts`).
+   (`takeSceneSnapshot`, `services/editor/sceneSnapshots.ts`). Draft
+   milestones (`services/editor/draftMilestones.ts`) are sets of snapshots,
+   one per scene.
 
 Tests: `hooks/useSelectionActionRun.test.tsx`,
 `services/llm/aiSwitches.test.ts`, `apps/web/cypress/e2e/ai-actions.cy.ts`.
