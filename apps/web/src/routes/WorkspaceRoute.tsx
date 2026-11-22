@@ -77,6 +77,8 @@ import {useWorkspaceSceneRoster} from '../hooks/useWorkspaceSceneRoster';
 import {getSceneOrder} from '../services/state/characterSnapshot';
 import {WorkspaceCharacterLabDialogs} from '../components/Workspace/WorkspaceCharacterLabDialogs';
 import {WorkspaceSceneDraftEntry} from '../components/Workspace/WorkspaceSceneDraftEntry';
+import {useSceneSnapshots} from '../hooks/useSceneSnapshots';
+import {WorkspaceSnapshotsModal} from '../components/Workspace/WorkspaceSnapshotsModal';
 
 type FeedbackTone = 'success' | 'error';
 
@@ -192,6 +194,8 @@ function WorkspaceRoute() {
     addSystemHistory
   });
   const sceneCursor = useWorkspaceSceneCursor(selectedId);
+  const sceneSnapshots = useSceneSnapshots({projectId: activeProject?.id ?? null, sceneId: selectedId, sceneTitle: title, isSceneReady: isSelectedDocumentInitialized,
+    content, savedContent: selectedDocument?.content ?? null, requestConfirm});
   const {
     sceneCursorPosition,
     sceneRosterStateMoment,
@@ -844,6 +848,7 @@ function WorkspaceRoute() {
                   insertContext={pendingAIInsert?.context ?? null}
                   insertProvenance={pendingAIInsert?.provenance}
                   sceneRevision={pendingAIInsert?.revision}
+                  contentReplacement={sceneSnapshots.contentReplacement}
                   onTextInserted={() => { if (!consumePendingAIInsert()) setStatBlockInsertContent(null); }}
                   selectionQuickSnippets={selectionQuickSnippets}
                   knownLoreHighlights={knownWorldBibleLoreHighlights}
@@ -966,6 +971,8 @@ function WorkspaceRoute() {
         documents={documents} selectedId={isSelectedDocumentInitialized ? selectedId : null}
         selectedTitle={title} selectedContent={content} onOpenScene={handleSelectDocument}
       />
+
+      <WorkspaceSnapshotsModal controller={sceneSnapshots} sceneTitle={title} currentContent={content} />
 
       <WorkspaceMemoryModal
         isOpen={isMemoryDialogOpen}

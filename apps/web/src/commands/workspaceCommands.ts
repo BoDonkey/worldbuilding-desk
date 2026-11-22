@@ -3,6 +3,8 @@ export const WORKSPACE_COMMAND_EVENT = 'workspace-command';
 export type WorkspaceCommandId =
   | 'new-scene'
   | 'save-scene'
+  | 'take-snapshot'
+  | 'open-snapshots'
   | 'open-scratchpad'
   | 'open-corkboard'
   | 'toggle-left-drawer'

@@ -14,6 +14,7 @@ export const RECORDS_CHANGED = {
   lore: 'wbd:lore-records-changed',
   loreFact: 'wbd:lore-fact-records-changed',
   maps: 'wbd:maps-changed',
+  sceneSnapshots: 'wbd:scene-snapshot-records-changed',
   stateMutationEvents: 'wbd:state-mutation-events-changed',
   writing: 'wbd:writing-records-changed'
 } as const;

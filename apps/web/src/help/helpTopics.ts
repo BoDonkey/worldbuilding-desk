@@ -141,7 +141,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     id: 'backup-export',
     title: 'Backups and exports',
     summary: 'Keep a full copy of a project, or take your work elsewhere.',
-    keywords: ['backup', 'export', 'restore', 'zip', 'sagabackup', 'docx', 'epub', 'markdown', 'csv', 'portable', 'encrypted'],
+    keywords: ['backup', 'export', 'restore', 'zip', 'sagabackup', 'docx', 'epub', 'markdown', 'csv', 'portable', 'encrypted', 'snapshot', 'version', 'history'],
     blocks: [
       {
         kind: 'paragraph',
@@ -153,6 +153,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           '**Full backup:** on the Projects page, choose **Export Backup** on a project. A **Plain backup (.zip)** can be read by anyone who has the file. An **Encrypted backup (.sagabackup)** needs its passphrase to open; SagaSpine never stores that passphrase and cannot recover it.',
           '**Restore:** open **Backup and import tools** on the Projects page. **Import Backup** shows a preview, then creates a new project or merges into an existing one. **Validate Backup** checks a file without importing it.',
           '**Your manuscript:** in Workspace, the scenes drawer has **Export MD**, **Export DOCX**, and **Export EPUB**.',
+          '**Scene snapshots:** in Workspace, **Take snapshot** (or Cmd/Ctrl+Shift+S) saves a copy of the open scene, and **Snapshots** lists them to compare with the current text, restore, or copy. Restoring first saves the current text as a snapshot. Snapshots are also taken automatically before an AI revision is applied and on a scene’s first edit each day. They go into full backups.',
           '**World Bible and Source Notes as plain files:** **Portable data → Export Markdown + CSV** makes a ZIP with one Markdown file per record and per Source Note, and one spreadsheet per category. It isn’t a backup and can’t restore a project.'
         ]
       },

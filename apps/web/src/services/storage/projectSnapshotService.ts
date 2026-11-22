@@ -16,6 +16,7 @@ import type {
   LoreFactProposal,
   MechanicsDraft,
   WorldMap,
+  SceneSnapshot,
   Project,
   ProjectSettings,
   StateMutationEvent,
@@ -53,6 +54,7 @@ import {
   LORE_FACT_PROPOSAL_STORE_NAME,
   MECHANICS_DRAFT_STORE_NAME,
   MAP_STORE_NAME,
+  SCENE_SNAPSHOT_STORE_NAME,
   SETTINGS_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
@@ -111,6 +113,7 @@ export interface ProjectSnapshot {
     stateMutationEvents: StateMutationEvent[];
     mechanicsDrafts: MechanicsDraft[];
     maps: WorldMap[];
+    sceneSnapshots: SceneSnapshot[];
   };
   counts: {
     categories: number;
@@ -143,6 +146,7 @@ export interface ProjectSnapshot {
     stateMutationEvents: number;
     mechanicsDrafts: number;
     maps: number;
+    sceneSnapshots: number;
     hasSettings: boolean;
     hasRuleset: boolean;
   };
@@ -198,7 +202,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     settlementStateRecords,
     stateMutationEvents,
     mechanicsDrafts,
-    maps
+    maps,
+    sceneSnapshots
   ] = await Promise.all([
     getProjectScopedRecords<ProjectSettings>(SETTINGS_STORE_NAME, projectId),
     getRulesetByProjectId(projectId),
@@ -252,7 +257,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     getProjectScopedRecords<SettlementState>(SETTLEMENT_STATE_STORE_NAME, projectId),
     getProjectScopedRecords<StateMutationEvent>(STATE_MUTATION_EVENT_STORE_NAME, projectId),
     getProjectScopedRecords<MechanicsDraft>(MECHANICS_DRAFT_STORE_NAME, projectId),
-    getProjectScopedRecords<WorldMap>(MAP_STORE_NAME, projectId)
+    getProjectScopedRecords<WorldMap>(MAP_STORE_NAME, projectId),
+    getProjectScopedRecords<SceneSnapshot>(SCENE_SNAPSHOT_STORE_NAME, projectId)
   ]);
 
   const settings = settingsRecords[0] ?? null;
@@ -294,7 +300,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       settlementStateRecords,
       stateMutationEvents,
       mechanicsDrafts,
-      maps
+      maps,
+      sceneSnapshots
     },
     counts: {
       categories: categories.length,
@@ -327,6 +334,7 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       stateMutationEvents: stateMutationEvents.length,
       mechanicsDrafts: mechanicsDrafts.length,
       maps: maps.length,
+      sceneSnapshots: sceneSnapshots.length,
       hasSettings: Boolean(settings),
       hasRuleset: Boolean(ruleset)
     }
@@ -371,6 +379,7 @@ export function validateSnapshotCounts(snapshot: ProjectSnapshot): SnapshotCount
     stateMutationEvents: snapshot.data.stateMutationEvents.length,
     mechanicsDrafts: snapshot.data.mechanicsDrafts.length,
     maps: snapshot.data.maps.length,
+    sceneSnapshots: snapshot.data.sceneSnapshots.length,
     hasSettings: Boolean(snapshot.data.settings),
     hasRuleset: Boolean(snapshot.data.ruleset)
   };

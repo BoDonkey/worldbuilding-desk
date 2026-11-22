@@ -620,6 +620,27 @@ _Status: implemented (Slices 4.42–4.45, 2026-09-27)._
   app never removes or disguises provider watermarks.
 - Plan and decisions: `docs/archive/ai-scene-drafting-plan.md`.
 
+### Scene snapshots
+
+- A scene snapshot (slice 4.95, `SceneSnapshot` in `entityTypes.ts`) is a
+  saved copy of a scene's HTML with a time, an optional author name, and a
+  kind: `manual`, or automatic `before-ai`, `before-restore`, `daily`,
+  `before-delete`. It records the scene title at the time, to name a scene
+  that has since been deleted.
+- Snapshots are the author's own text, not canon and not evidence. Nothing
+  reads them but the Snapshots dialog: no model prompt, review, retrieval
+  index, memory, or state replay. Restoring one is an ordinary scene edit,
+  re-reviewed like typing, and always saves the current text as a snapshot
+  first.
+- They live in the `scene_snapshots` store, read through the `projectId`
+  index and filtered by scene (a locked vault record exposes only `id` and
+  `projectId`). Backups carry them (snapshot schema 15); a copy remaps their
+  ids and `sceneId`. Automatic snapshots are pruned to the newest 20 per
+  scene in the same write as a new one; manual ones are never pruned.
+  Deleting a scene keeps its snapshots and first takes a `before-delete` one
+  of its last text; only project deletion removes them. Manual and
+  `before-delete` snapshots are always taken, even of unchanged text.
+
 ### Prose-proximate item and state handoff
 
 _Status: accepted product/domain direction (2026-08-16); implementation is

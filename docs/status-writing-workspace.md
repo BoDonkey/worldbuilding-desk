@@ -12,6 +12,25 @@
 - Active projects now route directly into the writing workspace.
 - Scene/context drawers now default closed so the editor remains primary.
 - Scene creation, deletion, autosave, and export.
+- Scene snapshots (slice 4.95). **Take snapshot** (editor footer, command
+  palette, or Cmd/Ctrl+Shift+S) saves the open scene's text with the time and
+  an optional name. Automatic snapshots are taken before an AI scene revision
+  is applied, before a snapshot is restored, and on a scene's first edit each
+  day (the text as it was before that edit; not for an empty scene, and not
+  repeated when the newest snapshot already has the same text). The
+  **Snapshots** dialog lists the scene's snapshots newest first and shows the
+  selected one read-only beside the current text; **Compare** marks the words
+  removed since the snapshot and the words added, with counts (whitespace-
+  separated words, so a punctuation change marks its word). **Restore**
+  saves the current text as an automatic snapshot first, then replaces the
+  scene text as an ordinary edit, which autosaves and is re-reviewed like
+  typing; **Copy** copies a snapshot's plain text; **Delete** asks first.
+  Snapshots the author takes are kept until deleted; automatic ones are
+  pruned to the newest 20 per scene. Deleting a scene keeps its snapshots
+  and first saves its last text (with its title) as an automatic snapshot,
+  unless the scene is empty (author decision, 2026-11-22). Until 4.96 a
+  deleted scene's snapshots are kept in the project and its backups but are
+  not shown in the app.
 - Markdown, DOCX, and EPUB export flows.
 - Import modes for scene ingestion: `strict`, `balanced`, `lenient`.
 - Deferred consistency review for imported scenes so writing is not blocked.

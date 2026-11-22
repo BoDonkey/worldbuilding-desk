@@ -38,6 +38,7 @@ import {
 } from '../store/workspaceUiStore';
 import type {ConfirmRequest} from './useConfirmDialog';
 import {describeError} from '../services/errors';
+import {takeSnapshotBeforeSceneDeletion} from '../services/editor/sceneSnapshots';
 import {useStatusAnnouncement} from './useStatusAnnouncement';
 export type SaveStatus = 'idle' | 'saving' | 'saved';
 type ImportMode = WorkspaceImportMode;
@@ -702,9 +703,19 @@ export const useWorkspaceDocuments = ({
           setDeletingDocumentId(doc.id);
           setFeedback(null);
           try {
+            if (activeProject) {
+              // The open scene's text can be ahead of its last save.
+              await takeSnapshotBeforeSceneDeletion({
+                projectId: activeProject.id,
+                sceneId: doc.id,
+                sceneTitle: doc.id === selectedId ? title : doc.title,
+                content: doc.id === selectedId ? content : doc.content
+              });
+            }
             await deleteWritingDocument(doc.id);
             await deleteDocumentSideEffectsRef.current?.(doc.id);
             if (activeProject) {
+              // Its snapshots are kept (author decision 2026-11-22; reachable in 4.96).
               await removeDeletedSceneStateChanges({
                 projectId: activeProject.id,
                 sceneId: doc.id,
@@ -729,6 +740,7 @@ export const useWorkspaceDocuments = ({
     },
     [
       activeProject,
+      content,
       deleteDocumentSideEffectsRef,
       documents,
       requestConfirm,
@@ -736,7 +748,8 @@ export const useWorkspaceDocuments = ({
       selectedId,
       setDeletingDocumentId,
       setDocuments,
-      setFeedback
+      setFeedback,
+      title
     ]
   );
 

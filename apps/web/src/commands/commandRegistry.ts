@@ -155,6 +155,22 @@ export const createAppCommands = ({
       run: () => dispatchWorkspaceCommand('save-scene')
     },
     {
+      id: 'workspace-take-snapshot',
+      label: 'Workspace: Take Snapshot',
+      section: 'Workspace',
+      keywords: ['snapshot', 'version', 'history', 'save', 'copy', 'draft'],
+      description: 'Save a copy of the open scene to compare or restore later.',
+      shortcut: 'Cmd/Ctrl+Shift+S',
+      run: () => dispatchWorkspaceCommand('take-snapshot')
+    },
+    {
+      id: 'workspace-open-snapshots',
+      label: 'Workspace: Open Snapshots',
+      section: 'Workspace',
+      keywords: ['snapshot', 'version', 'history', 'compare', 'restore'],
+      run: () => dispatchWorkspaceCommand('open-snapshots')
+    },
+    {
       id: 'workspace-open-scratchpad',
       label: 'Workspace: Open Scratchpad',
       section: 'Workspace',

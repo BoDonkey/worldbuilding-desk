@@ -1,4 +1,5 @@
 import type {SceneRevision} from '../services/assistant/sceneRevision';
+import type {SceneContentReplacement} from '../services/editor/sceneSnapshots';
 import {SceneRevisionPreview} from './Editor/SceneRevisionPreview';
 import type {Editor, Extension} from '@tiptap/core';
 import {EditorContent, useEditor} from '@tiptap/react';
@@ -67,6 +68,8 @@ interface TipTapEditorProps {
   sceneRevision?: SceneRevision;
   revisionProjectId?: string;
   revisionDocumentId?: string;
+  /** Restore: replaces the text of scene `revisionDocumentId` once per token. */
+  contentReplacement?: SceneContentReplacement | null;
   onTextInserted?: () => void;
   insertContext?: {from: number; to: number} | null;
   /** Present when a model wrote `textToInsert`; the insert is then marked as AI text. */
@@ -311,6 +314,7 @@ function TipTapEditor({
   sceneRevision,
   revisionProjectId,
   revisionDocumentId,
+  contentReplacement,
   onTextInserted,
   insertContext,
   insertProvenance,
@@ -475,6 +479,15 @@ function TipTapEditor({
       onWordCountChange?.(getWordCount(editor));
     }
   }, [content, editor, onWordCountChange, presentStatBlockToken]);
+
+  // Restore: an ordinary edit (emits onChange and can be undone), once per request.
+  const appliedReplacementToken = useRef<number | null>(null);
+  useEffect(() => {
+    if (!editor || !contentReplacement || contentReplacement.documentId !== revisionDocumentId) return;
+    if (appliedReplacementToken.current === contentReplacement.token) return;
+    appliedReplacementToken.current = contentReplacement.token;
+    editor.chain().setContent(contentReplacement.html || '<p></p>', {emitUpdate: true}).run();
+  }, [contentReplacement, editor, revisionDocumentId]);
 
   // initial word count
   useEffect(() => {
