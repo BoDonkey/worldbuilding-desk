@@ -33,7 +33,9 @@ dashboard and the writing coach described below, and — added 2026-09-26 —
 the character lab, and — added 2026-10-03 — optional password-protected
 project vaults, and — added 2026-11-07 — separate per-project switches for
 AI coaching and AI prose, both off by default, and author-editable AI
-actions in the selection menu (5.18, 5.19).
+actions in the selection menu (5.18, 5.19), and — added 2026-11-22 — a
+Corkboard planning chat whose outline changes are proposals the author
+accepts (4.85, 4.86).
 
 **Privacy promise.** Project data and manuscripts are stored locally.
 SagaSpine does not send diagnostic telemetry and does not use author
@@ -46,8 +48,8 @@ Ollama or configured workflow is fully offline.
 
 Explicitly **post-v1**: AI item-authoring slices beyond the manual
 description-first path, ruleset-domain adapters, app-wide search expansion,
-Scratchpad organization, *authored* Corkboard expansion (the *derived*
-dashboard panels of 4.19 are v1), executable ruleset generation, carry
+Scratchpad organization, other *authored* Corkboard expansion (the *derived*
+dashboard panels of 4.19 and the 4.85/4.86 planning chat are v1), executable ruleset generation, carry
 weight/encumbrance, nonfiction product work, persona/game-engine ecosystems
 beyond the character lab,
 Zod 4 migration, and the craft library beyond tranche 1 (which continues as a
@@ -151,7 +153,7 @@ run when a result was reused or coverage was focused.
 1. **Claim it.** Set the slice to `WIP` on the status board below before
    starting. Respect the open dependencies: 1.1's
    fresh-build trust run before 6.1; 5.2's macOS signing and 5.7 before the
-   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; 3.32
+   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; 4.85 then 4.86 before 6.1; 4.93 then 4.94 before 6.1; 4.95 then 4.96 and 4.97 before 6.1; 3.32
    after 5.19; 3.38 and 3.46 before 4.79; the 3.38–3.42 trust group
    before 6.1; Phase 6 strictly ordered. Finished
    slices' ordering is in the archived snapshot.
@@ -334,6 +336,19 @@ messages).
 | 4.82 | Ordinary assistant rolling summaries | 4 | M | — post-beta candidate; after the relevant 3.32 assistant/context seam |
 | 4.83 | Source-linked scene digest pilot | 4 | M | — experimental candidate from 1.6; no production memory change |
 | 4.84 | Workspace dialogs open above the context drawer | 4 | S | Done `1a7765e` |
+| 4.85 | Corkboard planning chat (read-only) | 4 | M | — pre-beta (author decision, 2026-11-22; v1 scope exception, before 6.1); from 2026-11-22 dogfood |
+| 4.86 | Planning chat proposes outline changes | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.85, before 6.1 |
+| 4.87 | Export a chosen set of characters | 4 | S | — from 2026-11-22 dogfood |
+| 4.88 | Feature toggles that fit the project mode | 4 | S | — from 2026-11-22 dogfood; General Fiction hides the toggles (author decision, 2026-11-22) |
+| 4.89 | Spacing pass: stacked controls and inline labels | 4 | XS | — from 2026-11-22 dogfood |
+| 4.90 | Editor text options: paragraph style, narrow width, more fonts | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
+| 4.91 | Focus mode | 4 | M | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
+| 4.92 | Typewriter scrolling | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
+| 4.93 | Backup reminder | 4 | S | — pre-beta (author decision, 2026-11-22); before 6.1 |
+| 4.94 | Scheduled automatic backups to a chosen folder (desktop) | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.93, before 6.1 |
+| 4.95 | Scene snapshots: save, compare, restore | 4 | M | — pre-beta (author decision, 2026-11-22); before 6.1 |
+| 4.96 | Draft milestones (snapshot the whole manuscript) | 4 | S | — pre-beta (author decision, 2026-11-22); after 4.95, before 6.1 |
+| 4.97 | Rewrite beside the original | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.95, before 6.1 |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
@@ -1111,6 +1126,279 @@ Movement checks are review findings, never blocks.
     1,000px wide that opens `Record change here` from the scene roster with
     the drawer open and types into the dialog without forcing. Then remove
     the wide-viewport workaround in `general-fiction-state.cy.ts`.
+
+- **4.85 Corkboard planning chat (read-only).** From the 2026-11-22
+  dogfood run. Today no AI surface reads the outline: the Writing coach sees
+  only deterministic dashboard measurements
+  (`summarizeStoryDashboardForCoach`), Draft this scene reads one linked
+  card's summary and plot points (`sceneGoalFromCards`), and the Workspace
+  assistant never reads chapter cards. The author wants to talk through the
+  chapter arc and plan individual scenes.
+  - **Behavior.** A chat panel on the Corkboard with a scope picker: **Whole
+    board** (every chapter card in order: title, status, summary, plot
+    points, linked scene titles and word counts) or **This card** (that card
+    in full plus its neighbours' titles and summaries). Retrieved World Bible
+    records and accepted facts join through the existing assistant retrieval,
+    labeled by trust tier as in the assistant. Scene prose is not sent by
+    default; at most a bounded excerpt of linked scenes, disclosed.
+  - **Trust boundary.** Read-only. Replies are conversation, never canon, card
+    edits, or manuscript text; nothing on the board changes from this slice.
+  - **AI plumbing.** Follows the AI coaching switch. Requests go through
+    `useFeatureModelRun` under a new `ConsultationFeature`
+    (`corkboard-planning`), with route disclosure, Stop, and consultation
+    accounting. Conversation is session-local and project-scoped, like the
+    Workspace assistant.
+  - **Also fix (small).** Say what a card is in the Workspace corkboard
+    dialog: a card is the plan, scenes are separate documents, and Link
+    current scene links the open document. The fixture's one-scene-per-
+    chapter import made linking look like it attached the whole chapter.
+  - **Verify.** Fast battery plus Corkboard Cypress specs. Unit tests for the
+    prompt builder (both scopes, ordering, empty plot points, missing linked
+    scenes, size bounds) and that no write path is reachable; e2e with a
+    stubbed provider that asks a question in each scope.
+
+- **4.86 Planning chat proposes outline changes.** After 4.85. A **Propose
+  changes** action on a planning-chat reply asks the model for structured
+  edits, shown through `AIProposalPreview` and accepted one at a time.
+  - **Proposal kinds.** Board: reorder cards, add a chapter card, revise a
+    card summary. Card: add, revise, or reorder plot points. Scenes: split a
+    card's plot points into planned scenes with goals; accepting one creates
+    an empty scene linked to the card (the existing Create linked scene path),
+    ready for Draft this scene or writing.
+  - **Validation.** Deterministic code checks the response schema, that every
+    referenced card, plot point, and scene id exists in this project and is
+    unchanged since the proposal was made (revision check), and length
+    bounds. Invalid or stale proposals are dropped with a plain message.
+    Accepted edits go through `useWorkspaceCorkboard`'s existing card and
+    plot-point actions; no new persistence path. Nothing touches canon,
+    mechanics, state, or scene prose.
+  - **Verify.** Full-coverage tier. Unit tests for the parser and validator
+    (unknown ids, stale revision, oversized text, mixed valid/invalid
+    batches); e2e that accepts one proposal of each kind and dismisses one,
+    and that the board is unchanged until acceptance.
+
+- **4.87 Export a chosen set of characters.** From the 2026-11-22 dogfood
+  run. Character packages (More → Character packages) offers only
+  **Export all characters** / **Export all with sheets**; one character
+  exports from its World Bible detail. There is nothing in between. The
+  service already takes a subset (`exportCharactersJson({entityIds})` in
+  `services/characters/characterTransferService.ts`); only the route lacks a
+  picker.
+  - **Behavior.** On `CharacterPackagesRoute`, a searchable checklist of the
+    project's World Bible characters (name, aliases, whether a sheet exists)
+    with Select all / Clear, a selected count, and **Export selected** (with
+    and without sheets). Keep Export all as is. Records still in the
+    `Needs canon link` queue are listed but not selectable, with the reason,
+    matching the existing export rules.
+  - **Also fix (copy).** The lead says what packages are for: copying
+    characters into another project, for example a standalone book or a
+    new project that reuses a cast. For a series that shares one world, point
+    to **Parent project** on Projects, which shares canon read-only instead of
+    copying it (`docs/domain-model.md`: inheritance covers canon only, not
+    sheets or state).
+  - **Verify.** Fast battery plus the character-package Cypress coverage.
+    Unit test that the route passes exactly the selected entity ids; e2e that
+    exports two of three characters and re-imports the file into a second
+    project with only those two present.
+
+- **4.88 Feature toggles that fit the project mode.** From the 2026-11-22
+  dogfood run: Settings → Feature Toggles shows four checkboxes even in a
+  General Fiction project, where all four default off and the mode already
+  decides what the project is.
+  - **Found while checking.** Two of the four do nothing.
+    `getProjectCapabilities` (`projectMode.ts`) computes
+    `canUseRuntimeModifiers` and `canUseSettlementAndZoneSystems`, but no
+    component, hook, or command reads either. **Enable Game Systems** gates
+    sheets, Compendium, stat pins, and Workspace mechanics; **Enable Rule
+    Authoring** gates the Ruleset route.
+  - **Behavior.** Remove the two dead toggles from the UI and the capability
+    type; keep their stored values readable so old settings and backups still
+    load (no schema change). In General Fiction, replace the section with one
+    line: mechanics and rulesets are off in this mode; switch Project Mode to
+    LitRPG to use them. If a General Fiction project already has either
+    remaining toggle on, keep showing the toggles so the author can turn them
+    off. LitRPG keeps both, with one sentence each on what they show.
+    Author decision (2026-11-22): hide in General Fiction, not a collapsed
+    Advanced disclosure; the replacement line must say how to turn
+    mechanics on (switch Project Mode to LitRPG).
+  - **Verify.** Fast battery. Unit tests that capabilities no longer expose
+    the removed flags and that old settings with them still normalize; route
+    test for both modes, including General Fiction with Game Systems on.
+
+- **4.89 Spacing pass: stacked controls and inline labels.** From the
+  2026-11-22 dogfood run.
+  - **Known case.** Settings → Reading & Editor: the **Source Notes open in**
+    buttons sit flush against the Inline feedback box below.
+    `.sectionBody` (`styles/SettingsRoute.module.css`) is a plain block, and
+    `EditorAppearanceControl`'s container has no bottom margin. Make section
+    bodies a flex column with one gap so stacked controls are spaced
+    consistently, and drop the one-off margins that then double up.
+  - **Known case 2 (screenshot 2026-11-22).** Settings → **Highlight
+    visibility**: the select sits on the same line as its label with no gap.
+    `.fieldLabel` is `display: block`, so the inline select follows the text;
+    its `margin-top: 0.35rem` shows the intent was a stacked label. Make
+    `.fieldLabel` a flex column with a small gap; this also fixes **Mode**
+    under Project Mode and the other Settings `fieldLabel` uses. The Settings
+    `.helperText` under a field should keep a little space from the field above.
+  - **Sweep.** Check the other `fieldLabel` classes (Projects, backup import,
+    Source Note editor) for the same inline pattern and fix with the same
+    rule, not per-field margins. No spacing tokens exist in `theme.css`; add
+    shared ones only if more than one file needs the value.
+  - **Verify.** Lint and unit tests; before/after screenshots of each fixed
+    screen in both themes at desktop and narrow widths.
+
+- **4.90 Editor text options: paragraph style, narrow width, more fonts.**
+  From the 2026-11-22 dogfood run; the author wants each one switchable.
+  Today Settings → Editor Appearance offers font size, text style (serif,
+  sans, dyslexia-friendly), width (Focused 760px, Wide 980px), line spacing,
+  surface, and the Source Notes view. Each is a `data-*` attribute on the
+  root that sets a CSS variable (`AccessibilityContext`, `styles/theme.css`),
+  saved in `localStorage` (per device, not per project). Follow that pattern.
+  - **Paragraph style.** Spaced (today: a blank line between paragraphs) or
+    Indented (first-line indent, no gap between paragraphs, no indent on the
+    first paragraph after a heading or scene break). Applies to the
+    manuscript and Source Notes visual editors only; export is unaffected.
+  - **Width.** Add **Narrow** (about 640px) before Focused and Wide.
+  - **Fonts.** Add a few more bundled-or-system stacks (for example a
+    monospace and a second serif), plus **Custom**: a typed font-family name
+    the computer already has, with a live preview line and a fallback to the
+    current stack when the font is missing. A system font picker
+    (`queryLocalFonts`) only if it works in the Electron renderer without a
+    new IPC channel; otherwise the typed name is enough.
+  - **Verify.** Fast battery. Unit tests for storage defaults and unknown
+    stored values; screenshots of each option in both themes; e2e that a
+    choice survives reload.
+
+- **4.91 Focus mode.** From the 2026-11-22 dogfood run. A Workspace toggle
+  (button, command palette entry, keyboard shortcut, and Escape to leave)
+  that hides the navigation rail, scene list, context drawer, and editor
+  toolbar, leaving the scene and a minimal word count. Remembered per device
+  like the appearance settings, with an option in Editor Appearance for
+  whether it starts on.
+  - **Rules.** Nothing is lost while hidden: autosave, review, and
+    highlights keep running (highlights follow the existing visibility
+    setting). Dialogs and the selection menu still open. Hovering or moving
+    to the left edge does not reveal the rail; leaving is explicit.
+    Accessible: the toggle's state is announced, focus stays in the editor.
+  - **Verify.** Fast battery plus Workspace Cypress specs; e2e that enters
+    focus mode, types, leaves with Escape, and finds the text saved and the
+    panels restored as they were.
+
+- **4.92 Typewriter scrolling.** From the 2026-11-22 dogfood run. An Editor
+  Appearance option that keeps the line being typed at a fixed height
+  (about a third of the way down) by scrolling the editor as you type or
+  move the caret, in the manuscript editor. Off by default.
+  - **Rules.** Scroll only on typing and keyboard caret moves, never on
+    mouse selection or when the author scrolls away to read; add bottom
+    padding so the last line can reach the fixed height. Respect
+    `prefers-reduced-motion` (jump, do not animate). Works in focus mode.
+  - **Verify.** Unit test for the scroll target calculation; e2e in a long
+    scene that the caret line stays within a band while typing and that a
+    manual scroll is not undone until typing resumes.
+
+- **4.93 Backup reminder.** From the 2026-11-22 dogfood run. Projects
+  save continuously to IndexedDB in the app's data folder, but the only copy
+  outside it is a manual **Export Backup**, and nothing reminds the author.
+  The only automatic backups are the pre-migration ones, kept in the same
+  database. A lost or wiped data folder loses every project.
+  - **Behavior.** Record when each project was last backed up (export
+    succeeded; later also 4.94's automatic runs) on the project record, and
+    carry it through backup/restore. Projects shows **Last backup: 9 days
+    ago** / **Never backed up** on each project card. After a threshold
+    (default 7 days, and only once the project has real content) a quiet
+    reminder appears on Projects and at the top of the Workspace with
+    **Back up now** (the existing export dialog) and **Remind me later**
+    (snoozes for a day). Never modal, never blocks writing. Settings sets the
+    threshold or turns reminders off.
+  - **Browser.** The web build also calls `navigator.storage.persist()` once
+    and, if refused, says in the reminder that the browser may clear data.
+  - **Verify.** Fast battery. Unit tests for the threshold, snooze, empty
+    projects, and the timestamp surviving backup/restore; e2e that exporting
+    clears the reminder.
+
+- **4.94 Scheduled automatic backups to a chosen folder (desktop).** After
+  4.93. Settings → Backups: choose a folder (for example one synced by
+  iCloud Drive, Dropbox, or OneDrive), a schedule (daily, or on quit), and
+  how many copies to keep per project (default 10).
+  - **Behavior.** On schedule, for each project with changes since its last
+    backup, build the same snapshot as **Export Backup** and write
+    `<project>-backup-<date-time>.zip` into `<folder>/<project>/`, then prune
+    the oldest beyond the limit. Runs in the background without blocking
+    writing; the result (time, file, or a plain error such as folder missing)
+    shows in Settings and updates 4.93's last-backup time. A missing folder
+    pauses backups and the 4.93 reminder says why.
+  - **IPC.** One narrow channel: the renderer sends bytes and a file name;
+    the main process writes only inside the folder the author picked through
+    a native dialog (stored in the data folder, path-checked so names cannot
+    escape it), and prunes only files matching the backup name pattern. No
+    general file access.
+  - **Protected projects.** The passphrase is never stored, so a locked
+    project cannot be backed up and an encrypted copy cannot be made
+    unattended. Author decision (2026-11-22): skip protected projects, list
+    them as skipped in the run result, and keep them on 4.93 reminders. A
+    per-session backup passphrase was considered and not chosen.
+  - **Browser build.** Not offered; 4.93 reminders cover it.
+  - **Verify.** Full-coverage tier plus desktop unit tests for the path
+    guard and pruning; packaged desktop e2e that a scheduled run writes a
+    restorable backup, that restore of it matches the project, and that
+    pruning keeps the newest N.
+
+- **4.95 Scene snapshots: save, compare, restore.** From the 2026-11-22
+  dogfood run. There is no version history for scenes: the editor's undo
+  lasts only for the session, the only automatic copies are pre-migration
+  backups, and Export Backup feels final. The model is Scrivener's
+  snapshots.
+  - **Behavior.** **Take snapshot** on a scene (button, command palette, and
+    shortcut) saves its full text with a time and an optional name ("Draft 1",
+    "before cutting the dream"). Automatic snapshots, marked as such: before
+    any AI replacement is applied (the scene revision preview), before
+    restoring another snapshot, and the first time a scene is edited each day.
+    A **Snapshots** panel lists them per scene; selecting one shows it
+    read-only beside the current text, with a **Compare** toggle that marks
+    words added and removed since the snapshot. **Restore** replaces the
+    scene text after taking an automatic snapshot of the current text, so a
+    restore is itself undoable. **Copy** puts a snapshot's text on the
+    clipboard to salvage a passage without restoring. Named snapshots are
+    kept until deleted; automatic ones are pruned to the newest 20 per scene.
+  - **Trust and data.** Snapshots are the author's own text, never canon,
+    never sent to AI or used in review or retrieval. Restoring triggers the
+    normal re-review of the scene like any edit. New project-owned store:
+    carried by backup/restore and project deletion (one list, per 3.64),
+    covered by vault protection, and counted in the backup size.
+  - **Verify.** Full-coverage tier; DB_VERSION bump, so packaged desktop e2e
+    and a grep for pinned versions. Unit tests for the word diff, pruning,
+    and restore-takes-a-snapshot; e2e that takes, compares, restores, and
+    then restores back.
+
+- **4.96 Draft milestones.** After 4.95. **Save draft milestone** on the
+  Workspace (and Projects) takes a named snapshot of every scene at once
+  ("Draft 1 complete") and records the milestone with its date, scene count,
+  and word count. A **Drafts** list shows milestones; opening one shows the
+  manuscript as it was, read-only, with per-scene compare against now, and
+  **Export this draft** (the existing manuscript export, from the milestone's
+  text). Restoring a whole milestone is not offered; restore scene by scene
+  through 4.95, so a draft can never silently overwrite later work.
+  Milestones keep their snapshots out of automatic pruning.
+  - **Verify.** Fast battery plus Workspace Cypress; e2e that saves a
+    milestone, edits two scenes, opens the milestone, sees the old text, and
+    exports it.
+
+- **4.97 Rewrite beside the original.** After 4.95. Select a passage and
+  choose **Rewrite beside original** (selection menu and command palette).
+  A split view shows the original passage read-only on one side and an
+  editable copy on the other; the rest of the scene stays in place. **Use
+  rewrite** replaces the passage (after an automatic 4.95 snapshot);
+  **Keep both** saves the rewrite as a named alternative on the scene to come
+  back to; **Discard** closes it. Saved alternatives list in the Snapshots
+  panel by passage. No AI involved; the existing AI selection actions may
+  later open their output in the same view.
+  - **Rules.** If the original passage changes while the rewrite is open,
+    **Use rewrite** asks again rather than replacing the wrong text (the
+    same stale-range check as the scene revision preview). Undo after
+    **Use rewrite** restores the original.
+  - **Verify.** Fast battery plus Workspace Cypress; e2e that rewrites a
+    paragraph, keeps both, comes back, and uses the alternative; unit test
+    for the stale-range refusal.
 
 ### Phase 5 — Release engineering
 
