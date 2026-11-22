@@ -153,7 +153,7 @@ run when a result was reused or coverage was focused.
 1. **Claim it.** Set the slice to `WIP` on the status board below before
    starting. Respect the open dependencies: 1.1's
    fresh-build trust run before 6.1; 5.2's macOS signing and 5.7 before the
-   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; 4.85 then 4.86 before 6.1; 4.93 then 4.94 before 6.1; 3.32
+   paid launch (6.4); 5.9 before 6.4; 5.18 then 5.19 before 6.1; 4.85 then 4.86 before 6.1; 4.93 then 4.94 before 6.1; 4.95 then 4.96 and 4.97 before 6.1; 3.32
    after 5.19; 3.38 and 3.46 before 4.79; the 3.38–3.42 trust group
    before 6.1; Phase 6 strictly ordered. Finished
    slices' ordering is in the archived snapshot.
@@ -346,9 +346,9 @@ messages).
 | 4.92 | Typewriter scrolling | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.93 | Backup reminder | 4 | S | — pre-beta (author decision, 2026-11-22); before 6.1 |
 | 4.94 | Scheduled automatic backups to a chosen folder (desktop) | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.93, before 6.1 |
-| 4.95 | Scene snapshots: save, compare, restore | 4 | M | — from 2026-11-22 dogfood; priority pending author decision |
-| 4.96 | Draft milestones (snapshot the whole manuscript) | 4 | S | — after 4.95; priority pending author decision |
-| 4.97 | Rewrite beside the original | 4 | M | — after 4.95; priority pending author decision |
+| 4.95 | Scene snapshots: save, compare, restore | 4 | M | — pre-beta (author decision, 2026-11-22); before 6.1 |
+| 4.96 | Draft milestones (snapshot the whole manuscript) | 4 | S | — pre-beta (author decision, 2026-11-22); after 4.95, before 6.1 |
+| 4.97 | Rewrite beside the original | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.95, before 6.1 |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
