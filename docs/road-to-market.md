@@ -361,9 +361,9 @@ messages).
 | 5.4 | Progressive first-run onboarding + sample project | 5 | L | Done `a5644b1` |
 | 5.5 | AI provider setup UX hardening | 5 | M | Done `1c15774` |
 | 5.6 | Local-only error handling | 5 | S | Done `8709ec1` |
-| 5.7 | Trial + license key gate | 5 | M | — |
+| 5.7 | Trial + license key gate | 5 | M | — entitlement service on a Cloudflare Worker (hosting plan, 2026-11-23) |
 | 5.8 | Help/docs baseline | 5 | S | Done `64cf02c` |
-| 5.9 | Landing page + demo assets | 5 | M | — |
+| 5.9 | Landing page + demo assets | 5 | M | — static site on Cloudflare Pages (hosting plan, 2026-11-23) |
 | 5.10 | Author-facing vocabulary sweep | 5 | XS | Done `69e6559` |
 | 5.12 | App-shell toast viewport + status live region | 5 | S | Done `7f303f7` |
 | 5.14 | Optional encrypted backups | 5 | S | Done `7669198` |
@@ -1442,6 +1442,14 @@ Movement checks are review findings, never blocks.
   [`research-payment-provider.md`](research-payment-provider.md): Creem is the
   conditional sandbox favorite, but production selection waits on its listed
   security, recovery, coverage, pricing, and operations gates.
+  **Hosting (plan, 2026-11-23):** the entitlement service is a Cloudflare
+  Worker with D1 (or KV) storage, beside the 5.9 site. It receives the
+  provider webhook, holds the provider keys and webhook secret in
+  Cloudflare's secret store (never in the repo, which is public), and returns
+  the signed lease. Only the lease-verification public key ships in the app.
+  If the chosen provider turns out to offer client-safe, locally verifiable
+  licenses (Creem gate 1), the Worker may not be needed; confirm before
+  building it.
 - **5.9 Landing page + demo assets.** Portability ("your data leaves with
   you") is a homepage-level promise once 4.29 exists; before that, state only
   the backup-zip and manuscript export truth. Build the simple landing page and a
@@ -1453,6 +1461,19 @@ Movement checks are review findings, never blocks.
   and **Private local AI** rather than collapsing them into a single offline
   claim. Do not advertise encrypted working projects before the vault smoke
   and packaged-desktop checks pass.
+  **Hosting (plan, 2026-11-23):** a plain static site on Cloudflare Pages
+  (free) at `sagaspine.com`, with `saga-spine.com` redirecting to it. No
+  website backend: checkout is the provider's hosted page; downloads and the
+  auto-update feed stay on GitHub Releases, which is free while the repo is
+  public; the demo video is embedded from a video host or served as a static
+  file. Include the public terms, privacy, and refund pages and a visible
+  support address that merchant approval requires; forward the address with
+  Cloudflare Email Routing. A beta signup form, if wanted, is a small Worker
+  endpoint or a free form service. Expected fixed cost is the domains (plus
+  the Apple Developer fee from 5.2). If the repo goes private, the update
+  feed needs a separate public releases repo (electron-builder can publish
+  there) and private Actions minutes become a cost, since macOS runners count
+  10×; decide visibility before the paid launch, not after.
 - **5.18 Per-project AI switches (coaching, prose).** Raised in 2026-11-07
   dogfooding: an author must be able to write without AI, and to accept AI
   feedback without accepting AI-written prose. Add two independent
