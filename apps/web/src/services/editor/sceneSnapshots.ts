@@ -26,9 +26,13 @@ export interface SceneContentReplacement {
   token: number;
 }
 
-/** Automatic snapshots are pruned; the author's own and draft milestones' never are. */
+/** Automatic snapshots are pruned; the author's own, milestones', and alternatives never are. */
 export const isAutomaticSnapshot = (snapshot: Pick<SceneSnapshot, 'kind'>): boolean =>
-  snapshot.kind !== 'manual' && snapshot.kind !== 'milestone';
+  snapshot.kind !== 'manual' && snapshot.kind !== 'milestone' && snapshot.kind !== 'alternative';
+
+/** A saved rewrite of one passage (4.97), not a copy of the whole scene. */
+export const isPassageAlternative = (snapshot: Pick<SceneSnapshot, 'kind'>): boolean =>
+  snapshot.kind === 'alternative';
 
 const KIND_LABELS: Record<SceneSnapshotKind, string> = {
   manual: 'Snapshot',
@@ -36,7 +40,9 @@ const KIND_LABELS: Record<SceneSnapshotKind, string> = {
   'before-restore': 'Automatic: before a restore',
   daily: 'Automatic: first edit of the day',
   'before-delete': 'Automatic: before the scene was deleted',
-  milestone: 'Draft milestone'
+  milestone: 'Draft milestone',
+  'before-rewrite': 'Automatic: before a rewrite was used',
+  alternative: 'Passage alternative'
 };
 
 export const describeSnapshotKind = (kind: SceneSnapshotKind): string => KIND_LABELS[kind];
@@ -82,7 +88,8 @@ export interface TakeSceneSnapshotParams {
 export async function takeSceneSnapshot(params: TakeSceneSnapshotParams): Promise<SceneSnapshot> {
   const existing = await getSceneSnapshots(params.projectId, params.sceneId);
   const alwaysTaken = params.kind === 'manual' || params.kind === 'before-delete';
-  if (!alwaysTaken && existing[0]?.content === params.content) return existing[0];
+  const newestOfScene = existing.find((snapshot) => !isPassageAlternative(snapshot));
+  if (!alwaysTaken && newestOfScene?.content === params.content) return newestOfScene;
   const name = params.name?.trim();
   const sceneTitle = params.sceneTitle?.trim();
   const snapshot: SceneSnapshot = {

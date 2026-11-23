@@ -222,7 +222,10 @@ The trust boundary in action: the model proposes, the author approves.
    and the scene as it was is kept as an automatic snapshot
    (`takeSceneSnapshot`, `services/editor/sceneSnapshots.ts`). Draft
    milestones (`services/editor/draftMilestones.ts`) are sets of snapshots,
-   one per scene.
+   one per scene. Rewrite beside the original (`hooks/usePassageRewrite.ts`,
+   `services/editor/passageRewrite.ts`) is the author's own revision path:
+   the same one-transaction replace, with the passage's range mapped through
+   edits instead of requiring an unchanged scene.
 
 Tests: `hooks/useSelectionActionRun.test.tsx`,
 `services/llm/aiSwitches.test.ts`, `apps/web/cypress/e2e/ai-actions.cy.ts`.

@@ -89,6 +89,10 @@ Procedure:
 10. Draft milestones (slice 4.96). Before exporting, save a draft milestone.
    In the copy, **Drafts** lists it with the same scene and word counts, and
    the whole draft shows the text as it was.
+11. Passage alternatives (slice 4.97). Before exporting, rewrite a paragraph
+   beside the original and choose **Keep both**. In the copy, the scene's
+   **Snapshots** lists it under **Passage alternatives**, and **Open beside
+   original** opens it beside that paragraph.
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated

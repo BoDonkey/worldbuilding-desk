@@ -348,7 +348,7 @@ messages).
 | 4.94 | Scheduled automatic backups to a chosen folder (desktop) | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.93, before 6.1 |
 | 4.95 | Scene snapshots: save, compare, restore | 4 | M | Done `0d19700` |
 | 4.96 | Draft milestones (snapshot the whole manuscript) | 4 | S | Done `7142b55` |
-| 4.97 | Rewrite beside the original | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.95, before 6.1 |
+| 4.97 | Rewrite beside the original | 4 | M | Done `a22653f` |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |

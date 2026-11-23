@@ -4,7 +4,8 @@ import type {SceneSnapshotsController} from '../../hooks/useSceneSnapshots';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {useEscapeToClose} from '../../hooks/useEscapeToClose';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
-import {formatSnapshotTime, snapshotTitle, wordLabel} from '../../services/editor/sceneSnapshots';
+import {formatSnapshotTime, isPassageAlternative, snapshotTitle, wordLabel} from '../../services/editor/sceneSnapshots';
+import {requestPassageRewrite} from '../../hooks/usePassageRewrite';
 import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
 import {SnapshotCompare} from './SnapshotCompare';
 import styles from './SceneVersions.module.css';
@@ -19,7 +20,8 @@ interface WorkspaceSnapshotsModalProps {
 /**
  * The Snapshots dialog (slice 4.95): take a named snapshot, list the scene's
  * snapshots, and show one read-only beside the current text, with Compare
- * marking the words added and removed since.
+ * marking the words added and removed since. Passage alternatives (4.97)
+ * are listed by passage and open beside their original in the editor.
  */
 export function WorkspaceSnapshotsModal({controller, sceneTitle, currentContent}: WorkspaceSnapshotsModalProps) {
   const {isOpen, close, snapshots, isLoaded, isWorking} = controller;
@@ -40,6 +42,38 @@ export function WorkspaceSnapshotsModal({controller, sceneTitle, currentContent}
   const selected: SceneSnapshot | null =
     snapshots.find((snapshot) => snapshot.id === selectedId) ?? snapshots[0] ?? null;
   if (!isOpen) return null;
+  const sceneSnapshots = snapshots.filter((snapshot) => !isPassageAlternative(snapshot));
+  // Alternatives of the same passage together, newest passage first.
+  const alternatives = snapshots
+    .filter(isPassageAlternative)
+    .sort((a, b) => {
+      const firstOf = (text?: string) => snapshots.findIndex((entry) => entry.passage?.originalText === text);
+      return firstOf(a.passage?.originalText) - firstOf(b.passage?.originalText);
+    });
+  const listItem = (snapshot: SceneSnapshot, meta: string) => (
+    <li key={snapshot.id}>
+      <button
+        type='button'
+        className={styles.listItem}
+        aria-pressed={snapshot.id === selected?.id}
+        onClick={() => setSelectedId(snapshot.id)}
+      >
+        <span className={styles.listTitle}>{snapshotTitle(snapshot)}</span>
+        <span className={styles.listMeta}>{meta}</span>
+      </button>
+    </li>
+  );
+  const deleteButton = (snapshot: SceneSnapshot) => (
+    <button type='button' className={styles.dangerButton} onClick={() => requestConfirm({
+      title: `Delete "${snapshotTitle(snapshot)}"?`,
+      message: 'This snapshot will be deleted. The scene itself is not changed.',
+      confirmLabel: 'Delete snapshot',
+      variant: 'danger',
+      onConfirm: () => controller.removeSnapshot(snapshot)
+    })}>
+      Delete
+    </button>
+  );
 
   const handleTake = async () => {
     if (await controller.takeSnapshot(name)) {
@@ -87,28 +121,45 @@ export function WorkspaceSnapshotsModal({controller, sceneTitle, currentContent}
         </form>
 
         <div className={styles.body}>
-          <ul className={styles.list} aria-label='Snapshots of this scene'>
-            {isLoaded && snapshots.length === 0 && (
-              <li className={styles.empty}>No snapshots yet. Take one before a big change.</li>
+          <div className={styles.sidebar}>
+            <ul className={styles.list} aria-label='Snapshots of this scene'>
+              {isLoaded && sceneSnapshots.length === 0 && (
+                <li className={styles.empty}>No snapshots yet. Take one before a big change.</li>
+              )}
+              {sceneSnapshots.map((snapshot) =>
+                listItem(snapshot, `${formatSnapshotTime(snapshot.createdAt)} · ${wordLabel(snapshot.wordCount)}`))}
+            </ul>
+            {alternatives.length > 0 && (
+              <>
+                <h4 className={styles.sectionHeading}>Passage alternatives</h4>
+                <ul className={styles.list} aria-label='Passage alternatives'>
+                  {alternatives.map((snapshot) => listItem(snapshot, formatSnapshotTime(snapshot.createdAt)))}
+                </ul>
+              </>
             )}
-            {snapshots.map((snapshot) => (
-              <li key={snapshot.id}>
-                <button
-                  type='button'
-                  className={styles.listItem}
-                  aria-pressed={snapshot.id === selected?.id}
-                  onClick={() => setSelectedId(snapshot.id)}
-                >
-                  <span className={styles.listTitle}>{snapshotTitle(snapshot)}</span>
-                  <span className={styles.listMeta}>
-                    {formatSnapshotTime(snapshot.createdAt)} · {wordLabel(snapshot.wordCount)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          </div>
 
-          {selected && (
+          {selected?.passage && (
+            <SnapshotCompare
+              key={selected.id}
+              snapshotHeading='Original passage'
+              snapshotHtml={selected.passage.original}
+              currentHtml={selected.content}
+              currentHeading={snapshotTitle(selected)}
+              summaryLabel='In the alternative'
+              actions={<>
+                <button type='button' onClick={() => {
+                  requestPassageRewrite({documentId: selected.sceneId, alternative: selected});
+                  close();
+                }}>
+                  Open beside original
+                </button>
+                <button type='button' onClick={() => void controller.copySnapshot(selected)}>Copy</button>
+                {deleteButton(selected)}
+              </>}
+            />
+          )}
+          {selected && !selected.passage && (
             <SnapshotCompare
               key={selected.id}
               snapshotHeading={`${snapshotTitle(selected)} · ${formatSnapshotTime(selected.createdAt)}`}
@@ -119,15 +170,7 @@ export function WorkspaceSnapshotsModal({controller, sceneTitle, currentContent}
                   Restore
                 </button>
                 <button type='button' onClick={() => void controller.copySnapshot(selected)}>Copy</button>
-                <button type='button' className={styles.dangerButton} onClick={() => requestConfirm({
-                  title: `Delete "${snapshotTitle(selected)}"?`,
-                  message: 'This snapshot will be deleted. The scene itself is not changed.',
-                  confirmLabel: 'Delete snapshot',
-                  variant: 'danger',
-                  onConfirm: () => controller.removeSnapshot(selected)
-                })}>
-                  Delete
-                </button>
+                {deleteButton(selected)}
               </>}
             />
           )}

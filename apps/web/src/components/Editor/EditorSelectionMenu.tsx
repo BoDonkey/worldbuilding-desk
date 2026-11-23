@@ -9,6 +9,7 @@ import {
 import type {EditorContextPopoverControls} from '../../hooks/useEditorContextPopovers';
 import type {LoreInspectorRecord} from '../../services/workspace/workspaceConsultation';
 import {SelectionMenuAIEntries, type EditorSelectionActions} from './SelectionMenuAIEntries';
+import {requestPassageRewrite} from '../../hooks/usePassageRewrite';
 
 /** A selected passage handed to the assistant as context. */
 export interface EditorAIContext {
@@ -78,6 +79,15 @@ export function EditorSelectionMenu({
       }}
       onMouseDown={(event) => event.preventDefault()}
     >
+      <button
+        type='button'
+        onClick={() => {
+          requestPassageRewrite({documentId, range: {from: selection.from, to: selection.to}});
+          closeMenu();
+        }}
+      >
+        Rewrite beside original
+      </button>
       <SelectionMenuAIEntries controls={selectionActions} selection={selection}
         onAskAI={onOpenAIContext && (() => onOpenAIContext({type: 'document', id: documentId,
           selectedText: selection.selectedText, from: selection.from, to: selection.to}))}

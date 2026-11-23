@@ -99,6 +99,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   opens a milestone read-only with per-scene compare and exports its text.
   Deleted scenes with snapshots are listed there and can be restored. No
   schema change: a milestone is a set of `milestone` snapshots.
+- Rewrite beside the original (slice 4.97): **Rewrite beside original**
+  (selection menu or command palette) opens an editable copy of a passage
+  beside it. **Use rewrite** replaces it as one undoable change after an
+  automatic snapshot, and refuses if the passage itself changed meanwhile;
+  **Keep both** saves the rewrite as a passage alternative in Snapshots,
+  which can be reopened beside the original later. No AI and no schema change.
 - Full current behavior:
   [`docs/status-writing-workspace.md`](docs/status-writing-workspace.md).
   Update it, not this file, when Workspace behavior changes.
