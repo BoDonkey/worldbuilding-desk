@@ -46,6 +46,7 @@ import {getAllProjects} from './services/storage';
 import {createFirstRunProject, hasCheckedFirstRun, markFirstRunChecked} from './services/onboarding/firstRun';
 import appShellStyles from './styles/AppShell.module.css';
 import {UpdateNotice} from './components/Updates/UpdateNotice';
+import {useScheduledBackupRunner} from './hooks/useScheduledBackups';
 
 const routeWindowScrollPositions = new Map<string, number>();
 
@@ -124,6 +125,7 @@ function AppShellLayout() {
   const location = useLocation();
   const isRailCollapsed = useAppStore((s) => s.isRailCollapsed);
   const setRailCollapsed = useAppStore((s) => s.setRailCollapsed);
+  useScheduledBackupRunner();
 
   useLayoutEffect(() => {
     const path = location.pathname;

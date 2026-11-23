@@ -27,6 +27,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openReleasePage: () => ipcRenderer.invoke('updates:open-release-page'),
     onChange: (callback: Listener<unknown>) => subscribe('updates:changed', callback)
   },
+  backups: {
+    get: () => ipcRenderer.invoke('backups:get'),
+    chooseFolder: () => ipcRenderer.invoke('backups:choose-folder'),
+    setPreferences: (patch: unknown) => ipcRenderer.invoke('backups:set-preferences', patch),
+    write: (request: {fileName: string; bytes: Uint8Array}) => ipcRenderer.invoke('backups:write', request),
+    recordRun: (result: unknown) => ipcRenderer.invoke('backups:record-run', result),
+    closeRunFinished: () => ipcRenderer.invoke('backups:close-run-finished'),
+    onChange: (callback: Listener<unknown>) => subscribe('backups:changed', callback),
+    onRunBeforeClose: (callback: Listener<void>) => subscribe('backups:run-before-close', callback)
+  },
   onLLMChunk: (callback: Listener<{requestId: string; text: string}>) =>
     subscribe('llm:stream:chunk', callback),
   onLLMComplete: (callback: Listener<{requestId: string}>) =>

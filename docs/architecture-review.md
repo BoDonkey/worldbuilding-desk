@@ -417,7 +417,9 @@ names only; none comes from the renderer.
 | `llm:complete`, `llm:stream`, `llm:stream:cancel`, `llm:local-context-size` | renderer → main (`invoke`) | `apiHandler.ts` |
 | `provider-keys:status`, `provider-keys:set`, `provider-keys:clear` | renderer → main (`invoke`) | `apiHandler.ts` |
 | `updates:get`, `updates:check`, `updates:download`, `updates:install`, `updates:set-check-automatically`, `updates:open-release-page` | renderer → main (`invoke`) | `updateIpc.ts` |
+| `backups:get`, `backups:choose-folder`, `backups:set-preferences`, `backups:write`, `backups:record-run`, `backups:close-run-finished` | renderer → main (`invoke`); only `backups:write` touches files, inside the folder chosen in the native dialog | `scheduledBackupIpc.ts` |
 | `llm:stream:chunk`, `llm:stream:complete`, `llm:stream:error` | main → renderer (events) | `apiHandler.ts` |
+| `backups:changed`, `backups:run-before-close` | main → renderer (events) | `scheduledBackupIpc.ts`, `main.ts` |
 | `updates:changed` | main → renderer (event) | `updateIpc.ts` |
 
 A new channel goes in this table in the same change.

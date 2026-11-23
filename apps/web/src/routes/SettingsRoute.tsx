@@ -17,6 +17,7 @@ import {AISettings} from '../components/Settings/AISettings';
 import {DiagnosticsPanel} from '../components/Settings/DiagnosticsPanel';
 import {UpdatesSettings} from '../components/Settings/UpdatesSettings';
 import {BackupReminderSettings} from '../components/Settings/BackupReminderSettings';
+import {ScheduledBackupSettings} from '../components/Settings/ScheduledBackupSettings';
 import {FontSizeControl} from '../components/Settings/FontSizeControl';
 import {EditorAppearanceControl} from '../components/Settings/EditorAppearanceControl';
 import {
@@ -370,6 +371,7 @@ function SettingsRoute() {
 
         <SettingsSection title='Backups'>
           <BackupReminderSettings />
+          <ScheduledBackupSettings />
         </SettingsSection>
 
         <SettingsSection title='Diagnostics'>

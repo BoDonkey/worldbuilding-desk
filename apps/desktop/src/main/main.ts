@@ -6,6 +6,8 @@ import {pathToFileURL} from 'node:url';
 import {setupAPIHandlers} from './apiHandler';
 import {resolveDataFolder, testAppDataFolder} from './dataFolder';
 import {openExternalIfSafe} from './externalLinks';
+import {BackupOnCloseGuard, setupScheduledBackupHandlers} from './scheduledBackupIpc';
+import {BackupPreferenceStore, snapshotOf} from './scheduledBackups';
 import {ProviderKeyVault} from './providerKeyVault';
 import {setupUpdateHandlers, testUpdateFeedUrl} from './updateIpc';
 import {UpdateController, UpdatePreferenceStore} from './updates';
@@ -14,6 +16,9 @@ import {buildDevContentSecurityPolicy, isRendererNavigation} from './windowPolic
 const isDevelopment = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 let mainWindow: BrowserWindow | null = null;
+let closeGuard: BackupOnCloseGuard | null = null;
+let quitting = false;
+let backupPreferences: BackupPreferenceStore | null = null;
 
 /** Settles the data folder before anything opens it; `--user-data-dir` wins. */
 function useSagaSpineDataFolder() {
@@ -47,7 +52,9 @@ function createUpdateController(): UpdateController {
     supported,
     // In-app installs on macOS need a signed build (Slice 5.2).
     installMode: process.platform === 'darwin' ? 'release-page' : 'in-app',
-    log: (message, error) => console.error(message, error)
+    log: (message, error) => console.error(message, error),
+    // Restarting into an update must not wait on a backup.
+    beforeInstall: () => closeGuard?.skipNextClose()
   });
 }
 
@@ -115,10 +122,31 @@ async function createMainWindow() {
     openExternalIfSafe(url, (safeUrl) => shell.openExternal(safeUrl));
   });
 
+  // Schedule "When SagaSpine closes" (4.94): hold the close while the
+  // renderer writes the backup, then close (or quit) as asked.
+  const win = mainWindow;
+  const guard = new BackupOnCloseGuard({
+    shouldRun: () => {
+      if (!backupPreferences) return false;
+      const snapshot = snapshotOf(backupPreferences.get());
+      return snapshot.schedule === 'on-close' && snapshot.folderAvailable && !win.webContents.isCrashed();
+    },
+    requestRun: () => win.webContents.send('backups:run-before-close'),
+    proceed: () => {
+      if (quitting) app.quit();
+      else if (!win.isDestroyed()) win.close();
+    }
+  });
+  closeGuard = guard;
+  win.on('close', (event) => {
+    if (guard.onClose()) event.preventDefault();
+  });
+
   await loadRenderer(mainWindow);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    if (closeGuard === guard) closeGuard = null;
   });
 }
 
@@ -126,6 +154,13 @@ app.whenReady().then(() => {
   setupAPIHandlers(
     new ProviderKeyVault({directory: app.getPath('userData'), cipher: safeStorage})
   );
+  backupPreferences = new BackupPreferenceStore({directory: app.getPath('userData')});
+  void backupPreferences.load();
+  setupScheduledBackupHandlers({
+    store: backupPreferences,
+    dataFolder: app.getPath('userData'),
+    onCloseRunFinished: () => closeGuard?.finished()
+  });
   const updates = createUpdateController();
   setupUpdateHandlers(updates, (url) => openExternalIfSafe(url, (safeUrl) => shell.openExternal(safeUrl)));
   installDevContentSecurityPolicy();
@@ -144,6 +179,10 @@ app.whenReady().then(() => {
       });
     }
   });
+});
+
+app.on('before-quit', () => {
+  quitting = true;
 });
 
 app.on('window-all-closed', () => {
