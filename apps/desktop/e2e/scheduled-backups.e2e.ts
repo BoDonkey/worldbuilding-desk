@@ -103,7 +103,14 @@ test('the on-close schedule backs up before the window closes', async ({desktop}
     BrowserWindow.getAllWindows()[0]?.close();
   });
   await expect.poll(() => backupsIn(backupRoot).filter((name) => BACKUP_NAME.test(name)).length, {timeout: 30_000}).toBe(1);
-  await expect.poll(() => app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows().length), {timeout: 30_000}).toBe(0);
+  // The window then closes. On Windows and Linux that quits the app, so a
+  // closed connection counts as closed too.
+  await expect
+    .poll(
+      () => app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows().length).catch(() => 0),
+      {timeout: 30_000}
+    )
+    .toBe(0);
 });
 
 test('a missing folder pauses backups and says why', async ({desktop}) => {
