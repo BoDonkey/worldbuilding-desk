@@ -16,6 +16,7 @@ import {CharacterStyleList} from '../components/CharacterStyleList';
 import {AISettings} from '../components/Settings/AISettings';
 import {DiagnosticsPanel} from '../components/Settings/DiagnosticsPanel';
 import {UpdatesSettings} from '../components/Settings/UpdatesSettings';
+import {BackupReminderSettings} from '../components/Settings/BackupReminderSettings';
 import {FontSizeControl} from '../components/Settings/FontSizeControl';
 import {EditorAppearanceControl} from '../components/Settings/EditorAppearanceControl';
 import {
@@ -366,6 +367,10 @@ function SettingsRoute() {
             <UpdatesSettings />
           </SettingsSection>
         )}
+
+        <SettingsSection title='Backups'>
+          <BackupReminderSettings />
+        </SettingsSection>
 
         <SettingsSection title='Diagnostics'>
           <DiagnosticsPanel secrets={configuredApiKeys} />

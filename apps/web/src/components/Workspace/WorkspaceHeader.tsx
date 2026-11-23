@@ -4,6 +4,7 @@ import type {ReviewReadiness} from '../../services/consistency/reviewReadiness';
 import styles from './WorkspaceHeader.module.css';
 import {PageHeader} from '../PageHeader';
 import {WorkspaceChapterCardContext} from './WorkspaceChapterCardContext';
+import {WorkspaceBackupReminder} from '../Backup/WorkspaceBackupReminder';
 
 interface WorkspaceHeaderProps {
   projectName: string;
@@ -17,7 +18,8 @@ interface WorkspaceHeaderProps {
 /**
  * The Workspace page header: the project and open scene, the Corkboard
  * cards linked to that scene, the review status chip (opens the Review
- * tab), and the Scratchpad button.
+ * tab), and the Scratchpad button. Below it, the backup reminder when one
+ * is due (4.93).
  */
 export function WorkspaceHeader({
   projectName,
@@ -28,41 +30,44 @@ export function WorkspaceHeader({
   onOpenScratchpad
 }: WorkspaceHeaderProps) {
   return (
-    <PageHeader
-      eyebrow='Current manuscript'
-      title='Writing Workspace'
-      meta={
-        <span className={styles.workspaceHeaderMeta}>
-          {projectName}
-          {selectedDocument ? ` · ${selectedDocument.title || 'Untitled scene'}` : ''}
-          <WorkspaceChapterCardContext
-            cards={chapterCardLinks.linkedChapterCards}
-            onOpenCard={chapterCardLinks.handleOpenChapterCard}
-            onOpenCorkboard={chapterCardLinks.handleOpenChapterCardRoute}
-          />
-        </span>
-      }
-      actions={
-        <>
-          <button
-            type='button'
-            className={`${styles.reviewIndicator} ${styles[`reviewIndicator_${reviewReadiness.state}`]}`}
-            onClick={onOpenReview}
-            title={reviewReadiness.detail}
-            aria-label={`Open review drawer, ${reviewReadiness.label}: ${reviewReadiness.detail}`}
-          >
-            <span className={styles.reviewIndicatorDot} />
-            <span>{reviewReadiness.label}</span>
-          </button>
-          <button
-            type='button'
-            className={styles.scratchpadHeaderButton}
-            onClick={onOpenScratchpad}
-          >
-            Scratchpad
-          </button>
-        </>
-      }
-    />
+    <>
+      <PageHeader
+        eyebrow='Current manuscript'
+        title='Writing Workspace'
+        meta={
+          <span className={styles.workspaceHeaderMeta}>
+            {projectName}
+            {selectedDocument ? ` · ${selectedDocument.title || 'Untitled scene'}` : ''}
+            <WorkspaceChapterCardContext
+              cards={chapterCardLinks.linkedChapterCards}
+              onOpenCard={chapterCardLinks.handleOpenChapterCard}
+              onOpenCorkboard={chapterCardLinks.handleOpenChapterCardRoute}
+            />
+          </span>
+        }
+        actions={
+          <>
+            <button
+              type='button'
+              className={`${styles.reviewIndicator} ${styles[`reviewIndicator_${reviewReadiness.state}`]}`}
+              onClick={onOpenReview}
+              title={reviewReadiness.detail}
+              aria-label={`Open review drawer, ${reviewReadiness.label}: ${reviewReadiness.detail}`}
+            >
+              <span className={styles.reviewIndicatorDot} />
+              <span>{reviewReadiness.label}</span>
+            </button>
+            <button
+              type='button'
+              className={styles.scratchpadHeaderButton}
+              onClick={onOpenScratchpad}
+            >
+              Scratchpad
+            </button>
+          </>
+        }
+      />
+      <WorkspaceBackupReminder />
+    </>
   );
 }

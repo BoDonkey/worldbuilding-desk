@@ -30,6 +30,7 @@ const PROJECT_LOCAL_STORAGE_PREFIXES = [
   'inspectorBudget',
   'workspaceReviewPrefs',
   'progressionContinuityReview',
+  'backupReminderSnooze',
   // Pre-3.23c mechanics drafts not yet moved into project storage.
   'wbd:first-mechanics'
 ] as const;
@@ -175,16 +176,50 @@ export async function saveProject(project: Project): Promise<void> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(PROJECT_STORE_NAME, 'readwrite');
     const store = tx.objectStore(PROJECT_STORE_NAME);
-    const request = store.put(versionedProject);
+    const existingRequest = store.get(project.id);
 
-    request.onsuccess = () => {
-      resolve();
+    existingRequest.onsuccess = () => {
+      const existing = existingRequest.result as Project | undefined;
+      let request: IDBRequest;
+      try {
+        // A locked project refuses the write by throwing here.
+        request = store.put(keepLatestBackupTime(versionedProject, existing));
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      request.onsuccess = () => {
+        resolve();
+      };
+      request.onerror = () => {
+        reject(request.error);
+      };
     };
 
-    request.onerror = () => {
-      reject(request.error);
+    existingRequest.onerror = () => {
+      reject(existingRequest.error);
     };
   });
+}
+
+/**
+ * Callers often save a copy of the project they read earlier (the active
+ * project in the app store, for one). A backup recorded since then must not be
+ * erased by that older copy, so the later backup time always wins (4.93).
+ */
+function keepLatestBackupTime<T extends Project>(next: T, existing: Project | undefined): T {
+  const previous = existing?.lastBackupAt;
+  if (previous === undefined || (next.lastBackupAt ?? 0) >= previous) return next;
+  return {...next, lastBackupAt: previous};
+}
+
+/** Records a successful backup without counting it as an edit to the project. */
+export async function recordProjectBackup(projectId: string, backedUpAt: number): Promise<Project | null> {
+  const project = await getProjectById(projectId);
+  if (!project) return null;
+  const updated = {...project, lastBackupAt: Math.max(project.lastBackupAt ?? 0, backedUpAt)};
+  await saveProject(updated);
+  return updated;
 }
 
 export async function deleteProject(id: string): Promise<void> {

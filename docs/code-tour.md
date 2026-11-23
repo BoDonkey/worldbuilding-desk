@@ -275,12 +275,17 @@ Tests: `packages/rules-engine/src/manuscript/replay.test.ts`,
 
 ### 3.4 Backup and restore
 
-**Export.** `routes/ProjectsRoute.tsx` →
+**Export.** `routes/ProjectsRoute.tsx` (or the backup reminder,
+`components/Backup/WorkspaceBackupReminder.tsx`) → `useProjectBackupExport`
+(`hooks/useProjectBackupExport.ts`) →
 `exportProjectBackupZip` (`services/storage/projectBackupExport.ts`) →
 `buildProjectSnapshot` (`services/storage/projectSnapshotService.ts`) reads
 every project store → zipped (`utils/zip.ts`), and with a passphrase sealed
 by `encryptBackup` (`services/storage/backupEncryption.ts`) →
-`triggerBytesDownload` (`utils/downloadJson.ts`).
+`triggerBytesDownload` (`utils/downloadJson.ts`). The hook then calls
+`recordProjectBackup` (`services/storage/repositories/projectStorage.ts`),
+which sets the project's `lastBackupAt`; the reminder rules (threshold,
+snooze, what counts as content) are in `services/backup/backupReminder.ts`.
 
 **Import.**
 
@@ -304,6 +309,9 @@ by `encryptBackup` (`services/storage/backupEncryption.ts`) →
    restored records (section 4).
 
 Tests: `services/storage/projectBackupIdRemap.test.ts`,
+`services/storage/projectBackupTimestamp.test.ts`,
+`services/backup/backupReminder.test.ts`,
+`apps/web/cypress/e2e/backup-reminder.cy.ts`,
 `services/storage/projectBackupCollisions.test.ts`,
 `apps/web/cypress/e2e/encrypted-backup.cy.ts`,
 `apps/desktop/e2e/backup-files.e2e.ts`. Manual: `docs/smoke-tests.md` § 1.

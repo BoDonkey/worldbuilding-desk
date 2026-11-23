@@ -12,6 +12,10 @@
 - Active projects now route directly into the writing workspace.
 - Scene/context drawers now default closed so the editor remains primary.
 - Scene creation, deletion, autosave, and export.
+- Backup reminder (slice 4.93). When the open project is due a backup (see
+  `PROJECT_STATUS.md`), a quiet reminder sits under the Workspace header with
+  **Back up now** and **Remind me later**. It never opens a dialog by itself
+  and never blocks the editor. It lives in `WorkspaceHeader`, not the route.
 - Rewrite beside the original (slice 4.97). Select a passage and choose
   **Rewrite beside original** in the selection menu (right-click) or the
   command palette (which uses the current selection). A panel above the

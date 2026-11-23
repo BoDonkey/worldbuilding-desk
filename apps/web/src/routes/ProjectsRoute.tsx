@@ -11,9 +11,7 @@ import {
   getDocumentsByProject,
   getEntitiesByProject,
   getRulesetByProjectId,
-  getProjectVaultState,
-  isProtectedProject,
-  exportProjectBackupZip
+  getProjectVaultState
 } from '../services/storage';
 import {getDefaultFeatureToggles} from '../projectMode';
 import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
@@ -33,6 +31,10 @@ import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useBackupPassphraseFlow} from '../hooks/useBackupPassphraseFlow';
 import {useProjectVault} from '../hooks/useProjectVault';
 import {useProjectBackupImport} from '../hooks/useProjectBackupImport';
+import {useProjectBackupExport} from '../hooks/useProjectBackupExport';
+import {useBackupReminders} from '../hooks/useBackupReminders';
+import {BackupReminder} from '../components/Backup/BackupReminder';
+import {describeLastBackup, projectHasRealContent} from '../services/backup/backupReminder';
 import {ProjectBackupImportPanel} from '../components/Projects/ProjectBackupImportPanel';
 import {LockedProjectCard, ProjectVaultActions, ProjectVaultHelp} from '../components/Projects/ProjectVaultCard';
 import {describeError} from '../services/errors';
@@ -51,7 +53,7 @@ function ProjectsRoute() {
     Map<string, WorldRuleset>
   >(new Map());
   const [projectCounts, setProjectCounts] = useState<
-    Map<string, {worldEntries: number; scenes: number}>
+    Map<string, {worldEntries: number; scenes: number; hasContent: boolean}>
   >(new Map());
   const [name, setName] = useState('');
   const [newProjectMode, setNewProjectMode] = useState<ProjectMode>('general');
@@ -68,7 +70,6 @@ function ProjectsRoute() {
   const showSampleOffer =
     projects.length <= 1 && !projects.some((project) => project.name === SAMPLE_PROJECT_NAME);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
-  const [exportingProjectId, setExportingProjectId] = useState<string | null>(null);
   const [syncingProjectId, setSyncingProjectId] = useState<string | null>(null);
   const [updatingProjectId, setUpdatingProjectId] = useState<string | null>(null);
 
@@ -90,7 +91,7 @@ function ProjectsRoute() {
     }
 
     const rulesetMap = new Map<string, WorldRuleset>();
-    const countsMap = new Map<string, {worldEntries: number; scenes: number}>();
+    const countsMap = new Map<string, {worldEntries: number; scenes: number; hasContent: boolean}>();
     for (const project of all) {
       const [ruleset, entities, documents] = await Promise.all([
         getRulesetByProjectId(project.id),
@@ -103,7 +104,8 @@ function ProjectsRoute() {
       }
       countsMap.set(project.id, {
         worldEntries: entities.length,
-        scenes: documents.length
+        scenes: documents.length,
+        hasContent: projectHasRealContent({documents, entityCount: entities.length})
       });
     }
     setProjectRulesets(rulesetMap);
@@ -336,32 +338,23 @@ function ProjectsRoute() {
     }
   };
 
-  const handleExportProjectBackup = async (project: Project) => {
-    const choice = await chooseExport(project.name, {projectProtected: isProtectedProject(project.id)});
-    if (!choice) return;
-    setExportingProjectId(project.id);
+  const {exportBackup, exportingProjectId} = useProjectBackupExport({
+    chooseExport,
+    onMessage: setFeedback,
+    onBackedUp: updateProjectState
+  });
+  const handleExportProjectBackup = (project: Project) => {
     setFeedback(null);
-    try {
-      const result = await exportProjectBackupZip({
-        projectId: project.id,
-        projectName: project.name,
-        passphrase: choice.passphrase
-      });
-      setFeedback({
-        tone: 'success',
-        message: result.encrypted
-          ? `Encrypted backup exported for "${project.name}". Keep its passphrase somewhere safe; it cannot be recovered.`
-          : `Backup exported for "${project.name}".`
-      });
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to export project backup.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setExportingProjectId(null);
-    }
+    return exportBackup(project);
   };
 
+  const backupReminders = useBackupReminders();
+  const dueBackupProjects = projects.filter(
+    (project) =>
+      vault.vaultStateOf(project.id) !== 'locked' &&
+      projectCounts.get(project.id)?.hasContent === true &&
+      backupReminders.isTimeDue(project)
+  );
 
   return (
     <section className={styles.page}>
@@ -425,6 +418,18 @@ function ProjectsRoute() {
           </div>
         </section>
       )}
+
+      {dueBackupProjects.map((project) => (
+        <BackupReminder
+          key={project.id}
+          project={project}
+          now={backupReminders.now}
+          storageNote={backupReminders.storageNote}
+          busy={exportingProjectId === project.id}
+          onBackUp={() => void handleExportProjectBackup(project)}
+          onSnooze={() => backupReminders.snooze(project.id)}
+        />
+      ))}
 
       <ProjectBackupImportPanel projects={projects} backupImport={backupImport} />
 
@@ -521,6 +526,7 @@ function ProjectsRoute() {
                 </span>
               )}
               </div>
+              <div className={styles.backupMeta}>{describeLastBackup(project.lastBackupAt, backupReminders.now)}</div>
               {hasRuleset && ruleset && (
                 <div className={styles.projectStats}>
                   <strong>Ruleset:</strong> {ruleset.name}
