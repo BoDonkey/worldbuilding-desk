@@ -27,6 +27,7 @@ export interface AISwitches {
 export const FEATURE_SWITCH: Record<ConsultationFeature, AISwitch> = {
   assistant: 'coaching',
   'writing-coach': 'coaching',
+  'corkboard-planning': 'coaching',
   'progression-continuity': 'coaching',
   'workspace-context': 'coaching',
   'canon-decision': 'coaching',

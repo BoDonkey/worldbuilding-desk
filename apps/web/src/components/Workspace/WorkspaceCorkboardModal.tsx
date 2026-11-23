@@ -74,6 +74,11 @@ export const WorkspaceCorkboardModal = ({
             <p className={workspaceStyles.modalDescription}>
               Quick access to the same chapter cards, beats, and scene links as Planning → Corkboard.
             </p>
+            <p className={workspaceStyles.modalDescription}>
+              A card is your plan for a chapter; its scenes are separate documents.{' '}
+              <strong>Link current scene</strong> links only the scene open in the editor to a card.
+              A chapter can link several scenes.
+            </p>
           </div>
           <div className={styles.corkboardHeaderActions}>
             <button type='button' className={workspaceStyles.modalSecondaryAction}

@@ -426,4 +426,5 @@ exports are ordinary downloads wherever the author saves them.
   (`projectMode.ts`); decides which systems are on.
 - **World Canvas.** The planning space: Core Idea, sketches, Open Threads.
   Never canon.
-- **Corkboard.** Chapter cards linked to scenes.
+- **Corkboard.** Chapter cards linked to scenes. Its read-only planning chat
+  (`useCorkboardPlanningChat`) talks about the outline.
