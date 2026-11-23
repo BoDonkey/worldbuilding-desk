@@ -378,6 +378,27 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   sealed, so its card shows no backup time. "Exported" means the download
   was handed to the browser or the desktop save; a cancelled save dialog is
   not detected.
+- Scheduled automatic backups, desktop only (slice 4.94). Settings → Backups
+  → Automatic backups picks a folder through the native dialog (refused if it
+  is inside SagaSpine's data folder or holds it), a schedule (off, once a
+  day, or when SagaSpine closes), and copies to keep per project (default
+  10). Each run builds the same zip as Export Backup for every project whose
+  snapshot changed since its last automatic backup to that folder (a SHA-256
+  fingerprint of the snapshot without its timestamps, kept on this computer
+  per folder), writes `<folder>/<project>/<project>-backup-<date-time>.zip`,
+  prunes the oldest files matching that pattern beyond the limit, and
+  updates the project's last-backup time. Protected projects are skipped and
+  listed as skipped, and keep their 4.93 reminders. Daily runs check 15
+  seconds after start, every ten minutes, and when the settings change; on
+  close the main process holds the window up to two minutes while the
+  renderer runs (skipped when restarting into an update). Settings shows the
+  last run (written, unchanged, skipped, failed) and **Back up changed
+  projects now**. A missing folder pauses runs without creating it, and
+  Settings and the backup reminder say why. The main process writes only
+  inside the chosen folder (file name pattern, resolved-path and symlink
+  checks, `.partial` then rename); the browser build does not offer it.
+  The project folder is named from the project's name, so a renamed project
+  starts a new folder and its old one is no longer pruned.
 - Project deletion commits its manifest, project-owned main-database records,
   and migration backups in one transaction. A failed primary deletion rolls
   back those records and restores the ruleset from its separate database.

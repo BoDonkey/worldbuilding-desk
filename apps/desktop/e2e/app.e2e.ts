@@ -14,6 +14,7 @@ test('loads the bundled renderer from disk under its Content-Security-Policy', a
   expect(
     await page.evaluate(() => Object.keys((window as unknown as {electronAPI: object}).electronAPI).sort())
   ).toEqual([
+    'backups',
     'llmCancelStream',
     'llmComplete',
     'llmLocalContextSize',
@@ -24,6 +25,12 @@ test('loads the bundled renderer from disk under its Content-Security-Policy', a
     'providerKeys',
     'updates'
   ]);
+  // Scheduled backups (4.94): no method takes a folder or path.
+  expect(
+    await page.evaluate(() =>
+      Object.keys((window as unknown as {electronAPI: {backups: object}}).electronAPI.backups).sort()
+    )
+  ).toEqual(['chooseFolder', 'closeRunFinished', 'get', 'onChange', 'onRunBeforeClose', 'recordRun', 'setPreferences', 'write']);
 
   expect(desktop.rendererErrors).toEqual([]);
 });

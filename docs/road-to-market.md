@@ -345,7 +345,7 @@ messages).
 | 4.91 | Focus mode | 4 | M | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.92 | Typewriter scrolling | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.93 | Backup reminder | 4 | S | Done `93b9893` |
-| 4.94 | Scheduled automatic backups to a chosen folder (desktop) | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.93, before 6.1 |
+| 4.94 | Scheduled automatic backups to a chosen folder (desktop) | 4 | M | WIP — pre-beta (author decision, 2026-11-22); after 4.93, before 6.1 |
 | 4.95 | Scene snapshots: save, compare, restore | 4 | M | Done `0d19700` |
 | 4.96 | Draft milestones (snapshot the whole manuscript) | 4 | S | Done `7142b55` |
 | 4.97 | Rewrite beside the original | 4 | M | Done `a22653f` |

@@ -89,6 +89,8 @@ export class UpdateController {
       supported: boolean;
       installMode: UpdateSnapshot['installMode'];
       log?: (message: string, error: unknown) => void;
+      /** Runs just before restarting into an update (the backup close guard steps aside). */
+      beforeInstall?: () => void;
     }
   ) {
     this.snapshot = {
@@ -162,6 +164,7 @@ export class UpdateController {
   /** Restarts into the downloaded update. Returns false when none is ready. */
   install(): boolean {
     if (this.snapshot.status.state !== 'downloaded') return false;
+    this.params.beforeInstall?.();
     this.params.updater.quitAndInstall(false, true);
     return true;
   }

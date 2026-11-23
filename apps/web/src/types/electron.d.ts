@@ -52,7 +52,51 @@ declare global {
     onChange: (callback: (snapshot: ElectronUpdateSnapshot) => void) => () => void;
   }
 
+  /** Mirrors the desktop main process backup types (slice 4.94). */
+  type ElectronBackupSchedule = 'off' | 'daily' | 'on-close';
+
+  interface ElectronBackupRunItem {
+    projectName: string;
+    fileName?: string;
+    message?: string;
+  }
+
+  interface ElectronBackupRunResult {
+    finishedAt: number;
+    status: 'completed' | 'folder-missing';
+    written: ElectronBackupRunItem[];
+    skipped: ElectronBackupRunItem[];
+    failed: ElectronBackupRunItem[];
+    unchanged: number;
+  }
+
+  interface ElectronBackupSnapshot {
+    folder: string | null;
+    folderAvailable: boolean;
+    schedule: ElectronBackupSchedule;
+    keep: number;
+    lastRun: ElectronBackupRunResult | null;
+  }
+
+  type ElectronBackupWriteResult =
+    | {ok: true; fileName: string; pruned: string[]}
+    | {ok: false; reason: 'no-folder' | 'folder-missing'};
+
+  /** Scheduled backups to a folder the author picks; the renderer never names a path. */
+  interface ElectronBackupsAPI {
+    get: () => Promise<ElectronBackupSnapshot>;
+    chooseFolder: () => Promise<{snapshot: ElectronBackupSnapshot; error?: string}>;
+    setPreferences: (patch: {schedule?: ElectronBackupSchedule; keep?: number}) => Promise<ElectronBackupSnapshot>;
+    write: (request: {fileName: string; bytes: Uint8Array}) => Promise<ElectronBackupWriteResult>;
+    recordRun: (result: ElectronBackupRunResult) => Promise<ElectronBackupSnapshot>;
+    closeRunFinished: () => Promise<void>;
+    onChange: (callback: (snapshot: ElectronBackupSnapshot) => void) => () => void;
+    onRunBeforeClose: (callback: () => void) => () => void;
+  }
+
   interface ElectronAPI {
+    /** Scheduled backups (4.94); older desktop builds lack it. */
+    backups?: ElectronBackupsAPI;
     /** App updates; older desktop builds lack it. */
     updates?: ElectronUpdatesAPI;
     /** Older desktop builds lack it. */

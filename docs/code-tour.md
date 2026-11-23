@@ -146,7 +146,7 @@ repositories fire after a write, so open screens can reload.
 
 | Path | Holds |
 |---|---|
-| `apps/desktop/src/main/` | Electron main process: window, IPC, providers, key vault, data folder, updates |
+| `apps/desktop/src/main/` | Electron main process: window, IPC, providers, key vault, data folder, updates, scheduled backups |
 | `apps/desktop/e2e/` | Playwright tests against the packaged desktop app |
 | `apps/web/cypress/e2e/` | Cypress browser tests, one spec per workflow |
 | `packages/rules-engine/src/` | Rules and state core (`packages/rules-engine/src/manuscript/`, `packages/rules-engine/src/engine/`; `packages/rules-engine/src/experimental/` is not exported) |
@@ -286,6 +286,20 @@ by `encryptBackup` (`services/storage/backupEncryption.ts`) →
 `recordProjectBackup` (`services/storage/repositories/projectStorage.ts`),
 which sets the project's `lastBackupAt`; the reminder rules (threshold,
 snooze, what counts as content) are in `services/backup/backupReminder.ts`.
+
+**Scheduled backups (desktop).** `useScheduledBackupRunner`
+(`hooks/useScheduledBackups.ts`, mounted in `App.tsx`'s shell) decides when
+a daily run is due (`isDailyBackupDue`) and answers the main process's
+on-close request → `runScheduledBackups`
+(`services/backup/scheduledBackups.ts`) builds each changed project's zip
+with `buildProjectBackup` (`services/storage/projectBackupExport.ts`),
+skips protected projects, and sends the bytes through
+`window.electronAPI.backups.write` → `setupScheduledBackupHandlers`
+(`apps/desktop/src/main/scheduledBackupIpc.ts`) → `writeBackupFile`
+(`apps/desktop/src/main/scheduledBackups.ts`), which checks the path,
+writes, and calls `pruneBackups`. `BackupOnCloseGuard` holds the window
+while the on-close run finishes. Settings: `ScheduledBackupSettings`
+(`components/Settings/ScheduledBackupSettings.tsx`).
 
 **Import.**
 

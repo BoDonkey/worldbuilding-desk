@@ -100,6 +100,15 @@ Procedure:
     show the reminder; **Remind me later** hides it for a day across reloads,
     and **Back up now** opens the export dialog and clears it. The copy
     imported in step 3 shows the backup's date, not `Never backed up`.
+13. Scheduled backups (slice 4.94, desktop). Settings → Backups → **Choose
+    folder…** a synced folder, set **Back up** to **Once a day** and copies
+    to 3. Within a few seconds the status says a project was backed up and
+    `<folder>/<project>/` holds a `-backup-<date-time>.zip`; import it as a
+    new project and the count check passes. **Back up changed projects now**
+    without edits says `unchanged`. A protected project is listed as
+    skipped. Switch to **When SagaSpine closes**, edit a scene, quit: a new
+    file appears and no more than 3 are kept. Rename the folder and reopen
+    Settings: it says backups are paused.
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated
