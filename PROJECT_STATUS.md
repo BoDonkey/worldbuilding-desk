@@ -362,6 +362,22 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   the envelope by content, ask for the passphrase, and read nothing until it
   opens; a wrong passphrase keeps the dialog open with a plain error, a newer
   envelope asks for an app update, and plain backups work as before.
+- Backup reminder (slice 4.93). Each project records when its last backup
+  was exported (`lastBackupAt` on the project record, never bumping
+  `updatedAt`; a save of an older copy keeps the later time) and the backup
+  file carries that time, so a restored project shows when its backup was
+  made. Project cards show **Last backup: N days ago** or **Never backed
+  up**. Once a project has a world record or a scene with words in it and its
+  last backup (or creation) is older than the threshold, a quiet reminder on
+  Projects and under the Workspace header offers **Back up now** (the export
+  dialog) and **Remind me later** (one day). Settings → Backups sets 3, 7
+  (default), 14, or 30 days, or turns reminders off; the choice and snoozes
+  are kept on this computer. The web build asks the browser once per session
+  to keep its data (`navigator.storage.persist()`) and, if refused, says in
+  the reminder that the browser may clear it. A locked project's record is
+  sealed, so its card shows no backup time. "Exported" means the download
+  was handed to the browser or the desktop save; a cancelled save dialog is
+  not detected.
 - Project deletion commits its manifest, project-owned main-database records,
   and migration backups in one transaction. A failed primary deletion rolls
   back those records and restores the ruleset from its separate database.

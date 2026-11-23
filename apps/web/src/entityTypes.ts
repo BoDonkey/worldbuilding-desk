@@ -17,6 +17,8 @@ export interface Project {
   inheritShodh?: boolean;
   canonVersion?: string;
   lastSyncedCanon?: string;
+  /** When a backup of this project last succeeded (4.93). Never bumps `updatedAt`. */
+  lastBackupAt?: number;
   createdAt: number;
   updatedAt: number;
 }

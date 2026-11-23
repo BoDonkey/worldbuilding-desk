@@ -94,6 +94,13 @@ Procedure:
    **Snapshots** lists it under **Passage alternatives**, and **Open beside
    original** opens it beside that paragraph.
 
+12. Backup reminder (slice 4.93). After step 2 the project card says
+    `Last backup: today`. In a project with writing and no backup for longer
+    than the Settings → Backups threshold, Projects and the top of Workspace
+    show the reminder; **Remind me later** hides it for a day across reloads,
+    and **Back up now** opens the export dialog and clears it. The copy
+    imported in step 3 shows the backup's date, not `Never backed up`.
+
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated
 Scratchpad, Corkboard cards missing plot points, order, or scene links, changed/missing
