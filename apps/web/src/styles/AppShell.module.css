@@ -23,3 +23,9 @@
     padding: 1rem 1rem calc(66px + 1rem) 1rem;
   }
 }
+
+/* Focus mode (4.91) hides the rail and the mobile bar, so drop their room. */
+:global(:root[data-focus-mode='on']) .main {
+  padding-left: 1.25rem;
+  padding-bottom: 1rem;
+}

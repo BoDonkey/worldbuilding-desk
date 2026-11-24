@@ -80,6 +80,7 @@ export function useCurrentSceneFind(params: {
       if (
         (event.metaKey || event.ctrlKey) &&
         !event.altKey &&
+        !event.shiftKey && // Cmd/Ctrl+Shift+F is focus mode
         event.key.toLocaleLowerCase() === 'f'
       ) {
         event.preventDefault();

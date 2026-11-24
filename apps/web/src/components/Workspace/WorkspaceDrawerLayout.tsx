@@ -3,6 +3,7 @@ import styles from './WorkspaceDrawer.module.css';
 import {WorkspaceContextDrawer} from './WorkspaceContextDrawer';
 import {WorkspaceDrawerPanel} from './WorkspaceDrawerPanel';
 import {WorkspaceSceneDrawer} from './WorkspaceSceneDrawer';
+import {useWorkspaceFocusMode} from '../../hooks/useWorkspaceFocusMode';
 
 interface WorkspaceDrawerLayoutProps {
   children: ReactNode;
@@ -28,12 +29,18 @@ export const WorkspaceDrawerLayout = ({
   closeContextDrawer,
   sceneDrawerProps,
   contextDrawerProps
-}: WorkspaceDrawerLayoutProps) => (
+}: WorkspaceDrawerLayoutProps) => {
+  const focusMode = useWorkspaceFocusMode({isNarrowViewport, closeSceneDrawer, closeContextDrawer});
+  return (
   <>
+    <p className={styles.visuallyHidden} role='status' aria-live='polite'>
+      {focusMode.announcement}
+    </p>
     <div className={styles.workspaceFrame} data-wbd-scroll-key='workspace-frame'>
       <div className={styles.workspaceLayout} data-wbd-scroll-key='workspace-layout'>
         {isSceneDrawerOpen && !isNarrowViewport && (
           <aside
+            data-focus-hide=''
             className={styles.sceneDrawerDesktop}
             data-wbd-scroll-key='workspace-scene-drawer'
           >
@@ -42,7 +49,7 @@ export const WorkspaceDrawerLayout = ({
         )}
         {children}
         {isContextDrawerOpen && !isNarrowViewport && (
-          <aside className={styles.contextDrawerDesktop}>
+          <aside className={styles.contextDrawerDesktop} data-focus-hide=''>
             <WorkspaceContextDrawer {...contextDrawerProps} />
           </aside>
         )}
@@ -74,4 +81,5 @@ export const WorkspaceDrawerLayout = ({
       </WorkspaceDrawerPanel>
     )}
   </>
-);
+  );
+};

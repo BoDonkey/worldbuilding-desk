@@ -154,6 +154,7 @@ export function StatPinPanel({isRailCollapsed}: {isRailCollapsed: boolean}) {
 
   return (
     <aside
+      data-focus-hide=''
       className={`${styles.panel} ${isRailCollapsed ? styles.railCollapsed : styles.railExpanded}`}
       aria-label='Pinned stats'
       style={avoidBottom ? {bottom: `${avoidBottom}px`} : undefined}

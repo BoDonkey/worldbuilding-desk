@@ -22,7 +22,8 @@ export type WorkspaceCommandId =
   | 'export-docx'
   | 'export-epub'
   | 'extract-memory'
-  | 'toggle-ai-panel';
+  | 'toggle-ai-panel'
+  | 'toggle-focus-mode';
 
 interface WorkspaceCommandDetail {
   id: WorkspaceCommandId;

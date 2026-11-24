@@ -21,3 +21,30 @@
   flex-wrap: wrap;
   padding-right: 0.45rem;
 }
+
+/* Focus mode (4.91): only the word count and a way out. */
+.focusBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.focusBar button {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.focusBar button:hover,
+.focusBar button:focus-visible {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+}

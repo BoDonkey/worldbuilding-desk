@@ -72,6 +72,7 @@ export function EditorSelectionMenu({
   return (
     <div
       ref={menuRef}
+      data-escape-layer=''
       className={styles.selectionBubble}
       style={{
         left: `${selection.x}px`,

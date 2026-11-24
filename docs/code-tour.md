@@ -383,6 +383,7 @@ exports are ordinary downloads wherever the author saves them.
 | A project won't open after an update | `services/storage/projectSchemaMigrations.ts` | `services/storage/projectSchemaMigrations.test.ts` |
 | An error message is vague | `describeError` (`services/errors/describeError.ts`); recent errors in the diagnostics buffer | `apps/web/cypress/e2e/local-diagnostics.cy.ts` |
 | Colors wrong in one theme | Tokens in `styles/theme.css` | `styles/themeTokens.test.ts` |
+| Focus mode hides too much, too little, or won't leave | `hooks/useWorkspaceFocusMode.ts` (`shouldLeaveOnEscape`), then `[data-focus-hide]` in `styles/theme.css` | `hooks/useWorkspaceFocusMode.test.ts`, `apps/web/cypress/e2e/focus-mode.cy.ts` |
 | An editor appearance setting is wrong or lost on reload | `services/editor/editorAppearance.ts`, `contexts/AccessibilityContext.tsx`, then the `data-editor-*` rules in `styles/theme.css` | `services/editor/editorAppearance.test.ts`, `apps/web/cypress/e2e/editor-text-options.cy.ts` |
 | CI ran more (or fewer) browser tests than expected | `scripts/ci/plan.mjs` | `scripts/ci/plan.test.mjs` |
 

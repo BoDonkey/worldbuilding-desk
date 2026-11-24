@@ -79,6 +79,7 @@ export function ContextPopover({
   return (
     <div
       ref={popoverRef}
+      data-escape-layer=''
       className={`${styles.popover} ${tone === 'neutral' ? styles.popoverNeutral : ''}`}
       {...(focusOnOpen
         ? {

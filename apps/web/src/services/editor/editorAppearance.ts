@@ -21,6 +21,10 @@ export type EditorLineHeight = (typeof EDITOR_LINE_HEIGHTS)[number];
 export const EDITOR_PARAGRAPH_STYLES = ['spaced', 'indented'] as const;
 export type EditorParagraphStyle = (typeof EDITOR_PARAGRAPH_STYLES)[number];
 
+/** Whether the Workspace opens in focus mode (4.91). */
+export const FOCUS_MODE_STARTS = ['off', 'on'] as const;
+export type FocusModeStart = (typeof FOCUS_MODE_STARTS)[number];
+
 /** localStorage keys. The older ones predate this module and keep their names. */
 export const APPEARANCE_KEYS = {
   editorFont: 'editorFont',
@@ -28,7 +32,8 @@ export const APPEARANCE_KEYS = {
   editorWidth: 'editorWidth',
   editorSurface: 'editorSurface',
   editorLineHeight: 'editorLineHeight',
-  editorParagraphStyle: 'editorParagraphStyle'
+  editorParagraphStyle: 'editorParagraphStyle',
+  focusModeStart: 'focusModeStart'
 } as const;
 
 export const APPEARANCE_DEFAULTS = {
@@ -36,7 +41,8 @@ export const APPEARANCE_DEFAULTS = {
   editorWidth: 'focused' as EditorWidth,
   editorSurface: 'paper' as EditorSurface,
   editorLineHeight: 'comfortable' as EditorLineHeight,
-  editorParagraphStyle: 'spaced' as EditorParagraphStyle
+  editorParagraphStyle: 'spaced' as EditorParagraphStyle,
+  focusModeStart: 'off' as FocusModeStart
 };
 
 /** The Custom font falls back to this stack when the named font is not installed. */

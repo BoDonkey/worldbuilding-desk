@@ -104,3 +104,8 @@
 .modalSecondaryAction {
   background: transparent;
 }
+
+/* Focus mode (4.91) leaves only the scene text. */
+:global(:root[data-focus-mode='on']) .editorTitleRow {
+  display: none;
+}

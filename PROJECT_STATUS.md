@@ -141,6 +141,19 @@ Under the hood, the app still includes rich systems for world data, rules, chara
     preview line, says when the font was not found, and falls back to the
     Serif stack. There is no system font picker: one would need the browser's
     local-fonts permission, which was not tried in the desktop app.
+- Focus mode (slice 4.91) hides everything in Workspace but the scene and a
+  word count with **Leave focus mode**: the navigation rail and mobile bar,
+  pinned stats, header and banners, scene title, both drawers, the editor
+  toolbar, and the footer. Turn it on with the footer's **Focus mode** button
+  (`aria-pressed`), the command palette, or Cmd/Ctrl+Shift+F (Find's Cmd/Ctrl+F
+  now ignores Shift); Escape or the button leaves, and the change is announced.
+  Panels are hidden by CSS (`data-focus-mode` on the root, `[data-focus-hide]`),
+  never unmounted, so autosave, review, highlights, and the drawers' open state
+  carry on; on a narrow screen, entering closes the drawer overlays. Escape is
+  left to any open dialog, menu, popover, or selection menu first. Whether
+  Workspace opens in focus mode is a per-device setting in Editor Appearance
+  (off by default); leaving Workspace always turns it off
+  (`hooks/useWorkspaceFocusMode.ts`, `store/focusModeStore.ts`).
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
