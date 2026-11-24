@@ -28,6 +28,7 @@ import type {AIProviderId} from '../../entityTypes';
 export type ConsultationFeature =
   | 'assistant'
   | 'writing-coach'
+  | 'corkboard-planning'
   | 'progression-continuity'
   | 'workspace-context'
   | 'canon-decision'
@@ -44,6 +45,7 @@ export type ConsultationFeature =
 const FEATURE_LABELS: Record<ConsultationFeature, string> = {
   assistant: 'Writing assistant',
   'writing-coach': 'Writing coach',
+  'corkboard-planning': 'Corkboard planning chat',
   'progression-continuity': 'Progression continuity',
   'workspace-context': 'Workspace context actions',
   'canon-decision': 'Canon decisions',

@@ -507,8 +507,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ### AI and Retrieval
 - Per-project AI switches (5.18) at the top of **Settings → AI Settings**:
   **AI coaching** (AI that reads and responds and never writes into the
-  manuscript: assistant chat and prompt tools, writing coach, Ask your
-  project, model-assisted canon check, canon decision consultations,
+  manuscript: assistant chat and prompt tools, writing coach, Corkboard
+  planning chat, Ask your project, model-assisted canon check, canon decision consultations,
   progression continuity, Lore Inspector consultations, World Canvas
   brainstorming and coaching, Talk to a character, Character from a
   description, and local AI review annotations) and **AI prose** (Preview
@@ -577,6 +577,21 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   existing runaway guard, and writing-coach requests record
   `writing-coach`. Both assistant surfaces show the same point-of-use route and
   budget disclosure beside Send.
+- **Corkboard planning chat** (4.85): a read-only chat panel under the
+  Corkboard's planning view. **Whole board** sends every chapter card in order
+  (title, status, summary, plot point titles, linked scene titles and word
+  counts); **This card** sends the selected card in full (with plot point
+  notes) and its neighbours' titles and summaries. Scene prose is sent only
+  when the author ticks **Include the opening of each linked scene** (600
+  characters each, 3,000 in all). Every part is bounded
+  (`services/corkboard/planningChat.ts`). Retrieved World Bible records and
+  accepted facts join with trust-tier labels as in the assistant, but the
+  assistant's factual-question gate is not applied, because it refused
+  ordinary planning questions. Requests run through the assistant request
+  policy under `corkboard-planning` (coaching switch, route disclosure,
+  budget, Stop). The conversation is session-local and per project. Replies
+  never change cards, canon, or manuscript text; proposing outline changes is
+  4.86.
 - Every other AI feature (Character Lab, Scene Draft, World Canvas coaching and
   brainstorm, Corkboard coach and progression continuity, Canon Decisions,
   model canon check, custom selection actions) sends its request through

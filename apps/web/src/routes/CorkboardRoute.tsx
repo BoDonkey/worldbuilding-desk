@@ -12,6 +12,7 @@ import {useStoryDashboardData} from '../hooks/useStoryDashboardData';
 import {useProgressionContinuityCandidates} from '../hooks/useProgressionContinuityCandidates';
 import {StoryDashboard} from '../components/Corkboard/StoryDashboard';
 import {ChapterCardSceneLinks} from '../components/Corkboard/ChapterCardSceneLinks';
+import {CorkboardPlanningChat} from '../components/Corkboard/CorkboardPlanningChat';
 import {removeSceneLink, toggleSceneLink} from '../services/workspace/chapterCardSceneLinks';
 import {canDraftScenes, isSceneDraftable} from '../services/sceneDraft/sceneDraft';
 import {getProjectCapabilities} from '../projectMode';
@@ -286,6 +287,7 @@ function CorkboardRoute() {
           </button>
         </div>
       ) : (
+        <>
         <div
           className={`${styles.layout} ${
             isChapterRailCollapsed ? styles.layoutRailCollapsed : ''
@@ -492,6 +494,14 @@ function CorkboardRoute() {
             </div>
           )}
         </div>
+        <CorkboardPlanningChat
+          projectId={activeProject.id}
+          aiConfig={projectSettings?.aiSettings}
+          cards={corkboardCards}
+          documents={documents}
+          selectedCard={selectedCard}
+        />
+        </>
       )}
 
       {confirmDialog}

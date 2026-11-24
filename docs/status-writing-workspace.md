@@ -281,6 +281,9 @@
   one card opens directly in the quick modal with its title focused, while the
   dedicated Corkboard link selects the same card. Scenes linked to several
   cards expose a compact expandable chip row without changing editor width.
+  The quick modal says what a card is (4.85): the plan for a chapter, with
+  scenes as separate documents, and **Link current scene** links only the
+  open scene.
 - Corkboard chapter-card records are included in project backup snapshots and restore paths.
 - Corkboard now includes a read-only Story Dashboard derived entirely from
   saved manuscript text, accepted state events, configured rules, and explicit
