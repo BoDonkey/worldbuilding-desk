@@ -209,12 +209,34 @@
   --editor-font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
+:root[data-editor-font="book"] {
+  --editor-font-family: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+}
+
+:root[data-editor-font="mono"] {
+  --editor-font-family: "iA Writer Mono S", "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+/* Custom: the typed font name, then the Serif stack. AccessibilityContext sets
+   --editor-custom-font-family on the root element; this is the default. */
+:root {
+  --editor-custom-font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+}
+
+:root[data-editor-font="custom"] {
+  --editor-font-family: var(--editor-custom-font-family);
+}
+
 :root[data-editor-font="sans"] {
   --editor-font-family: "Avenir Next", "Segoe UI", Helvetica, sans-serif;
 }
 
 :root[data-editor-font="dyslexic"] {
   --editor-font-family: "OpenDyslexic", "Atkinson Hyperlegible", "Verdana", sans-serif;
+}
+
+:root[data-editor-width="narrow"] {
+  --editor-max-width: 640px;
 }
 
 :root[data-editor-width="focused"] {
