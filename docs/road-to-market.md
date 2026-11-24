@@ -343,7 +343,7 @@ messages).
 | 4.89 | Spacing pass: stacked controls and inline labels | 4 | XS | Done e388b08 — from 2026-11-22 dogfood |
 | 4.90 | Editor text options: paragraph style, narrow width, more fonts | 4 | S | Done d811f0d — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.91 | Focus mode | 4 | M | Done b6faa2e — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
-| 4.92 | Typewriter scrolling | 4 | S | WIP — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
+| 4.92 | Typewriter scrolling | 4 | S | Done 2d9e3e9 — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.93 | Backup reminder | 4 | S | Done `93b9893` |
 | 4.94 | Scheduled automatic backups to a chosen folder (desktop) | 4 | M | Done `9d6e949` |
 | 4.95 | Scene snapshots: save, compare, restore | 4 | M | Done `0d19700` |
