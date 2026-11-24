@@ -1,17 +1,58 @@
 import React from 'react';
 import {useAccessibility} from '../../contexts/AccessibilityContext';
 import styles from '../../assets/components/EditorAppearanceControl.module.css';
+import {CustomFontField} from './CustomFontField';
+
+interface Choice<T extends string> {
+  value: T;
+  label: string;
+}
+
+function ChoiceGroup<T extends string>({
+  label,
+  choices,
+  value,
+  onChange
+}: {
+  label: string;
+  choices: Choice<T>[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className={styles.group} role='group' aria-label={label}>
+      <span className={styles.label}>{label}</span>
+      <div className={styles.buttonGroup}>
+        {choices.map((choice) => (
+          <button
+            key={choice.value}
+            type='button'
+            onClick={() => onChange(choice.value)}
+            className={value === choice.value ? styles.active : ''}
+            aria-pressed={value === choice.value}
+          >
+            {choice.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export const EditorAppearanceControl: React.FC = () => {
   const {
     editorFont,
     setEditorFont,
+    editorCustomFont,
+    setEditorCustomFont,
     editorWidth,
     setEditorWidth,
     editorSurface,
     setEditorSurface,
     editorLineHeight,
     setEditorLineHeight,
+    editorParagraphStyle,
+    setEditorParagraphStyle,
     sourceNoteView,
     setSourceNoteView
   } = useAccessibility();
@@ -24,139 +65,79 @@ export const EditorAppearanceControl: React.FC = () => {
         view Source Notes open in. The rest of the app is unaffected.
       </p>
 
-      <div className={styles.group}>
-        <span className={styles.label}>Text style</span>
-        <div className={styles.buttonGroup}>
-          <button
-            type='button'
-            onClick={() => setEditorFont('serif')}
-            className={editorFont === 'serif' ? styles.active : ''}
-            aria-pressed={editorFont === 'serif'}
-          >
-            Serif
-          </button>
-          <button
-            type='button'
-            onClick={() => setEditorFont('sans')}
-            className={editorFont === 'sans' ? styles.active : ''}
-            aria-pressed={editorFont === 'sans'}
-          >
-            Sans
-          </button>
-          <button
-            type='button'
-            onClick={() => setEditorFont('dyslexic')}
-            className={editorFont === 'dyslexic' ? styles.active : ''}
-            aria-pressed={editorFont === 'dyslexic'}
-          >
-            Dyslexic
-          </button>
-        </div>
-      </div>
+      <ChoiceGroup
+        label='Text style'
+        value={editorFont}
+        onChange={setEditorFont}
+        choices={[
+          {value: 'serif', label: 'Serif'},
+          {value: 'book', label: 'Book'},
+          {value: 'sans', label: 'Sans'},
+          {value: 'mono', label: 'Mono'},
+          {value: 'dyslexic', label: 'Dyslexic'},
+          {value: 'custom', label: 'Custom'}
+        ]}
+      />
+      {editorFont === 'custom' && (
+        <CustomFontField value={editorCustomFont} onChange={setEditorCustomFont} />
+      )}
 
-      <div className={styles.group}>
-        <span className={styles.label}>Reading width</span>
-        <div className={styles.buttonGroup}>
-          <button
-            type='button'
-            onClick={() => setEditorWidth('focused')}
-            className={editorWidth === 'focused' ? styles.active : ''}
-            aria-pressed={editorWidth === 'focused'}
-          >
-            Focused
-          </button>
-          <button
-            type='button'
-            onClick={() => setEditorWidth('wide')}
-            className={editorWidth === 'wide' ? styles.active : ''}
-            aria-pressed={editorWidth === 'wide'}
-          >
-            Wide
-          </button>
-        </div>
-      </div>
+      <ChoiceGroup
+        label='Reading width'
+        value={editorWidth}
+        onChange={setEditorWidth}
+        choices={[
+          {value: 'narrow', label: 'Narrow'},
+          {value: 'focused', label: 'Focused'},
+          {value: 'wide', label: 'Wide'}
+        ]}
+      />
 
-      <div className={styles.group}>
-        <span className={styles.label}>Line height</span>
-        <div className={styles.buttonGroup}>
-          <button
-            type='button'
-            onClick={() => setEditorLineHeight('compact')}
-            className={editorLineHeight === 'compact' ? styles.active : ''}
-            aria-pressed={editorLineHeight === 'compact'}
-          >
-            Compact
-          </button>
-          <button
-            type='button'
-            onClick={() => setEditorLineHeight('comfortable')}
-            className={editorLineHeight === 'comfortable' ? styles.active : ''}
-            aria-pressed={editorLineHeight === 'comfortable'}
-          >
-            Comfortable
-          </button>
-          <button
-            type='button'
-            onClick={() => setEditorLineHeight('airy')}
-            className={editorLineHeight === 'airy' ? styles.active : ''}
-            aria-pressed={editorLineHeight === 'airy'}
-          >
-            Airy
-          </button>
-        </div>
-      </div>
+      <ChoiceGroup
+        label='Line height'
+        value={editorLineHeight}
+        onChange={setEditorLineHeight}
+        choices={[
+          {value: 'compact', label: 'Compact'},
+          {value: 'comfortable', label: 'Comfortable'},
+          {value: 'airy', label: 'Airy'}
+        ]}
+      />
 
-      <div className={styles.group}>
-        <span className={styles.label}>Editor surface</span>
-        <div className={styles.buttonGroup}>
-          <button
-            type='button'
-            onClick={() => setEditorSurface('paper')}
-            className={editorSurface === 'paper' ? styles.active : ''}
-            aria-pressed={editorSurface === 'paper'}
-          >
-            Paper
-          </button>
-          <button
-            type='button'
-            onClick={() => setEditorSurface('mist')}
-            className={editorSurface === 'mist' ? styles.active : ''}
-            aria-pressed={editorSurface === 'mist'}
-          >
-            Mist
-          </button>
-          <button
-            type='button'
-            onClick={() => setEditorSurface('contrast')}
-            className={editorSurface === 'contrast' ? styles.active : ''}
-            aria-pressed={editorSurface === 'contrast'}
-          >
-            Contrast
-          </button>
-        </div>
-      </div>
+      <ChoiceGroup
+        label='Paragraphs'
+        value={editorParagraphStyle}
+        onChange={setEditorParagraphStyle}
+        choices={[
+          {value: 'spaced', label: 'Spaced'},
+          {value: 'indented', label: 'Indented'}
+        ]}
+      />
+      <p className={styles.helper}>
+        Indented starts each paragraph with a first-line indent and no gap, like a printed
+        book. It changes the manuscript and Source Notes editors only, not exports.
+      </p>
 
-      <div className={styles.group}>
-        <span className={styles.label}>Source Notes open in</span>
-        <div className={styles.buttonGroup}>
-          <button
-            type='button'
-            onClick={() => setSourceNoteView('visual')}
-            className={sourceNoteView === 'visual' ? styles.active : ''}
-            aria-pressed={sourceNoteView === 'visual'}
-          >
-            Visual editor
-          </button>
-          <button
-            type='button'
-            onClick={() => setSourceNoteView('markdown')}
-            className={sourceNoteView === 'markdown' ? styles.active : ''}
-            aria-pressed={sourceNoteView === 'markdown'}
-          >
-            Markdown source
-          </button>
-        </div>
-      </div>
+      <ChoiceGroup
+        label='Editor surface'
+        value={editorSurface}
+        onChange={setEditorSurface}
+        choices={[
+          {value: 'paper', label: 'Paper'},
+          {value: 'mist', label: 'Mist'},
+          {value: 'contrast', label: 'Contrast'}
+        ]}
+      />
+
+      <ChoiceGroup
+        label='Source Notes open in'
+        value={sourceNoteView}
+        onChange={setSourceNoteView}
+        choices={[
+          {value: 'visual', label: 'Visual editor'},
+          {value: 'markdown', label: 'Markdown source'}
+        ]}
+      />
     </div>
   );
 };

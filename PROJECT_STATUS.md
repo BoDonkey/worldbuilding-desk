@@ -126,7 +126,21 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - The **Dyslexic** text style uses OpenDyslexic, bundled with the app
   (`@fontsource/opendyslexic`, SIL Open Font License; license shipped as
   `fonts/OpenDyslexic-LICENSE.txt`), so it no longer depends on an
-  installed font. Serif and Sans use fonts already on the computer.
+  installed font. Serif, Book, Sans, and Mono use fonts already on the
+  computer.
+- Editor text options (slice 4.90), in Settings → Reading & Editor → Editor
+  Appearance, saved per device like the other appearance settings
+  (`services/editor/editorAppearance.ts`):
+  - **Paragraphs**: Spaced (a gap between paragraphs) or Indented (a
+    first-line indent and no gap; no indent after a heading, scene break, or
+    list). Manuscript and Source Notes visual editors only; exports are
+    unchanged.
+  - **Reading width**: Narrow (640px), Focused (760px), Wide (980px).
+  - **Text style**: Book (a second serif) and Mono join Serif, Sans, and
+    Dyslexic. **Custom** takes a typed name of an installed font, shows a
+    preview line, says when the font was not found, and falls back to the
+    Serif stack. There is no system font picker: one would need the browser's
+    local-fonts permission, which was not tried in the desktop app.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
@@ -463,6 +477,24 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   utility under `More`; `/characters` is compatibility-only and redirects to
   World Bible. The former Character Tools route and independent roster UI are
   removed while storage adapters, v1 packages, and legacy resolution remain.
+- Character packages (4.87) has a picker beside Export all: a searchable
+  checklist of World Bible characters (name, aliases, whether a sheet
+  exists), Select all / Clear, a selected count, and **Export selected**
+  with or without sheets. Records in the World Bible's `Needs canon link`
+  queue are listed without a usable checkbox: a selected export carries only
+  World Bible characters, while Export all still includes them. The lead
+  says packages copy characters into another project and points series
+  authors to **Parent project**, which shares canon read-only.
+- Settings → Feature Toggles (4.88) explains each of the four toggles in one
+  sentence. In General Fiction the section is one line saying mechanics and
+  rulesets are off and to switch Project Mode to LitRPG Author; a General
+  Fiction project with any toggle already on keeps the toggles so it can turn
+  them off. All four toggles stay: Runtime Modifiers and Settlement/Zone
+  Systems gate Compendium crafting modifiers and world systems.
+- Settings sections (4.89) stack their controls in a flex column with one
+  gap, and field labels stack the control under the label
+  (`--space-field-label`, shared with Projects, Source Notes, and Character
+  packages).
 - World Bible character detail is now one sectioned experience: `Canon`,
   `Notes`, `Continuity`, project-gated `Mechanics`, and `Writing aids`. New
   characters remain focused on Canon until the canonical record is saved;

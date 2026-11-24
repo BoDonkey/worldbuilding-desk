@@ -1,7 +1,9 @@
 import {DB_NAME, DB_VERSION} from '../../src/services/storage/db';
 
+/** `gameSystems` turns Game Systems on in General Fiction, which hides the toggles (4.88). */
 function setSeededProjectMode(
-  projectMode: 'general' | 'litrpg' | 'game'
+  projectMode: 'general' | 'litrpg' | 'game',
+  gameSystems = projectMode !== 'general'
 ): Cypress.Chainable<void> {
   const enableGameSystems = projectMode !== 'general';
   return cy.window().then(
@@ -21,7 +23,7 @@ function setSeededProjectMode(
               ...getRequest.result,
               projectMode,
               featureToggles: {
-                enableGameSystems,
+                enableGameSystems: gameSystems,
                 enableRuntimeModifiers: enableGameSystems,
                 enableSettlementAndZoneSystems: enableGameSystems,
                 enableRuleAuthoring: enableGameSystems
@@ -200,7 +202,15 @@ describe('Project mode guardrails', () => {
       ]);
     });
     cy.ensureSettingsSectionOpen('Feature Toggles');
-    cy.contains('label', 'Enable Game Systems').find('input').check();
+    cy.contains('summary', 'Feature Toggles').closest('details').within(() => {
+      cy.contains('Mechanics and rulesets are off in General Fiction').should('contain', 'switch Project Mode to');
+      cy.get('input[type="checkbox"]').should('not.exist');
+    });
+    // An older General Fiction project with Game Systems on keeps its toggles so it can turn them off.
+    setSeededProjectMode('general', true);
+    cy.visit('/settings');
+    cy.ensureSettingsSectionOpen('Feature Toggles');
+    cy.contains('label', 'Enable Game Systems').find('input').should('be.checked');
     cy.visit('/workspace');
     cy.contains('button', 'Insert Status Block').should('be.visible');
     cy.contains('button', 'Refresh Placeholders').should('be.visible');

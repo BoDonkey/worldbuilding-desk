@@ -11,6 +11,7 @@ import {
 import styles from '../styles/CharactersRoute.module.css';
 import {describeError} from '../services/errors';
 import {RouteFeedback} from '../components/common';
+import {CharacterExportPicker} from '../components/CharacterPackages/CharacterExportPicker';
 
 function CharacterPackagesRoute() {
   const activeProject = useAppStore((state) => state.activeProject);
@@ -45,20 +46,23 @@ function CharacterPackagesRoute() {
     };
   }, [activeProject]);
 
-  const handleExport = async (includeSheets: boolean) => {
+  /** Exports every character, or exactly `entityIds` when given (4.87). */
+  const handleExport = async (includeSheets: boolean, entityIds?: string[]) => {
     if (!activeProject) return;
     setFeedback(null);
     try {
       await exportCharactersJson({
         projectId: activeProject.id,
         projectName: activeProject.name,
-        includeSheets
+        includeSheets,
+        ...(entityIds ? {entityIds} : {})
       });
+      const what = entityIds
+        ? `${entityIds.length} character${entityIds.length === 1 ? '' : 's'} exported`
+        : 'Character packages exported';
       setFeedback({
         tone: 'success',
-        message: includeSheets
-          ? 'Character packages exported with sheets.'
-          : 'Character packages exported.'
+        message: includeSheets ? `${what} with sheets.` : `${what}.`
       });
     } catch (error) {
       setFeedback({
@@ -114,8 +118,11 @@ function CharacterPackagesRoute() {
     <section className={styles.page}>
       <h1 className={styles.title}>Character packages</h1>
       <p className={styles.lead}>
-        Transfer several World Bible characters between projects. Edit a single
-        character or export its package from that character's World Bible detail.
+        A character package copies characters into another project, for example a
+        standalone book or a new project that reuses a cast. For a series that shares
+        one world, set a <strong>Parent project</strong> on Projects instead: it shares
+        canon read-only rather than copying it. One character can also be exported
+        from its World Bible detail.
       </p>
       <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
       <div className={styles.toolbar}>
@@ -143,6 +150,12 @@ function CharacterPackagesRoute() {
           style={{display: 'none'}}
         />
       </div>
+      <CharacterExportPicker
+        projectId={activeProject.id}
+        keptSeparateKeys={projectSettings?.keptSeparateCharacterIdentityKeys}
+        canTransferSheets={canTransferSheets}
+        onExport={(entityIds, includeSheets) => handleExport(includeSheets, entityIds)}
+      />
       {!canTransferSheets && capabilities.canUseRuleAuthoring && (
         <p className={styles.notice}>
           Sheet transfer becomes available after this project has rules.

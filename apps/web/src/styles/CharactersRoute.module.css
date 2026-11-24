@@ -73,7 +73,7 @@
 
 .fieldLabel {
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-field-label);
   color: var(--color-text-primary);
   min-width: 0;
 }
