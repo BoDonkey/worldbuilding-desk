@@ -112,16 +112,18 @@ export function useWorkspaceCorkboard(projectId: string | null) {
     setDirty(true);
   }, []);
 
-  const createCard = useCallback(() => {
-    if (!projectId) return;
+  /** Appends a card and returns its id. Planning proposals pass a title and summary (4.86). */
+  const createCard = useCallback((initial?: {title?: string; summary?: string}): string | undefined => {
+    if (!projectId) return undefined;
     const now = Date.now();
+    const id = crypto.randomUUID();
     updateCards((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id,
         projectId,
-        title: '',
-        summary: '',
+        title: initial?.title ?? '',
+        summary: initial?.summary ?? '',
         status: DEFAULT_CARD_STATUS,
         order: prev.length,
         plotPoints: [],
@@ -129,6 +131,7 @@ export function useWorkspaceCorkboard(projectId: string | null) {
         updatedAt: now
       }
     ]);
+    return id;
   }, [projectId, updateCards]);
 
   const updateCard = useCallback(
@@ -182,7 +185,8 @@ export function useWorkspaceCorkboard(projectId: string | null) {
         }
         const [card] = next.splice(index, 1);
         next.splice(targetIndex, 0, {...card, updatedAt: Date.now()});
-        return next;
+        // Renumber here: normalizing sorts by `order`, which would undo the move.
+        return next.map((entry, order) => ({...entry, order}));
       });
     },
     [updateCards]
@@ -278,7 +282,8 @@ export function useWorkspaceCorkboard(projectId: string | null) {
           return {
             ...card,
             updatedAt: Date.now(),
-            plotPoints
+            // Renumbered for the same reason as cards in `moveCard`.
+            plotPoints: plotPoints.map((entry, order) => ({...entry, order}))
           };
         })
       );

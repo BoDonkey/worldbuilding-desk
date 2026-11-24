@@ -24,6 +24,7 @@ import {
   type SceneDraft,
   type SceneDraftInputs
 } from '../../services/sceneDraft/sceneDraft';
+import {plannedSceneGoal} from '../../services/sceneDraft/plannedSceneGoals';
 import {countWords} from '../../services/dashboard/storyDashboard';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {describeRouteDataFlow} from '../../services/llm/providerRoute';
@@ -98,7 +99,7 @@ export function SceneDraftDialog({isOpen, projectId, sceneId, sceneTitle, onInse
     setInputs(
       saved?.inputs ?? {
         ...emptyInputs(),
-        goal: sceneGoalFromCards(linkedCards),
+        goal: plannedSceneGoal(sceneId) ?? sceneGoalFromCards(linkedCards),
         previousEnding: previousSceneEnding(lab.documents, sceneId)
       }
     );

@@ -622,8 +622,25 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   ordinary planning questions. Requests run through the assistant request
   policy under `corkboard-planning` (coaching switch, route disclosure,
   budget, Stop). The conversation is session-local and per project. Replies
-  never change cards, canon, or manuscript text; proposing outline changes is
-  4.86.
+  never change cards, canon, or manuscript text on their own.
+- **Planning chat proposals** (4.86): **Propose changes** on a reply sends
+  the reply, its question, and the whole board with short keys (C2, C2.P3)
+  to the project's main model, which answers with structured edits: reorder
+  cards, add a card, revise a card summary, add, revise, or reorder plot
+  points, and plan a scene for a card. `services/corkboard/planningProposals.ts`
+  checks the schema, length bounds (oversized text is dropped, not cut), and
+  that every key names a card or plot point the model was shown; invalid
+  proposals are listed as left out with the reason, and the rest are kept.
+  Each proposal records the part of the board it depends on (a summary, a
+  plot point's text, an order); accepting re-reads it, and a proposal whose
+  basis changed is dropped with a plain message instead of applied. Proposals
+  show through `AIProposalPreview` and are confirmed one at a time through
+  the Corkboard's own card and plot-point actions. Accepting a planned scene
+  creates an empty scene linked to the card without leaving the Corkboard
+  (toast with **Open scene**); its goal fills **Draft this scene** for that
+  scene for the session only. Nothing touches canon, mechanics, state, or
+  scene prose. Card and plot-point **Move up / Move down** were no-ops before
+  this slice (normalizing re-sorted by the old order); fixed.
 - Every other AI feature (Character Lab, Scene Draft, World Canvas coaching and
   brainstorm, Corkboard coach and progression continuity, Canon Decisions,
   model canon check, custom selection actions) sends its request through

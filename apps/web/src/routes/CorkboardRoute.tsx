@@ -500,6 +500,14 @@ function CorkboardRoute() {
           cards={corkboardCards}
           documents={documents}
           selectedCard={selectedCard}
+          actions={{
+            createCorkboardCard,
+            updateCorkboardCard,
+            moveCorkboardCard,
+            addCorkboardPlotPoint,
+            updateCorkboardPlotPoint,
+            moveCorkboardPlotPoint
+          }}
         />
         </>
       )}
