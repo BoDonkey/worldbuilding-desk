@@ -338,9 +338,9 @@ messages).
 | 4.84 | Workspace dialogs open above the context drawer | 4 | S | Done `1a7765e` |
 | 4.85 | Corkboard planning chat (read-only) | 4 | M | Done `76483cf` — the assistant's factual-question gate is not applied (it refused planning questions); retrieval and request policy are shared |
 | 4.86 | Planning chat proposes outline changes | 4 | M | — pre-beta (author decision, 2026-11-22); after 4.85, before 6.1 |
-| 4.87 | Export a chosen set of characters | 4 | S | WIP — from 2026-11-22 dogfood |
-| 4.88 | Feature toggles that fit the project mode | 4 | S | WIP — from 2026-11-22 dogfood; General Fiction hides the toggles (author decision, 2026-11-22) |
-| 4.89 | Spacing pass: stacked controls and inline labels | 4 | XS | WIP — from 2026-11-22 dogfood |
+| 4.87 | Export a chosen set of characters | 4 | S | Done e388b08 — from 2026-11-22 dogfood |
+| 4.88 | Feature toggles that fit the project mode | 4 | S | Done e388b08 — from 2026-11-22 dogfood; General Fiction hides the toggles (author decision, 2026-11-22) |
+| 4.89 | Spacing pass: stacked controls and inline labels | 4 | XS | Done e388b08 — from 2026-11-22 dogfood |
 | 4.90 | Editor text options: paragraph style, narrow width, more fonts | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.91 | Focus mode | 4 | M | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
 | 4.92 | Typewriter scrolling | 4 | S | — provisional pre-beta (author decision, 2026-11-22); from 2026-11-22 dogfood |
