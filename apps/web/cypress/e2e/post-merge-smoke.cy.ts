@@ -113,12 +113,11 @@ function setProjectMode(modeValue: 'litrpg' | 'game' | 'general'): void {
     });
 }
 
-function enableGameSystems(): void {
-  cy.ensureSettingsSectionOpen('Feature Toggles');
-  cy.contains('label', 'Enable Game Systems').find('input').check();
-}
-
-function setStoredProjectMode(mode: 'litrpg' | 'game' | 'general'): Cypress.Chainable<void> {
+/** `gameSystems` turns Game Systems on in General Fiction, which hides the toggles (4.88). */
+function setStoredProjectMode(
+  mode: 'litrpg' | 'game' | 'general',
+  gameSystems = mode !== 'general'
+): Cypress.Chainable<void> {
   const gameSystemsEnabled = mode !== 'general';
   return mutateSmokeDb(async (db) => {
     const settings = await getRecord<{id: string; [key: string]: unknown}>(
@@ -130,7 +129,7 @@ function setStoredProjectMode(mode: 'litrpg' | 'game' | 'general'): Cypress.Chai
       ...settings,
       projectMode: mode,
       featureToggles: {
-        enableGameSystems: gameSystemsEnabled,
+        enableGameSystems: gameSystems,
         enableRuntimeModifiers: gameSystemsEnabled,
         enableSettlementAndZoneSystems: gameSystemsEnabled,
         enableRuleAuthoring: gameSystemsEnabled
@@ -1134,10 +1133,7 @@ describe('Post-merge smoke checklist', () => {
   });
 
   it('inserts rendered character status blocks into the scene editor', () => {
-    cy.visit('/settings');
-    cy.ensureSettingsSectionOpen('Project Mode');
-    setProjectMode('general');
-    enableGameSystems();
+    setStoredProjectMode('general', true);
     cy.visit('/workspace');
 
     cy.contains('button', 'Insert Status Block').click();
@@ -1159,10 +1155,7 @@ describe('Post-merge smoke checklist', () => {
   });
 
   it('inserts template tokens and refreshes them into live stat blocks', () => {
-    cy.visit('/settings');
-    cy.ensureSettingsSectionOpen('Project Mode');
-    setProjectMode('general');
-    enableGameSystems();
+    setStoredProjectMode('general', true);
     cy.visit('/workspace');
 
     cy.contains('button', 'Insert Status Block').click();
