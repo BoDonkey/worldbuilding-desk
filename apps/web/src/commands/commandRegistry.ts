@@ -164,6 +164,15 @@ export const createAppCommands = ({
       run: () => dispatchWorkspaceCommand('take-snapshot')
     },
     {
+      id: 'workspace-toggle-focus-mode',
+      label: 'Workspace: Focus Mode',
+      section: 'Workspace',
+      keywords: ['focus', 'distraction', 'free', 'hide', 'panels', 'zen', 'fullscreen', 'writing'],
+      description: 'Hide everything but the scene and a word count. Press Escape to leave.',
+      shortcut: 'Cmd/Ctrl+Shift+F',
+      run: () => dispatchWorkspaceCommand('toggle-focus-mode')
+    },
+    {
       id: 'workspace-open-snapshots',
       label: 'Workspace: Open Snapshots',
       section: 'Workspace',

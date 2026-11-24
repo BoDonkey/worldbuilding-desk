@@ -740,39 +740,34 @@ function WorkspaceRoute() {
         onChange={(e) => void handleImportDocuments(e)}
         style={{display: 'none'}}
       />
-      <WorkspaceHeader
-        projectName={activeProject.name}
-        selectedDocument={selectedDocument}
-        chapterCardLinks={chapterCardLinks}
-        reviewReadiness={reviewReadiness}
-        onOpenReview={() => openContextDrawer('review')}
-        onOpenScratchpad={openScratchpadModal}
-      />
-      <GettingStartedGuide projectId={activeProject.id} />
+      {/* Hidden in focus mode (4.91); display: contents keeps the layout. */}
+      <div data-focus-hide='' style={{display: 'contents'}}>
+        <WorkspaceHeader
+          projectName={activeProject.name} selectedDocument={selectedDocument}
+          chapterCardLinks={chapterCardLinks} reviewReadiness={reviewReadiness}
+          onOpenReview={() => openContextDrawer('review')} onOpenScratchpad={openScratchpadModal}
+        />
+        <GettingStartedGuide projectId={activeProject.id} />
+      </div>
       <RouteFeedback feedback={feedback} onClear={clearFeedback} errorsAsToast />
-      {showReviewBanner && (
-        <UnknownEntityPanel
-          hiddenReviewSurfaceCount={hiddenReviewSurfaceCount}
-          issueCount={unknownGuardrailIssues.length}
-          onDismissAll={() => dismissAllUnknownEntities(selectedId ?? undefined)}
-          onDismissNotice={() => setReviewBannerDismissed(true)}
-          onResolveAll={resolveAllUnknownEntities}
-          reviewBannerBody={reviewCopy.bannerBody}
-          reviewBannerTitle={reviewCopy.bannerTitle}
-          reviewCreateAllLabel={reviewCopy.createAllLabel}
-          reviewDismissAllLabel={reviewCopy.dismissAllLabel}
-          visibleReviewSurfaces={visibleReviewSurfaces}
-        />
-      )}
-      {seriesBibleConfig?.parentProjectId && (
-        <CanonPanel
-          childLastSynced={canonState.childLastSynced}
-          isSyncingCanon={isSyncingCanon}
-          onSync={handleCanonSync}
-          parentCanonVersion={canonState.parentCanonVersion}
-          parentName={canonState.parentName}
-        />
-      )}
+      <div data-focus-hide='' style={{display: 'contents'}}>
+        {showReviewBanner && (
+          <UnknownEntityPanel
+            hiddenReviewSurfaceCount={hiddenReviewSurfaceCount} issueCount={unknownGuardrailIssues.length}
+            onDismissAll={() => dismissAllUnknownEntities(selectedId ?? undefined)}
+            onDismissNotice={() => setReviewBannerDismissed(true)} onResolveAll={resolveAllUnknownEntities}
+            reviewBannerBody={reviewCopy.bannerBody} reviewBannerTitle={reviewCopy.bannerTitle}
+            reviewCreateAllLabel={reviewCopy.createAllLabel} reviewDismissAllLabel={reviewCopy.dismissAllLabel}
+            visibleReviewSurfaces={visibleReviewSurfaces}
+          />
+        )}
+        {seriesBibleConfig?.parentProjectId && (
+          <CanonPanel
+            childLastSynced={canonState.childLastSynced} isSyncingCanon={isSyncingCanon} onSync={handleCanonSync}
+            parentCanonVersion={canonState.parentCanonVersion} parentName={canonState.parentName}
+          />
+        )}
+      </div>
 
       <WorkspaceDrawerLayout
         isNarrowViewport={isNarrowViewport}

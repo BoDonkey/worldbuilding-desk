@@ -387,3 +387,8 @@
     font-size: var(--editor-font-size, 1.04rem);
   }
 }
+
+/* Workspace focus mode (4.91) hides the manuscript toolbar. */
+:root[data-focus-mode="on"] [data-workspace-root] .tiptap-wrapper > .control-group {
+  display: none;
+}

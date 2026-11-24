@@ -374,3 +374,8 @@ textarea:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
+
+/* Workspace focus mode (4.91): panels stay mounted, only hidden. */
+:root[data-focus-mode="on"] [data-focus-hide] {
+  display: none !important;
+}

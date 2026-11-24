@@ -180,7 +180,7 @@ export const Navigation: FC<NavigationProps> = ({
   return (
     <>
       {!isRailCollapsed && (
-        <aside className={styles.rail}>
+        <aside className={styles.rail} data-focus-hide=''>
           <div className={styles.brand} title='SagaSpine'>
             SS
           </div>
@@ -291,6 +291,7 @@ export const Navigation: FC<NavigationProps> = ({
         <button
           type='button'
           className={styles.floatingRailToggle}
+          data-focus-hide=''
           onClick={onToggleRail}
           aria-label='Show side rail'
           title='Show side rail'
@@ -299,7 +300,7 @@ export const Navigation: FC<NavigationProps> = ({
         </button>
       )}
 
-      <nav className={styles.mobileBar} aria-label='Mobile navigation'>
+      <nav className={styles.mobileBar} aria-label='Mobile navigation' data-focus-hide=''>
         {mobileBarItems.map((item) => (
           <NavLink
             key={item.to}

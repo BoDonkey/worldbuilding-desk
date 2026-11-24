@@ -53,6 +53,8 @@ export const EditorAppearanceControl: React.FC = () => {
     setEditorLineHeight,
     editorParagraphStyle,
     setEditorParagraphStyle,
+    focusModeStart,
+    setFocusModeStart,
     sourceNoteView,
     setSourceNoteView
   } = useAccessibility();
@@ -128,6 +130,21 @@ export const EditorAppearanceControl: React.FC = () => {
           {value: 'contrast', label: 'Contrast'}
         ]}
       />
+
+      <ChoiceGroup
+        label='Focus mode when the Workspace opens'
+        value={focusModeStart}
+        onChange={setFocusModeStart}
+        choices={[
+          {value: 'off', label: 'Off'},
+          {value: 'on', label: 'On'}
+        ]}
+      />
+      <p className={styles.helper}>
+        Focus mode hides everything but the scene and a word count. Turn it on or off with
+        the Focus mode button under the editor, the command palette, or Cmd/Ctrl+Shift+F;
+        Escape leaves it.
+      </p>
 
       <ChoiceGroup
         label='Source Notes open in'

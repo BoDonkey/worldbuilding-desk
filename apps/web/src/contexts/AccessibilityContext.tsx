@@ -8,6 +8,7 @@ import {
   EDITOR_PARAGRAPH_STYLES,
   EDITOR_SURFACES,
   EDITOR_WIDTHS,
+  FOCUS_MODE_STARTS,
   cleanCustomFontName,
   customFontFamily,
   readChoice,
@@ -16,7 +17,8 @@ import {
   type EditorLineHeight,
   type EditorParagraphStyle,
   type EditorSurface,
-  type EditorWidth
+  type EditorWidth,
+  type FocusModeStart
 } from '../services/editor/editorAppearance';
 
 type FontSize = 'small' | 'medium' | 'large';
@@ -39,6 +41,9 @@ interface AccessibilityContextType {
   /** The font name for Custom, cleaned; empty until the author types one. */
   editorCustomFont: string;
   setEditorCustomFont: (name: string) => void;
+  /** Whether the Workspace opens in focus mode. */
+  focusModeStart: FocusModeStart;
+  setFocusModeStart: (start: FocusModeStart) => void;
   sourceNoteView: SourceNoteView;
   setSourceNoteView: (view: SourceNoteView) => void;
 }
@@ -63,6 +68,8 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     readChoice(APPEARANCE_KEYS.editorLineHeight, EDITOR_LINE_HEIGHTS, APPEARANCE_DEFAULTS.editorLineHeight));
   const [editorParagraphStyle, setEditorParagraphStyle] = useState<EditorParagraphStyle>(() =>
     readChoice(APPEARANCE_KEYS.editorParagraphStyle, EDITOR_PARAGRAPH_STYLES, APPEARANCE_DEFAULTS.editorParagraphStyle));
+  const [focusModeStart, setFocusModeStart] = useState<FocusModeStart>(() =>
+    readChoice(APPEARANCE_KEYS.focusModeStart, FOCUS_MODE_STARTS, APPEARANCE_DEFAULTS.focusModeStart));
   const [sourceNoteView, setSourceNoteView] = useState<SourceNoteView>(() =>
     localStorage.getItem('sourceNoteView') === 'markdown' ? 'markdown' : 'visual'
   );
@@ -104,6 +111,10 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [editorCustomFont]);
 
   useEffect(() => {
+    localStorage.setItem(APPEARANCE_KEYS.focusModeStart, focusModeStart);
+  }, [focusModeStart]);
+
+  useEffect(() => {
     localStorage.setItem('sourceNoteView', sourceNoteView);
   }, [sourceNoteView]);
 
@@ -124,6 +135,8 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         setEditorParagraphStyle,
         editorCustomFont,
         setEditorCustomFont,
+        focusModeStart,
+        setFocusModeStart,
         sourceNoteView,
         setSourceNoteView
       }}

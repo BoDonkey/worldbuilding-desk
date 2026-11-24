@@ -29,7 +29,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     id: 'getting-started',
     title: 'Getting started',
     summary: 'Create a project and start writing.',
-    keywords: ['new', 'project', 'sample', 'scene', 'palette', 'shortcut', 'start'],
+    keywords: ['new', 'project', 'sample', 'scene', 'palette', 'shortcut', 'start', 'focus', 'distraction'],
     blocks: [
       {
         kind: 'steps',
@@ -46,6 +46,10 @@ export const HELP_TOPICS: HelpTopic[] = [
       {
         kind: 'paragraph',
         text: 'Press **Cmd+K** (macOS) or **Ctrl+K** (Windows and Linux) anywhere to open the command palette and jump to any screen. Screens not shown in the side rail are under **More**.'
+      },
+      {
+        kind: 'paragraph',
+        text: '**Focus mode** hides everything in Workspace but the scene and a word count. Use the **Focus mode** button under the editor, the command palette, or **Cmd/Ctrl+Shift+F**; press **Escape** or **Leave focus mode** to come back. Writing still saves and is still reviewed. **Settings → Reading & Editor** can start Workspace in focus mode.'
       }
     ],
     links: [
