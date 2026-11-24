@@ -1,10 +1,25 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
+import {
+  APPEARANCE_DEFAULTS,
+  APPEARANCE_KEYS,
+  EDITOR_FONTS,
+  EDITOR_LINE_HEIGHTS,
+  EDITOR_PARAGRAPH_STYLES,
+  EDITOR_SURFACES,
+  EDITOR_WIDTHS,
+  cleanCustomFontName,
+  customFontFamily,
+  readChoice,
+  readCustomFontName,
+  type EditorFont,
+  type EditorLineHeight,
+  type EditorParagraphStyle,
+  type EditorSurface,
+  type EditorWidth
+} from '../services/editor/editorAppearance';
+
 type FontSize = 'small' | 'medium' | 'large';
-type EditorFont = 'serif' | 'sans' | 'dyslexic';
-type EditorWidth = 'focused' | 'wide';
-type EditorSurface = 'paper' | 'mist' | 'contrast';
-type EditorLineHeight = 'compact' | 'comfortable' | 'airy';
 /** Which view Source Notes open in: the visual editor or their stored text. */
 export type SourceNoteView = 'visual' | 'markdown';
 
@@ -19,6 +34,11 @@ interface AccessibilityContextType {
   setEditorSurface: (surface: EditorSurface) => void;
   editorLineHeight: EditorLineHeight;
   setEditorLineHeight: (lineHeight: EditorLineHeight) => void;
+  editorParagraphStyle: EditorParagraphStyle;
+  setEditorParagraphStyle: (style: EditorParagraphStyle) => void;
+  /** The font name for Custom, cleaned; empty until the author types one. */
+  editorCustomFont: string;
+  setEditorCustomFont: (name: string) => void;
   sourceNoteView: SourceNoteView;
   setSourceNoteView: (view: SourceNoteView) => void;
 }
@@ -31,28 +51,18 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     if (stored === 'small' || stored === 'medium' || stored === 'large') return stored;
     return 'medium';
   });
-  const [editorFont, setEditorFont] = useState<EditorFont>(() => {
-    const stored = localStorage.getItem('editorFont');
-    if (stored === 'serif' || stored === 'sans' || stored === 'dyslexic') return stored;
-    return 'serif';
-  });
-  const [editorWidth, setEditorWidth] = useState<EditorWidth>(() => {
-    const stored = localStorage.getItem('editorWidth');
-    if (stored === 'focused' || stored === 'wide') return stored;
-    return 'focused';
-  });
-  const [editorSurface, setEditorSurface] = useState<EditorSurface>(() => {
-    const stored = localStorage.getItem('editorSurface');
-    if (stored === 'paper' || stored === 'mist' || stored === 'contrast') return stored;
-    return 'paper';
-  });
-  const [editorLineHeight, setEditorLineHeight] = useState<EditorLineHeight>(() => {
-    const stored = localStorage.getItem('editorLineHeight');
-    if (stored === 'compact' || stored === 'comfortable' || stored === 'airy') {
-      return stored;
-    }
-    return 'comfortable';
-  });
+  const [editorFont, setEditorFont] = useState<EditorFont>(() =>
+    readChoice(APPEARANCE_KEYS.editorFont, EDITOR_FONTS, APPEARANCE_DEFAULTS.editorFont));
+  const [editorCustomFont, setEditorCustomFontState] = useState(readCustomFontName);
+  const setEditorCustomFont = (name: string) => setEditorCustomFontState(cleanCustomFontName(name));
+  const [editorWidth, setEditorWidth] = useState<EditorWidth>(() =>
+    readChoice(APPEARANCE_KEYS.editorWidth, EDITOR_WIDTHS, APPEARANCE_DEFAULTS.editorWidth));
+  const [editorSurface, setEditorSurface] = useState<EditorSurface>(() =>
+    readChoice(APPEARANCE_KEYS.editorSurface, EDITOR_SURFACES, APPEARANCE_DEFAULTS.editorSurface));
+  const [editorLineHeight, setEditorLineHeight] = useState<EditorLineHeight>(() =>
+    readChoice(APPEARANCE_KEYS.editorLineHeight, EDITOR_LINE_HEIGHTS, APPEARANCE_DEFAULTS.editorLineHeight));
+  const [editorParagraphStyle, setEditorParagraphStyle] = useState<EditorParagraphStyle>(() =>
+    readChoice(APPEARANCE_KEYS.editorParagraphStyle, EDITOR_PARAGRAPH_STYLES, APPEARANCE_DEFAULTS.editorParagraphStyle));
   const [sourceNoteView, setSourceNoteView] = useState<SourceNoteView>(() =>
     localStorage.getItem('sourceNoteView') === 'markdown' ? 'markdown' : 'visual'
   );
@@ -83,6 +93,17 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [editorLineHeight]);
 
   useEffect(() => {
+    document.documentElement.setAttribute('data-editor-paragraph', editorParagraphStyle);
+    localStorage.setItem(APPEARANCE_KEYS.editorParagraphStyle, editorParagraphStyle);
+  }, [editorParagraphStyle]);
+
+  useEffect(() => {
+    // Read by `:root[data-editor-font="custom"]`; the fallback stack follows the name.
+    document.documentElement.style.setProperty('--editor-custom-font-family', customFontFamily(editorCustomFont));
+    localStorage.setItem(APPEARANCE_KEYS.editorCustomFont, editorCustomFont);
+  }, [editorCustomFont]);
+
+  useEffect(() => {
     localStorage.setItem('sourceNoteView', sourceNoteView);
   }, [sourceNoteView]);
 
@@ -99,6 +120,10 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         setEditorSurface,
         editorLineHeight,
         setEditorLineHeight,
+        editorParagraphStyle,
+        setEditorParagraphStyle,
+        editorCustomFont,
+        setEditorCustomFont,
         sourceNoteView,
         setSourceNoteView
       }}
