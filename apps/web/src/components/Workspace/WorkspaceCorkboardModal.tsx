@@ -82,7 +82,7 @@ export const WorkspaceCorkboardModal = ({
           </div>
           <div className={styles.corkboardHeaderActions}>
             <button type='button' className={workspaceStyles.modalSecondaryAction}
-              onClick={createCorkboardCard}>New Card</button>
+              onClick={() => createCorkboardCard()}>New Card</button>
             <button type='button' className={workspaceStyles.modalSecondaryAction}
               onClick={onClose}>Close</button>
           </div>
@@ -98,7 +98,7 @@ export const WorkspaceCorkboardModal = ({
             <p className={styles.corkboardEmptyCopy}>
               Sketch scenes, chapter beats, or loose sequence ideas without leaving the writing workspace.
             </p>
-            <button type='button' onClick={createCorkboardCard}>Create first card</button>
+            <button type='button' onClick={() => createCorkboardCard()}>Create first card</button>
           </div>
         ) : (
           <div className={styles.corkboardCardList}>

@@ -25,12 +25,14 @@ export function useChapterCardSceneActions({
     }
   }, [updateCard]);
 
+  /** `title` replaces the derived "Card — Scene N" title, as a planned scene's does (4.86). */
   const createLinkedScene = useCallback(async (
-    card: ChapterCard
+    card: ChapterCard,
+    title?: string
   ): Promise<CreateLinkedSceneResult> => {
     const linkedCount = new Set(card.sceneIds ?? []).size;
     const document = await createDocument({
-      title: deriveLinkedSceneTitle(card, linkedCount)
+      title: title?.trim() || deriveLinkedSceneTitle(card, linkedCount)
     });
     if (!document) return {document: null, linked: false};
     return {document, linked: await retryLink(card, document)};

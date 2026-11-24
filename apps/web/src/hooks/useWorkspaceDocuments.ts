@@ -38,6 +38,7 @@ import {
 } from '../store/workspaceUiStore';
 import type {ConfirmRequest} from './useConfirmDialog';
 import {describeError} from '../services/errors';
+import {buildNewSceneDocument} from '../services/workspace/newSceneDocument';
 import {takeSnapshotBeforeSceneDeletion} from '../services/editor/sceneSnapshots';
 import {useStatusAnnouncement} from './useStatusAnnouncement';
 export type SaveStatus = 'idle' | 'saving' | 'saved';
@@ -326,16 +327,13 @@ export const useWorkspaceDocuments = ({
     setCreatingScene(true);
     setFeedback(null);
     try {
-      const now = Date.now();
-      const doc: WritingDocument = {
-        id: options?.id ?? crypto.randomUUID(),
+      const doc = buildNewSceneDocument({
         projectId: activeProject.id,
-        title: options?.title?.trim() || 'Untitled scene',
-        content: options?.content ?? '<p></p>',
-        order: getNextWritingDocumentOrder(documents),
-        createdAt: now,
-        updatedAt: now
-      };
+        documents,
+        title: options?.title,
+        id: options?.id,
+        content: options?.content
+      });
 
       await saveWritingDocument(doc);
 

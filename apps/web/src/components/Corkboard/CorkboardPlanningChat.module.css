@@ -75,3 +75,17 @@
   display: grid;
   gap: 0.5rem;
 }
+
+.proposals {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.proposalList,
+.notices {
+  margin: 0;
+  padding-left: 1.4rem;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}

@@ -283,7 +283,9 @@
   cards expose a compact expandable chip row without changing editor width.
   The quick modal says what a card is (4.85): the plan for a chapter, with
   scenes as separate documents, and **Link current scene** links only the
-  open scene.
+  open scene. A scene created from an accepted planning-chat scene proposal
+  (4.86) starts empty; for that session, **Draft this scene** starts from the
+  proposal's goal instead of the card's summary and plot points.
 - Corkboard chapter-card records are included in project backup snapshots and restore paths.
 - Corkboard now includes a read-only Story Dashboard derived entirely from
   saved manuscript text, accepted state events, configured rules, and explicit

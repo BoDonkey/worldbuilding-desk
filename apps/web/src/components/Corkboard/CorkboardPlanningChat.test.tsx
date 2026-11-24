@@ -1,10 +1,10 @@
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {ChapterCard, ProjectAISettings, WritingDocument} from '../../entityTypes';
 import {CorkboardPlanningChat} from './CorkboardPlanningChat';
 
-const mocks = vi.hoisted(() => ({stream: vi.fn()}));
+const mocks = vi.hoisted(() => ({stream: vi.fn(), replies: [] as string[]}));
 
 vi.mock('../../services/rag/getRAGService', () => ({
   getRAGService: vi.fn(async () => ({search: vi.fn(async () => [])}))
@@ -13,7 +13,7 @@ vi.mock('../../services/llm/LLMService', () => ({
   LLMService: class {
     async *stream(request: unknown) {
       mocks.stream(request);
-      yield 'Chapter two could raise the stakes earlier.';
+      yield mocks.replies.shift() ?? 'Chapter two could raise the stakes earlier.';
     }
   }
 }));
@@ -52,7 +52,16 @@ const documents: WritingDocument[] = [
 
 type StreamedRequest = {feature: string; systemPrompt: string; context: {source: string; content: string}[]};
 
-const renderChat = (config = aiConfig()) =>
+const makeActions = () => ({
+  createCorkboardCard: vi.fn(() => 'new-card'),
+  updateCorkboardCard: vi.fn(async () => {}),
+  moveCorkboardCard: vi.fn(),
+  addCorkboardPlotPoint: vi.fn(),
+  updateCorkboardPlotPoint: vi.fn(),
+  moveCorkboardPlotPoint: vi.fn()
+});
+
+const renderChat = (config = aiConfig(), actions = makeActions()) =>
   render(
     <MemoryRouter>
       <CorkboardPlanningChat
@@ -61,6 +70,7 @@ const renderChat = (config = aiConfig()) =>
         cards={cards}
         documents={documents}
         selectedCard={cards[1]!}
+        actions={actions}
       />
     </MemoryRouter>
   );
@@ -70,13 +80,14 @@ const ask = (text: string) => {
   fireEvent.click(screen.getByRole('button', {name: 'Send'}));
 };
 
-describe('CorkboardPlanningChat (4.85)', () => {
+describe('CorkboardPlanningChat (4.85, 4.86)', () => {
   const writes: string[] = [];
 
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     mocks.stream.mockReset();
+    mocks.replies.length = 0;
     writes.length = 0;
     for (const method of ['put', 'add', 'delete', 'clear'] as const) {
       vi.spyOn(IDBObjectStore.prototype, method).mockImplementation(function (this: IDBObjectStore) {
@@ -136,6 +147,41 @@ describe('CorkboardPlanningChat (4.85)', () => {
       'Chapter two could raise the stakes earlier.',
       'And then?'
     ]);
+  });
+
+  it('proposes changes from a reply and changes nothing until one is confirmed', async () => {
+    mocks.replies.push(
+      'Move the market first, and tighten the arrival.',
+      JSON.stringify({proposals: [
+        {kind: 'reorder-cards', order: ['C2', 'C1', 'C3'], reason: 'Open on the robbery.'},
+        {kind: 'revise-card-summary', card: 'C1', summary: 'She arrives already robbed.'},
+        {kind: 'revise-card-summary', card: 'C9', summary: 'No such card.'}
+      ]})
+    );
+    const actions = makeActions();
+    renderChat(aiConfig(), actions);
+    ask('Where should the book open?');
+    await screen.findByText('Move the market first, and tighten the arrival.');
+    fireEvent.click(screen.getByRole('button', {name: 'Propose changes'}));
+
+    expect(await screen.findByText('Reorder chapter cards: the board')).toBeInTheDocument();
+    const request = mocks.stream.mock.calls[1]![0] as StreamedRequest;
+    expect(request.feature).toBe('corkboard-planning');
+    expect(request.systemPrompt).toContain('Reply with JSON only');
+    expect(request.context[0]!.content).toContain('[C2] Chapter 2: The Market');
+    expect(screen.getByText(/Proposal 3 was left out: it names a chapter card \(C9\)/)).toBeInTheDocument();
+    expect(Object.values(actions).every((action) => action.mock.calls.length === 0)).toBe(true);
+
+    const summary = screen.getByText('Revise a card summary: Chapter 1, Arrival').closest('section')!;
+    fireEvent.click(within(summary).getByRole('button', {name: 'Dismiss'}));
+    expect(screen.queryByText('Revise a card summary: Chapter 1, Arrival')).not.toBeInTheDocument();
+
+    const reorder = screen.getByText('Reorder chapter cards: the board').closest('section')!;
+    fireEvent.click(within(reorder).getByRole('button', {name: 'Confirm action'}));
+    await waitFor(() => expect(actions.moveCorkboardCard).toHaveBeenCalledWith('c2', -1));
+    expect(actions.moveCorkboardCard).toHaveBeenCalledTimes(1);
+    expect(actions.updateCorkboardCard).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
   });
 
   it('offers nothing to send when AI coaching is off', () => {
