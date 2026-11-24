@@ -152,16 +152,16 @@
 }
 
 .fieldLabel {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-field-label);
   font-size: 0.9rem;
   color: var(--color-text-primary);
 }
 
 .fieldLabel select,
 .fieldLabel input {
-  display: block;
   width: 100%;
-  margin-top: 0.35rem;
 }
 
 .countsText {

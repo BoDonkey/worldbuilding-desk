@@ -58,7 +58,7 @@
 .customFont {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: var(--space-field-label);
   max-width: 28rem;
 }
 

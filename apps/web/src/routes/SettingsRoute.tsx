@@ -20,6 +20,7 @@ import {BackupReminderSettings} from '../components/Settings/BackupReminderSetti
 import {ScheduledBackupSettings} from '../components/Settings/ScheduledBackupSettings';
 import {FontSizeControl} from '../components/Settings/FontSizeControl';
 import {EditorAppearanceControl} from '../components/Settings/EditorAppearanceControl';
+import {FeatureTogglesFields} from '../components/Settings/FeatureTogglesFields';
 import {
   getDefaultFeatureToggles,
   getVisibleProjectModeOptions
@@ -402,58 +403,11 @@ function SettingsRoute() {
         </SettingsSection>
 
         <SettingsSection title='Feature Toggles'>
-          <p className={styles.helperText}>
-            Use toggles to simplify UI per project while preserving data.
-          </p>
-          <label className={styles.toggleRow}>
-            <input
-              type='checkbox'
-              checked={settings.featureToggles.enableGameSystems}
-              onChange={(e) =>
-                void handleFeatureToggleChange('enableGameSystems', e.target.checked)
-              }
-            />
-            <span>Enable Game Systems</span>
-          </label>
-          <label className={styles.toggleRow}>
-            <input
-              type='checkbox'
-              checked={settings.featureToggles.enableRuntimeModifiers}
-              onChange={(e) =>
-                void handleFeatureToggleChange(
-                  'enableRuntimeModifiers',
-                  e.target.checked
-                )
-              }
-            />
-            <span>Enable Runtime Modifiers</span>
-          </label>
-          <label className={styles.toggleRow}>
-            <input
-              type='checkbox'
-              checked={settings.featureToggles.enableSettlementAndZoneSystems}
-              onChange={(e) =>
-                void handleFeatureToggleChange(
-                  'enableSettlementAndZoneSystems',
-                  e.target.checked
-                )
-              }
-            />
-            <span>Enable Settlement/Zone Systems</span>
-          </label>
-          <label className={styles.toggleRow}>
-            <input
-              type='checkbox'
-              checked={settings.featureToggles.enableRuleAuthoring}
-              onChange={(e) =>
-                void handleFeatureToggleChange(
-                  'enableRuleAuthoring',
-                  e.target.checked
-                )
-              }
-            />
-            <span>Enable Rule Authoring</span>
-          </label>
+          <FeatureTogglesFields
+            projectMode={settings.projectMode}
+            featureToggles={settings.featureToggles}
+            onChange={(key, enabled) => void handleFeatureToggleChange(key, enabled)}
+          />
         </SettingsSection>
 
         <SettingsSection title='Consistency Detection Keywords'>

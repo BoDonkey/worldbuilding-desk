@@ -13,6 +13,8 @@
   --layer-modal-raised: 2100; /* command palette, Character Lab */
   --layer-confirm: 2200;      /* confirmations, which can open from any dialog */
   --layer-toast: 2300;        /* the app-shell toast viewport */
+  /* Space between a stacked field label and its control (4.89). */
+  --space-field-label: 0.35rem;
 }
 
 :root[data-theme="light"] {
