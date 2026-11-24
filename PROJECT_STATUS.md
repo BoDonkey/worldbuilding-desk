@@ -154,6 +154,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   Workspace opens in focus mode is a per-device setting in Editor Appearance
   (off by default); leaving Workspace always turns it off
   (`hooks/useWorkspaceFocusMode.ts`, `store/focusModeStore.ts`).
+- Typewriter scrolling (slice 4.92), an Editor Appearance option (per device,
+  off by default): in the manuscript editor, after a key press changes the
+  text or moves the caret, the editor scrolls so the caret line sits a third
+  of the way down (`services/editor/typewriterScroll.ts`,
+  `hooks/useTypewriterScrolling.ts`). Clicks, drags, and the author's own
+  scrolling never trigger it; the next key press does. It jumps instead of
+  animating under `prefers-reduced-motion`. Bottom padding (66vh) lets the
+  last line reach that height. Works in focus mode.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.

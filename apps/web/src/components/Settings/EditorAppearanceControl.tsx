@@ -55,6 +55,8 @@ export const EditorAppearanceControl: React.FC = () => {
     setEditorParagraphStyle,
     focusModeStart,
     setFocusModeStart,
+    editorTypewriter,
+    setEditorTypewriter,
     sourceNoteView,
     setSourceNoteView
   } = useAccessibility();
@@ -130,6 +132,20 @@ export const EditorAppearanceControl: React.FC = () => {
           {value: 'contrast', label: 'Contrast'}
         ]}
       />
+
+      <ChoiceGroup
+        label='Typewriter scrolling'
+        value={editorTypewriter}
+        onChange={setEditorTypewriter}
+        choices={[
+          {value: 'off', label: 'Off'},
+          {value: 'on', label: 'On'}
+        ]}
+      />
+      <p className={styles.helper}>
+        Keeps the line you are typing a third of the way down the manuscript editor. Clicking
+        or scrolling to read never moves the page; the next key you type brings the line back.
+      </p>
 
       <ChoiceGroup
         label='Focus mode when the Workspace opens'

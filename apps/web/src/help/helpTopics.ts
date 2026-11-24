@@ -29,7 +29,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     id: 'getting-started',
     title: 'Getting started',
     summary: 'Create a project and start writing.',
-    keywords: ['new', 'project', 'sample', 'scene', 'palette', 'shortcut', 'start', 'focus', 'distraction'],
+    keywords: ['new', 'project', 'sample', 'scene', 'palette', 'shortcut', 'start', 'focus', 'distraction', 'typewriter', 'scrolling'],
     blocks: [
       {
         kind: 'steps',
@@ -49,7 +49,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       },
       {
         kind: 'paragraph',
-        text: '**Focus mode** hides everything in Workspace but the scene and a word count. Use the **Focus mode** button under the editor, the command palette, or **Cmd/Ctrl+Shift+F**; press **Escape** or **Leave focus mode** to come back. Writing still saves and is still reviewed. **Settings → Reading & Editor** can start Workspace in focus mode.'
+        text: '**Focus mode** hides everything in Workspace but the scene and a word count. Use the **Focus mode** button under the editor, the command palette, or **Cmd/Ctrl+Shift+F**; press **Escape** or **Leave focus mode** to come back. Writing still saves and is still reviewed. **Settings → Reading & Editor** can start Workspace in focus mode, and turn on **Typewriter scrolling**, which keeps the line you are typing a third of the way down the editor.'
       }
     ],
     links: [

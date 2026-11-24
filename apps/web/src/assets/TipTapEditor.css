@@ -392,3 +392,9 @@
 :root[data-focus-mode="on"] [data-workspace-root] .tiptap-wrapper > .control-group {
   display: none;
 }
+
+/* Typewriter scrolling (4.92): room below the last line so it can scroll up
+   to a third of the way down the editor. */
+:root[data-editor-typewriter="on"] [data-workspace-root] .ProseMirror {
+  padding-bottom: 66vh;
+}
