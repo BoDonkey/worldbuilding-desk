@@ -25,6 +25,10 @@ export type EditorParagraphStyle = (typeof EDITOR_PARAGRAPH_STYLES)[number];
 export const FOCUS_MODE_STARTS = ['off', 'on'] as const;
 export type FocusModeStart = (typeof FOCUS_MODE_STARTS)[number];
 
+/** Typewriter scrolling in the manuscript editor (4.92). */
+export const TYPEWRITER_MODES = ['off', 'on'] as const;
+export type TypewriterMode = (typeof TYPEWRITER_MODES)[number];
+
 /** localStorage keys. The older ones predate this module and keep their names. */
 export const APPEARANCE_KEYS = {
   editorFont: 'editorFont',
@@ -33,7 +37,8 @@ export const APPEARANCE_KEYS = {
   editorSurface: 'editorSurface',
   editorLineHeight: 'editorLineHeight',
   editorParagraphStyle: 'editorParagraphStyle',
-  focusModeStart: 'focusModeStart'
+  focusModeStart: 'focusModeStart',
+  editorTypewriter: 'editorTypewriter'
 } as const;
 
 export const APPEARANCE_DEFAULTS = {
@@ -42,7 +47,8 @@ export const APPEARANCE_DEFAULTS = {
   editorSurface: 'paper' as EditorSurface,
   editorLineHeight: 'comfortable' as EditorLineHeight,
   editorParagraphStyle: 'spaced' as EditorParagraphStyle,
-  focusModeStart: 'off' as FocusModeStart
+  focusModeStart: 'off' as FocusModeStart,
+  editorTypewriter: 'off' as TypewriterMode
 };
 
 /** The Custom font falls back to this stack when the named font is not installed. */

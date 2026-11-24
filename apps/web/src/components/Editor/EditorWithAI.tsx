@@ -23,6 +23,8 @@ import type {EditorConfig} from '../../config/editorConfig';
 import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
 import type {StatBlockPreviewData} from '../../hooks/useWorkspaceStatBlocks';
 import type {InlineHighlightsMode} from '../../entityTypes';
+import {useAccessibility} from '../../contexts/AccessibilityContext';
+import {useTypewriterScrolling} from '../../hooks/useTypewriterScrolling';
 import styles from '../../assets/components/Editor.module.css';
 import type {EditorSelectionActions} from './SelectionMenuAIEntries';
 import {
@@ -193,6 +195,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     statPeekControls;
 
   const aiTextControls = useAITextControls(readyEditor);
+  const {editorTypewriter} = useAccessibility();
+  useTypewriterScrolling({enabled: editorTypewriter === 'on', editorRef, editorScrollRef, editorReadyToken});
 
   const effectiveInlineHighlightsMode =
     inlineHighlightsMode === 'hidden-while-typing' && isActivelyTyping

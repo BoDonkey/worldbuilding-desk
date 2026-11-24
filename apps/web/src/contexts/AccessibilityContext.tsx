@@ -9,6 +9,7 @@ import {
   EDITOR_SURFACES,
   EDITOR_WIDTHS,
   FOCUS_MODE_STARTS,
+  TYPEWRITER_MODES,
   cleanCustomFontName,
   customFontFamily,
   readChoice,
@@ -18,7 +19,8 @@ import {
   type EditorParagraphStyle,
   type EditorSurface,
   type EditorWidth,
-  type FocusModeStart
+  type FocusModeStart,
+  type TypewriterMode
 } from '../services/editor/editorAppearance';
 
 type FontSize = 'small' | 'medium' | 'large';
@@ -44,6 +46,9 @@ interface AccessibilityContextType {
   /** Whether the Workspace opens in focus mode. */
   focusModeStart: FocusModeStart;
   setFocusModeStart: (start: FocusModeStart) => void;
+  /** Typewriter scrolling in the manuscript editor. */
+  editorTypewriter: TypewriterMode;
+  setEditorTypewriter: (mode: TypewriterMode) => void;
   sourceNoteView: SourceNoteView;
   setSourceNoteView: (view: SourceNoteView) => void;
 }
@@ -70,6 +75,8 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     readChoice(APPEARANCE_KEYS.editorParagraphStyle, EDITOR_PARAGRAPH_STYLES, APPEARANCE_DEFAULTS.editorParagraphStyle));
   const [focusModeStart, setFocusModeStart] = useState<FocusModeStart>(() =>
     readChoice(APPEARANCE_KEYS.focusModeStart, FOCUS_MODE_STARTS, APPEARANCE_DEFAULTS.focusModeStart));
+  const [editorTypewriter, setEditorTypewriter] = useState<TypewriterMode>(() =>
+    readChoice(APPEARANCE_KEYS.editorTypewriter, TYPEWRITER_MODES, APPEARANCE_DEFAULTS.editorTypewriter));
   const [sourceNoteView, setSourceNoteView] = useState<SourceNoteView>(() =>
     localStorage.getItem('sourceNoteView') === 'markdown' ? 'markdown' : 'visual'
   );
@@ -115,6 +122,11 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [focusModeStart]);
 
   useEffect(() => {
+    document.documentElement.setAttribute('data-editor-typewriter', editorTypewriter);
+    localStorage.setItem(APPEARANCE_KEYS.editorTypewriter, editorTypewriter);
+  }, [editorTypewriter]);
+
+  useEffect(() => {
     localStorage.setItem('sourceNoteView', sourceNoteView);
   }, [sourceNoteView]);
 
@@ -137,6 +149,8 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         setEditorCustomFont,
         focusModeStart,
         setFocusModeStart,
+        editorTypewriter,
+        setEditorTypewriter,
         sourceNoteView,
         setSourceNoteView
       }}
