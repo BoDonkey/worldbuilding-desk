@@ -1589,8 +1589,10 @@ Movement checks are review findings, never blocks.
 
 ### Phase 6 — Beta, RC, Launch
 
-- **6.1 Beta.** Signed, auto-updating build to a 10–30 author cohort
-  (fiction + LitRPG mix). Define what feedback is collected and where —
+- **6.1 Beta.** Unsigned build (5.2: signing waits for the paid launch;
+  release pages carry the first-launch steps) to a 10–30 author cohort
+  (fiction + LitRPG mix). Windows installs update in place; macOS gets an
+  update notice pointing to the release page (5.1). Define what feedback is collected and where —
   including two activation measures the research review asked for: time from
   first open to first accepted canon record, and time to the first review
   catch the author agrees with (self-reported, no telemetry); beta
