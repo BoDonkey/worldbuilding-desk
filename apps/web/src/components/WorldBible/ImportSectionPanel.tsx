@@ -92,6 +92,9 @@ interface ImportSectionPanelProps {
     sectionId: string,
     destination: ImportSectionDestination
   ) => void;
+  /** Other drafts the given heading's choice would change (4.99). */
+  countMatchingHeadingDrafts?: (sectionId: string) => number;
+  onApplyToMatchingHeadings?: (draftId: string, sectionId: string) => void;
 }
 
 export function ImportSectionPanel({
@@ -100,7 +103,9 @@ export function ImportSectionPanel({
   plannedNewFieldLabels = [],
   isApplyingImports,
   onUpdateDraft,
-  onUpdateSectionDestination
+  onUpdateSectionDestination,
+  countMatchingHeadingDrafts,
+  onApplyToMatchingHeadings
 }: ImportSectionPanelProps) {
   if (!draft.detectedSections || draft.detectedSections.length === 0) {
     return null;
@@ -157,6 +162,11 @@ export function ImportSectionPanel({
             : null;
           const newFieldInputId = `import-new-field-${draft.id}-${section.id}`;
           const newFieldErrorId = `${newFieldInputId}-error`;
+          // Offered once the author sets this heading by hand (4.99).
+          const matchingDraftCount =
+            section.chosenByAuthor && (draft.useDetectedSections ?? false) && !newFieldLabelError
+              ? countMatchingHeadingDrafts?.(section.id) ?? 0
+              : 0;
           return (
             <div key={section.id} className={styles.importSectionItem}>
               <div>
@@ -222,6 +232,17 @@ export function ImportSectionPanel({
                     </span>
                   )}
                 </div>
+              )}
+              {matchingDraftCount > 0 && onApplyToMatchingHeadings && (
+                <button
+                  type='button'
+                  className={styles.importApplyMatchingButton}
+                  disabled={isApplyingImports}
+                  onClick={() => onApplyToMatchingHeadings(draft.id, section.id)}
+                >
+                  Apply to {matchingDraftCount} other draft{matchingDraftCount === 1 ? '' : 's'} with
+                  this heading
+                </button>
               )}
             </div>
           );

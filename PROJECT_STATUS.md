@@ -325,7 +325,15 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   is imported and shows a waiting / imported / failed count. Imported drafts
   stay listed as **Imported** with an **Open** action; failed drafts show the
   reason and stay importable; drafts are never imported twice. **Import
-  and open** scrolls the opened record into view. **Import selected (N)**
+  and open** scrolls the opened record into view. Since slice 4.99 each
+  card also has **Import** (saves without opening the record); after
+  **Import**, or once the record opened by **Import and open** closes, focus
+  moves to the next draft still to import. A heading destination set by hand
+  offers **Apply to N other drafts with this heading** (same heading text,
+  same category, structured headings on, not imported, not set by hand on
+  that draft); it copies the choice and saves nothing
+  (`services/worldBible/importHeadingMatching.ts`,
+  `hooks/useImportDraftFocus.ts`). **Import selected (N)**
   replaces Apply Imports, and closing with unsaved drafts asks before
   discarding them. **Manage Categories** is a modal dialog (focus trap,
   Escape backs out of field editing then closes, closes on navigation,

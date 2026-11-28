@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import type {Dispatch, RefObject, SetStateAction} from 'react';
 import type {EntityCategory, Project, ProjectSettings, WorldEntity} from '../../entityTypes';
 import type {ImportMode, useWorldBibleDocumentImport} from '../../hooks/useWorldBibleDocumentImport';
@@ -8,6 +8,8 @@ import type {
 } from '../../hooks/useWorldBibleJsonImport';
 import type {useWorldBibleAuthoringAssistant} from '../../hooks/useWorldBibleAuthoringAssistant';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
+import {useImportDraftFocus} from '../../hooks/useImportDraftFocus';
+import {findMatchingHeadingDrafts} from '../../services/worldBible/importHeadingMatching';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
 import {ImportDraftCard} from './ImportDraftCard';
 import {ImportDocumentPreviewDialog} from './ImportDocumentPreviewDialog';
@@ -36,6 +38,8 @@ interface WorldBibleImportWorkspaceProps {
   jsonImportInputRef: RefObject<HTMLInputElement | null>;
   /** Opens a saved record in the editor; `saved` is the just-written copy when the list is not yet refreshed. */
   onOpenImportedEntity: (entityId: string, saved?: WorldEntity) => void;
+  /** The record editor is open; closing it returns focus to the next draft (4.99). */
+  isRecordEditorOpen: boolean;
 }
 
 export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps) => {
@@ -43,14 +47,14 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
     activeProject, projectSettings, activeCategory, categories, categoryById, documentImport, jsonImport,
     authoring,
     isPasteImportOpen, setIsPasteImportOpen, pastedImportText, setPastedImportText,
-    importInputRef, jsonImportInputRef, onOpenImportedEntity
+    importInputRef, jsonImportInputRef, onOpenImportedEntity, isRecordEditorOpen
   } = props;
   // The import AI helper is AI coaching; it hides while that switch is off (5.18).
   const aiCoaching = readAISwitches(projectSettings?.aiSettings).coaching;
   const {
     isApplyingImports, importDrafts, clearImportDrafts, applyImportDrafts,
-    updateImportDraft, updateImportSectionDestination, handleImportEntities,
-    preparePastedImportDraft
+    updateImportDraft, updateImportSectionDestination, applySectionDestinationToMatching,
+    handleImportEntities, preparePastedImportDraft
   } = documentImport;
   const {
     isApplyingJsonImport, jsonImportSession, jsonImportConflictResolutions, activeJsonCategory,
@@ -65,6 +69,12 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
   } = authoring;
   const [activeImportPreviewId, setActiveImportPreviewId] = useState<string | null>(null);
   const {requestConfirm, confirmDialog} = useConfirmDialog();
+  const draftListRef = useRef<HTMLUListElement | null>(null);
+  const {focusNextAfter, returnAfterEditor} = useImportDraftFocus({
+    drafts: importDrafts,
+    listRef: draftListRef,
+    isRecordEditorOpen
+  });
   const plannedNewFieldLabels = getPlannedNewFieldLabels(importDrafts);
   const activeImportPreviewDraft =
     importDrafts.find((draft) => draft.id === activeImportPreviewId) ?? null;
@@ -88,9 +98,14 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
 
   const handleImport = async (options?: {draftIds?: string[]; openFirstImported?: boolean}) => {
     const firstImported = await applyImportDrafts(options);
-    if (options?.openFirstImported && firstImported) {
+    if (!firstImported) return;
+    const singleDraftId = options?.draftIds?.length === 1 ? options.draftIds[0] : null;
+    if (options?.openFirstImported) {
       setActiveImportPreviewId(null);
+      if (singleDraftId) returnAfterEditor(singleDraftId);
       onOpenImportedEntity(firstImported.id, firstImported);
+    } else if (singleDraftId) {
+      focusNextAfter(singleDraftId);
     }
   };
 
@@ -263,7 +278,7 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
               />
             </section>
           )}
-          <ul className={styles.importDraftList}>
+          <ul ref={draftListRef} className={styles.importDraftList}>
             {importDrafts.map((draft) => (
               <ImportDraftCard
                 key={draft.id}
@@ -274,6 +289,11 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
                 isApplyingImports={isApplyingImports}
                 onUpdateDraft={updateImportDraft}
                 onUpdateSectionDestination={updateImportSectionDestination}
+                countMatchingHeadingDrafts={(sectionId) =>
+                  findMatchingHeadingDrafts(importDrafts, draft.id, sectionId).length
+                }
+                onApplyToMatchingHeadings={applySectionDestinationToMatching}
+                onImport={(draftId) => void handleImport({draftIds: [draftId]})}
                 onImportAndOpen={(draftId) =>
                   void handleImport({draftIds: [draftId], openFirstImported: true})
                 }

@@ -143,4 +143,43 @@ describe('useWorldBibleDocumentImport draft status', () => {
     });
     expect(result.current.importDrafts[0].status).toBe('imported');
   });
+
+  it('copies a heading choice to the same heading on the other drafts (4.99)', async () => {
+    const {result} = renderImports();
+    const files = ['harbor', 'ridge', 'marsh'].map(
+      (name) => new File([`# ${name}\n\n## Tides\nHigh twice daily.\n\n## Notes\nQuiet.`], `${name}.md`)
+    );
+    await act(async () => {
+      await result.current.handleImportEntities({target: {files, value: ''}} as never);
+    });
+    const [harbor, ridge] = result.current.importDrafts;
+    const tides = (draft: typeof harbor) => draft.detectedSections!.find((item) => item.title === 'Tides')!;
+
+    // Marsh's Tides heading was set by hand, so it keeps its own choice.
+    act(() => {
+      result.current.updateImportSectionDestination(
+        result.current.importDrafts[2].id,
+        tides(result.current.importDrafts[2]).id,
+        {action: 'ignore'}
+      );
+      result.current.updateImportSectionDestination(harbor.id, tides(harbor).id, {
+        action: 'new-field',
+        newFieldLabel: 'Tides'
+      });
+    });
+    act(() => result.current.applySectionDestinationToMatching(harbor.id, tides(harbor).id));
+
+    const [, nextRidge, nextMarsh] = result.current.importDrafts;
+    expect(nextRidge.id).toBe(ridge.id);
+    expect(tides(nextRidge)).toMatchObject({action: 'new-field', newFieldLabel: 'Tides'});
+    expect(tides(nextRidge).chosenByAuthor).toBeUndefined();
+    expect(tides(nextMarsh)).toMatchObject({action: 'ignore', chosenByAuthor: true});
+    // Other headings are untouched, and nothing was saved.
+    expect(nextRidge.detectedSections!.find((item) => item.title === 'Notes')).toEqual(
+      ridge.detectedSections!.find((item) => item.title === 'Notes')
+    );
+    expect(mocks.saveEntity).not.toHaveBeenCalled();
+    expect(mocks.saveCategory).not.toHaveBeenCalled();
+  });
 });
+

@@ -101,6 +101,50 @@ describe('World Bible document import destinations', () => {
     });
   });
 
+  it('applies a heading choice across the batch and keeps the place in the list (4.99)', () => {
+    cy.contains('[aria-label="World Bible categories"] button', /^Locations$/).click();
+    importDocuments(
+      ['harbor', 'ridge', 'marsh'].map((name) =>
+        markdownFile(`${name}.md`, `## Overview\nThe ${name}.\n\n## Tides\n${name} tides.`)
+      )
+    );
+
+    destinationFor('harbor.md', 'Tides').select('New field: Tides');
+    cy.contains('li', 'harbor.md')
+      .contains('button', 'Apply to 2 other drafts with this heading')
+      .click();
+    cy.contains('[role="status"]', 'Applied the "Tides" choice to 2 other drafts.').should('be.visible');
+    destinationFor('ridge.md', 'Tides').find('option:selected').should('have.text', 'New field: Tides');
+    destinationFor('marsh.md', 'Tides').find('option:selected').should('have.text', 'New field: Tides');
+    cy.contains('li', 'harbor.md').contains('button', /other drafts? with this heading/).should('not.exist');
+
+    // Import without opening: focus moves to the next draft still to import.
+    cy.contains('li', 'harbor.md').contains('button', /^Import$/).click();
+    cy.contains('[role="status"]', 'Imported 1 new entry').should('be.visible');
+    cy.contains('li', 'harbor.md').should('contain.text', 'Saved to the project as');
+    cy.focused().closest('li').should('contain.text', 'ridge.md');
+
+    // Import and open: closing the record returns focus to the next draft.
+    cy.contains('li', 'ridge.md').contains('button', 'Import and open').click();
+    cy.contains('[role="status"]', 'Imported 1 new entry').should('be.visible');
+    cy.contains('form button', /^Cancel$/).click();
+    cy.focused().closest('li').should('contain.text', 'marsh.md');
+
+    cy.contains('li', 'marsh.md').contains('button', /^Import$/).click();
+    cy.contains('[role="status"]', 'Imported 1 new entry').should('be.visible');
+
+    readStore<StoredCategory>('entityCategories').then((categories) => {
+      const locations = categories.find((category) => category.name === 'Locations');
+      expect(locations?.fieldSchema.filter((field) => field.label === 'Tides')).to.have.length(1);
+    });
+    readStore<StoredEntity>('entities').then((entities) => {
+      ['harbor', 'ridge', 'marsh'].forEach((name) => {
+        const entity = entities.find((item) => item.name === name);
+        expect(entity?.fields.tides, name).to.contain(`${name} tides.`);
+      });
+    });
+  });
+
   it('shows a field created by an import on a new, unsaved character', () => {
     cy.contains('[aria-label="World Bible categories"] button', /^Characters$/).click();
     importDocuments([

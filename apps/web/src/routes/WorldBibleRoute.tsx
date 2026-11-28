@@ -506,6 +506,7 @@ function WorldBibleRoute() {
         pastedImportText={draft.pastedImportText} setPastedImportText={draft.setPastedImportText}
         importInputRef={importInputRef} jsonImportInputRef={jsonImportInputRef}
         onOpenImportedEntity={handleOpenImportedEntity}
+        isRecordEditorOpen={isRecordEditorOpen}
       />
       {showCategoryManager && (
         <CategoryManager

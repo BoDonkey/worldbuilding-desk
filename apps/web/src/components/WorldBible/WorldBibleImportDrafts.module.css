@@ -207,6 +207,23 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 28%, transparent);
 }
 
+/* Copies a heading choice to the other drafts (4.99). */
+.importApplyMatchingButton {
+  grid-column: 1 / -1;
+  justify-self: start;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border-radius: 999px;
+  padding: 0.32rem 0.8rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.importApplyMatchingButton:hover {
+  background: var(--color-bg-secondary);
+}
+
 .importHelperActions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
