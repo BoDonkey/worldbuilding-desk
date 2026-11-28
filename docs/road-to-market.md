@@ -351,7 +351,7 @@ messages).
 | 4.97 | Rewrite beside the original | 4 | M | Done `a22653f` |
 | 4.98 | Settings hints that follow the choice; export paragraph style | 4 | S | Done `8ba5547` — pre-beta; from 2026-11-28 dogfood; choice is per project per device (localStorage), not in backups; Typewriter and Focus hints left as feature descriptions |
 | 4.99 | Batch import: heading choices across drafts | 4 | S | — pre-beta; from 2026-11-28 dogfood |
-| 4.100a | Character images: storage, backups, record Images panel | 4 | M | WIP — pre-beta (author decision, 2026-11-28); no size limit; from 2026-11-28 dogfood |
+| 4.100a | Character images: storage, backups, record Images panel | 4 | M | Done `e15260c` — pre-beta (author decision, 2026-11-28); no size limit; from 2026-11-28 dogfood |
 | 4.100b | Character images: card PNG portraits, character packages | 4 | S | — pre-beta; after 4.100a; card PNG portraits kept (author decision, 2026-11-28) |
 | 4.101 | DOCX manuscript format | 4 | M | — pre-beta (author decision, 2026-11-28); after 4.98 |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
