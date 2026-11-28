@@ -23,6 +23,8 @@ export interface WorldBibleImportSectionDraft {
    * Sections that share a label, in one draft or across a batch, create one field.
    */
   newFieldLabel?: string;
+  /** The author set this destination on this draft by hand (4.99). */
+  chosenByAuthor?: boolean;
 }
 
 export type ImportSectionDestination = Pick<

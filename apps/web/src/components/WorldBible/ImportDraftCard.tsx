@@ -21,6 +21,10 @@ interface ImportDraftCardProps {
     sectionId: string,
     destination: ImportSectionDestination
   ) => void;
+  /** Other drafts the given heading's choice would change (4.99). */
+  countMatchingHeadingDrafts: (sectionId: string) => number;
+  onApplyToMatchingHeadings: (draftId: string, sectionId: string) => void;
+  onImport: (draftId: string) => void;
   onImportAndOpen: (draftId: string) => void;
   onOpenImported: (entityId: string) => void;
   onPreviewSource: (draftId: string) => void;
@@ -34,6 +38,9 @@ export function ImportDraftCard({
   isApplyingImports,
   onUpdateDraft,
   onUpdateSectionDestination,
+  countMatchingHeadingDrafts,
+  onApplyToMatchingHeadings,
+  onImport,
   onImportAndOpen,
   onOpenImported,
   onPreviewSource
@@ -41,7 +48,11 @@ export function ImportDraftCard({
   if (draft.status === 'imported') {
     const savedName = draft.importedEntityName || draft.name;
     return (
-      <li className={styles.importDraftCard} aria-label={`${draft.fileName}: imported`}>
+      <li
+        className={styles.importDraftCard}
+        aria-label={`${draft.fileName}: imported`}
+        data-import-draft-id={draft.id}
+      >
         <div className={styles.importDraftTop}>
           <span>{draft.fileName}</span>
           <div className={styles.importChipRow}>
@@ -71,7 +82,7 @@ export function ImportDraftCard({
   const landsAsRichText = preferredField?.type === 'textarea';
   const isDisabled = Boolean(draft.parseError) || isApplyingImports;
   return (
-    <li className={styles.importDraftCard}>
+    <li className={styles.importDraftCard} data-import-draft-id={draft.id}>
       <div className={styles.importDraftTop}>
         <label>
           <input
@@ -160,8 +171,18 @@ export function ImportDraftCard({
             isApplyingImports={isApplyingImports}
             onUpdateDraft={onUpdateDraft}
             onUpdateSectionDestination={onUpdateSectionDestination}
+            countMatchingHeadingDrafts={countMatchingHeadingDrafts}
+            onApplyToMatchingHeadings={onApplyToMatchingHeadings}
           />
           <div className={styles.importDraftActions}>
+            <button
+              type='button'
+              className={styles.importPreviewButton}
+              onClick={() => onImport(draft.id)}
+              disabled={isApplyingImports}
+            >
+              Import
+            </button>
             <button
               type='button'
               className={styles.importPreviewButton}

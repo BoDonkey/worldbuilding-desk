@@ -10,6 +10,10 @@ import {convertPlainTextToRichHtml} from '../services/worldBible/worldBibleEntit
 import {describeError} from '../services/errors';
 import {parseDocxFile} from '../services/worldBible/docxImport';
 import {
+  applyHeadingDestinationToMatches,
+  findMatchingHeadingDrafts
+} from '../services/worldBible/importHeadingMatching';
+import {
   buildPreview,
   classifyImportSections,
   detectImportDocumentName,
@@ -331,7 +335,8 @@ export const useWorldBibleDocumentImport = ({
                         ...section,
                         action: destination.action,
                         fieldKey: destination.fieldKey,
-                        newFieldLabel: destination.newFieldLabel
+                        newFieldLabel: destination.newFieldLabel,
+                        chosenByAuthor: true
                       }
                     : section
                 )
@@ -341,6 +346,25 @@ export const useWorldBibleDocumentImport = ({
       );
     },
     []
+  );
+
+  /** Copies one heading's destination to the same heading on the other drafts (4.99). */
+  const applySectionDestinationToMatching = useCallback(
+    (draftId: string, sectionId: string) => {
+      const count = findMatchingHeadingDrafts(importDrafts, draftId, sectionId).length;
+      if (count === 0) return;
+      setImportDrafts((prev) => applyHeadingDestinationToMatches(prev, draftId, sectionId));
+      const title = importDrafts
+        .find((draft) => draft.id === draftId)
+        ?.detectedSections?.find((section) => section.id === sectionId)?.title;
+      setFeedback({
+        tone: 'success',
+        message: `Applied the ${title ? `"${title}" ` : ''}choice to ${count} other draft${
+          count === 1 ? '' : 's'
+        }. Nothing is saved until you import.`
+      });
+    },
+    [importDrafts, setFeedback]
   );
 
   // When a category's fields change (an import in this batch created one, or
@@ -546,6 +570,7 @@ export const useWorldBibleDocumentImport = ({
     preparePastedImportDraft,
     updateImportDraft,
     updateImportSectionDestination,
+    applySectionDestinationToMatching,
     applyImportDrafts
   };
 };

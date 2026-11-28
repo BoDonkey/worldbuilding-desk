@@ -180,4 +180,30 @@ describe('ImportSectionPanel', () => {
     expect(screen.queryByText(/Adds a new field named/)).toBeNull();
     expect(screen.getByLabelText('New field name')).toHaveValue(' age! ');
   });
+
+  it('offers to apply a hand-set heading to matching drafts (4.99)', () => {
+    const onApplyToMatchingHeadings = vi.fn();
+    const sections: WorldBibleImportSectionDraft[] = [
+      {id: 'look', title: 'Appearance', content: 'Tall.', action: 'new-field', chosenByAuthor: true},
+      {id: 'age', title: 'Age', content: '30', action: 'existing-field', fieldKey: 'age'}
+    ];
+    render(
+      <ImportSectionPanel
+        draft={buildDraft(sections)}
+        category={characters}
+        isApplyingImports={false}
+        onUpdateDraft={vi.fn()}
+        onUpdateSectionDestination={vi.fn()}
+        countMatchingHeadingDrafts={(sectionId) => (sectionId === 'look' ? 2 : 3)}
+        onApplyToMatchingHeadings={onApplyToMatchingHeadings}
+      />
+    );
+
+    // Only the heading the author set by hand offers it.
+    const buttons = screen.getAllByRole('button', {name: /other drafts? with this heading/});
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveTextContent('Apply to 2 other drafts with this heading');
+    fireEvent.click(buttons[0]);
+    expect(onApplyToMatchingHeadings).toHaveBeenCalledWith('draft', 'look');
+  });
 });

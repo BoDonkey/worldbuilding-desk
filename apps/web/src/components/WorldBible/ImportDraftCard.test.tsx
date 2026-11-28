@@ -27,6 +27,7 @@ const draft: WorldBibleImportDraft = {
 
 const renderCard = (overrides: Partial<WorldBibleImportDraft>) => {
   const handlers = {
+    onImport: vi.fn(),
     onImportAndOpen: vi.fn(),
     onOpenImported: vi.fn()
   };
@@ -40,6 +41,8 @@ const renderCard = (overrides: Partial<WorldBibleImportDraft>) => {
         onUpdateDraft={vi.fn()}
         onUpdateSectionDestination={vi.fn()}
         onPreviewSource={vi.fn()}
+        countMatchingHeadingDrafts={() => 0}
+        onApplyToMatchingHeadings={vi.fn()}
         {...handlers}
       />
     </ul>
@@ -53,6 +56,14 @@ describe('ImportDraftCard', () => {
 
     expect(screen.getByText('Not saved yet')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Import and open'})).toBeInTheDocument();
+  });
+
+  it('imports a draft without opening it (4.99)', () => {
+    const {onImport, onImportAndOpen} = renderCard({});
+
+    fireEvent.click(screen.getByRole('button', {name: 'Import'}));
+    expect(onImport).toHaveBeenCalledWith('draft');
+    expect(onImportAndOpen).not.toHaveBeenCalled();
   });
 
   it('collapses an imported draft to the saved record with an Open action', () => {
