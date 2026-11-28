@@ -349,6 +349,10 @@ messages).
 | 4.95 | Scene snapshots: save, compare, restore | 4 | M | Done `0d19700` |
 | 4.96 | Draft milestones (snapshot the whole manuscript) | 4 | S | Done `7142b55` |
 | 4.97 | Rewrite beside the original | 4 | M | Done `a22653f` |
+| 4.98 | Settings hints that follow the choice; export paragraph style | 4 | S | — pre-beta; from 2026-11-28 dogfood |
+| 4.99 | Batch import: heading choices across drafts | 4 | S | — pre-beta; from 2026-11-28 dogfood |
+| 4.100 | Character images | 4 | M | — pre-beta (author decision, 2026-11-28); no size limit; card PNG portraits kept; from 2026-11-28 dogfood |
+| 4.101 | DOCX manuscript format | 4 | M | — pre-beta (author decision, 2026-11-28); after 4.98 |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
@@ -1411,6 +1415,88 @@ Movement checks are review findings, never blocks.
   - **Verify.** Fast battery plus Workspace Cypress; e2e that rewrites a
     paragraph, keeps both, comes back, and uses the alternative; unit test
     for the stale-range refusal.
+
+- **4.98 Settings hints that follow the choice; export paragraph style.**
+  Pre-beta. From the 2026-11-28
+  dogfood run. Settings → Reading & Editor → Highlight visibility shows the
+  same hint (about Hidden while typing) for every mode. Show one line per
+  mode: Visible (full highlights), Subtle (lighter underlines, still
+  clickable), Hidden while typing (back after a short pause). Do the same
+  for the Paragraphs hint, and reword it so it does not read as a
+  limitation: this is how the editor looks on this device; exports use their
+  own layout. Sweep the other Editor Appearance choices for static hints
+  that describe only one option.
+  - **Export paragraph style.** EPUB and DOCX export get a Paragraphs
+    choice, **Indented** (default) or **Spaced**, kept separate from the
+    editor setting (author decision, 2026-11-28: spaced paragraphs suit
+    neither publishers nor book readers). Indented means a first-line
+    indent and no gap, with no indent on the first paragraph after a
+    heading or scene break. EPUB does it in `book.css` with a class on
+    first paragraphs; DOCX through the paragraph style (Normal with a
+    first-line indent, plus a no-indent style), not direct formatting.
+    Markdown export is unchanged. The choice is remembered per project.
+  - **Verify.** Fast battery; a component test that the hint changes with
+    the selection; `sceneExport` unit tests for both styles in both formats
+    (CSS rules, `w:ind` in the styles part, first paragraph after a heading).
+
+- **4.99 Batch import: heading choices across drafts.** From the 2026-11-28
+  dogfood run. When several documents are imported into one category, a
+  heading choice (send to a field, new field, skip) is saved on one draft
+  only; the other drafts pick up a new field only after the first one is
+  imported.
+  - **Apply to matching headings.** After a destination change, offer
+    **Apply to N other drafts with this heading** (same heading text, same
+    category, not yet imported, not changed by hand on that draft). One
+    click updates them; the per-draft choice stays editable.
+  - **Import without opening.** Add **Import** beside **Import and open**
+    on each card, so finishing one draft does not open the full record
+    editor. After either, keep the place in the list: scroll and focus move
+    to the next draft still to import, and imported cards collapse to their
+    one-line summary.
+  - **Rules.** Nothing is saved until a draft is imported (unchanged). A
+    planned new field is still created once, by whichever draft imports
+    first.
+  - **Verify.** Fast battery; hook unit tests for apply-to-matching
+    (skips hand-changed and imported drafts); Cypress batch import of three
+    documents sharing a heading.
+
+- **4.100 Character images.** From the 2026-11-28 dogfood run; this is
+  the parked "Images" backlog item (2026-10-06), now with dogfood evidence.
+  **Pre-beta** (author decision, 2026-11-28). One
+  or more images on a World Bible record (characters first, any category
+  allowed), with one chosen as the portrait shown on the record and in
+  pickers. Stored in the project the way map images are (4.80: data URL
+  with type, size, dimensions), carried by backup, restore, vaults, and
+  character packages. Display only: AI surfaces do not see images.
+  - **No size limit** (author decision, 2026-11-28). Still show each
+    image's size and the record's total, and fail with a clear message if
+    the browser or disk refuses the write (storage quota), never silently.
+  - **Character cards keep their portrait** (author decision,
+    2026-11-28). Importing a card PNG stores the PNG as the record's
+    portrait; remove the dialog line saying the portrait is not imported.
+    Card export writes the chosen portrait as the card image.
+  - **Verify.** Fast battery plus World Bible Cypress; backup round trip and
+    package export/import keep images; DB version bump rules if the schema
+    changes.
+
+- **4.101 DOCX manuscript format.** Pre-beta (author decision,
+  2026-11-28); after 4.98. A **Manuscript format** option on DOCX export for
+  submitting to agents and publishers: standard manuscript format through
+  real Word styles (so a typesetter can restyle it), not direct formatting.
+  12pt Times New Roman or Courier, double spacing, 1" margins, first-line
+  indent with no gap, scene breaks as a centered `#`, each chapter starting
+  on a new page, and a header with author surname, short title, and page
+  number. A title page with the author's name and contact block, title, and
+  approximate word count (rounded, as agents expect). Author name and
+  contact come from a small form remembered per project; nothing is sent
+  anywhere.
+  - **Rules.** Scene titles and numbering are left out of the body in this
+    format (today's DOCX export prints "1. Title" headings); chapters keep
+    their headings. Manuscript text is unchanged; only layout differs.
+  - **Verify.** Fast battery; `sceneExport` unit tests on the styles part,
+    section properties (margins, header), scene-break paragraphs, and word
+    count rounding; open a sample in Word and LibreOffice and attach
+    screenshots.
 
 ### Phase 5 — Release engineering
 
