@@ -14,6 +14,7 @@ import {
 import {describeError} from '../services/errors';
 import {pushAppToast} from '../store/notificationStore';
 import {exportScenesAsDocx, exportScenesAsEpub, exportScenesAsMarkdown} from '../utils/sceneExport';
+import {readExportParagraphStyle} from '../utils/exportParagraphStyle';
 
 export type DraftExportFormat = 'markdown' | 'docx' | 'epub';
 
@@ -117,7 +118,11 @@ export function useDraftMilestones({
 
   const exportMilestone = useCallback((milestone: DraftMilestone, format: DraftExportFormat) => {
     if (!projectId) return;
-    const params = {projectName: `${projectName} - ${milestone.name}`, scenes: milestoneAsDocuments(milestone, projectId)};
+    const params = {
+      projectName: `${projectName} - ${milestone.name}`,
+      scenes: milestoneAsDocuments(milestone, projectId),
+      paragraphStyle: readExportParagraphStyle(projectId)
+    };
     if (format === 'markdown') exportScenesAsMarkdown(params);
     else if (format === 'docx') exportScenesAsDocx(params);
     else exportScenesAsEpub(params);

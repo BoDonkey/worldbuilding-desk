@@ -2,10 +2,17 @@ import type {WritingDocument} from '../entityTypes';
 import {htmlTextContent} from './textHelpers';
 import {buildZip} from './zip';
 import {sanitizeFileNamePart, triggerBytesDownload} from './downloadJson';
+import {DEFAULT_EXPORT_PARAGRAPH_STYLE, type ExportParagraphStyle} from './exportParagraphStyle';
+
+/** A scene break (the editor's horizontal rule) inside the scene text blocks. */
+const SCENE_BREAK = '\uE000scene-break\uE000';
+/** How a scene break reads in EPUB and DOCX exports. */
+const SCENE_BREAK_TEXT = '* * *';
 
 function htmlToPlainTextWithParagraphs(html: string): string {
   const normalized = html
     .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<hr\b[^>]*>/gi, `\n\n${SCENE_BREAK}\n\n`)
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/h[1-6]>/gi, '\n\n')
     .replace(/<\/li>/gi, '\n')
@@ -14,15 +21,37 @@ function htmlToPlainTextWithParagraphs(html: string): string {
   return htmlTextContent(normalized).replace(/\r\n/g, '\n').trim();
 }
 
+/** Paragraph text blocks; scene breaks are SCENE_BREAK blocks. */
 function sceneTextBlocks(scene: WritingDocument): string[] {
   const text = htmlToPlainTextWithParagraphs(scene.content);
   if (!text) {
     return [];
   }
-  return text
+  const blocks = text
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean);
+  // A scene that only has scene breaks has no content.
+  return blocks.some((block) => block !== SCENE_BREAK) ? blocks : [];
+}
+
+type ExportBlockKind = 'first' | 'body' | 'scene-break';
+
+/**
+ * Each block with its layout role: the first paragraph of a scene and the one
+ * after a scene break take no first-line indent (4.98).
+ */
+function exportBlocks(scene: WritingDocument): Array<{kind: ExportBlockKind; text: string}> {
+  let afterBreak = true;
+  return sceneTextBlocks(scene).map((block) => {
+    if (block === SCENE_BREAK) {
+      afterBreak = true;
+      return {kind: 'scene-break', text: SCENE_BREAK_TEXT};
+    }
+    const kind: ExportBlockKind = afterBreak ? 'first' : 'body';
+    afterBreak = false;
+    return {kind, text: block};
+  });
 }
 
 function escapeMarkdown(value: string): string {
@@ -52,7 +81,7 @@ export function buildScenesMarkdown(params: {
     const title = scene.title.trim() || `Untitled scene ${index + 1}`;
     lines.push(`## ${index + 1}. ${escapeMarkdown(title)}`);
     lines.push('');
-    const blocks = sceneTextBlocks(scene);
+    const blocks = sceneTextBlocks(scene).filter((block) => block !== SCENE_BREAK);
     if (blocks.length === 0) {
       lines.push('_No content_');
       lines.push('');
@@ -95,20 +124,71 @@ function sceneParagraphXml(scene: WritingDocument, index: number): string {
   const heading = `<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr>${textToWordRunXml(
     `${index + 1}. ${title}`
   )}</w:p>`;
-  const blocks = sceneTextBlocks(scene);
+  const blocks = exportBlocks(scene);
   if (blocks.length === 0) {
     return `${heading}<w:p><w:r><w:t xml:space="preserve"> </w:t></w:r></w:p>`;
   }
   const body = blocks
-    .map((block) => `<w:p>${textToWordRunXml(block)}</w:p>`)
+    .map((block) => `<w:p>${DOCX_PARAGRAPH_PROPERTIES[block.kind]}${textToWordRunXml(block.text)}</w:p>`)
     .join('');
   return heading + body;
 }
 
-export function buildScenesDocx(params: {
+/** Body paragraphs use Normal; the others name their own style. */
+const DOCX_PARAGRAPH_PROPERTIES: Record<ExportBlockKind, string> = {
+  first: '<w:pPr><w:pStyle w:val="FirstParagraph"/></w:pPr>',
+  body: '',
+  'scene-break': '<w:pPr><w:pStyle w:val="SceneBreak"/></w:pPr>'
+};
+
+/** 1.5em at 12pt, matching the editor's indent; twentieths of a point. */
+const DOCX_FIRST_LINE_INDENT = 360;
+
+/**
+ * The styles part. Paragraph layout lives in styles, not on each paragraph, so
+ * a publisher or typesetter can restyle the whole file at once.
+ */
+export function buildDocxStylesXml(paragraphStyle: ExportParagraphStyle): string {
+  const indented = paragraphStyle === 'indented';
+  const normalParagraph = indented
+    ? `<w:spacing w:after="0" w:line="276" w:lineRule="auto"/><w:ind w:firstLine="${DOCX_FIRST_LINE_INDENT}"/>`
+    : '<w:spacing w:after="240" w:line="276" w:lineRule="auto"/><w:ind w:firstLine="0"/>';
+  const noIndent = '<w:ind w:firstLine="0"/>';
+  return (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    '<w:docDefaults>' +
+    '<w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="Times New Roman" w:cs="Times New Roman"/>' +
+    '<w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr></w:rPrDefault>' +
+    '<w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault>' +
+    '</w:docDefaults>' +
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/>' +
+    `<w:pPr>${normalParagraph}</w:pPr></w:style>` +
+    '<w:style w:type="paragraph" w:styleId="FirstParagraph"><w:name w:val="First Paragraph"/>' +
+    `<w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr>${noIndent}</w:pPr></w:style>` +
+    '<w:style w:type="paragraph" w:styleId="SceneBreak"><w:name w:val="Scene Break"/>' +
+    '<w:basedOn w:val="Normal"/><w:next w:val="FirstParagraph"/><w:qFormat/>' +
+    `<w:pPr><w:keepNext/><w:spacing w:before="240" w:after="240"/>${noIndent}<w:jc w:val="center"/></w:pPr></w:style>` +
+    '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/>' +
+    '<w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/>' +
+    `<w:pPr><w:spacing w:after="480"/>${noIndent}<w:jc w:val="center"/></w:pPr>` +
+    '<w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr></w:style>' +
+    '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/>' +
+    '<w:basedOn w:val="Normal"/><w:next w:val="FirstParagraph"/><w:qFormat/>' +
+    `<w:pPr><w:keepNext/><w:spacing w:before="480" w:after="240"/>${noIndent}<w:outlineLvl w:val="0"/></w:pPr>` +
+    '<w:rPr><w:b/><w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr></w:style>' +
+    '</w:styles>'
+  );
+}
+
+interface SceneExportParams {
   projectName: string;
   scenes: WritingDocument[];
-}): Uint8Array {
+  /** EPUB and DOCX only; Indented when not given. */
+  paragraphStyle?: ExportParagraphStyle;
+}
+
+export function buildScenesDocx(params: SceneExportParams): Uint8Array {
   const encoder = new TextEncoder();
   const bodyXml = params.scenes
     .map((scene, index) => sceneParagraphXml(scene, index))
@@ -153,6 +233,7 @@ export function buildScenesDocx(params: {
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
     '<Default Extension="xml" ContentType="application/xml"/>' +
     '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
     '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
     '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
     '</Types>';
@@ -164,6 +245,13 @@ export function buildScenesDocx(params: {
     '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' +
     '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>' +
     '</Relationships>';
+
+  const documentRelsXml =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+    '</Relationships>';
+  const stylesXml = buildDocxStylesXml(params.paragraphStyle ?? DEFAULT_EXPORT_PARAGRAPH_STYLE);
 
   const coreXml =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -191,18 +279,23 @@ export function buildScenesDocx(params: {
     {fileName: '_rels/.rels', fileData: encoder.encode(relsXml)},
     {fileName: 'docProps/core.xml', fileData: encoder.encode(coreXml)},
     {fileName: 'docProps/app.xml', fileData: encoder.encode(appXml)},
-    {fileName: 'word/document.xml', fileData: encoder.encode(documentXml)}
+    {fileName: 'word/document.xml', fileData: encoder.encode(documentXml)},
+    {fileName: 'word/_rels/document.xml.rels', fileData: encoder.encode(documentRelsXml)},
+    {fileName: 'word/styles.xml', fileData: encoder.encode(stylesXml)}
   ]);
 }
 
 function buildSceneChapterXhtml(scene: WritingDocument, index: number): string {
   const title = scene.title.trim() || `Untitled scene ${index + 1}`;
-  const blocks = sceneTextBlocks(scene);
+  const blocks = exportBlocks(scene);
   const body =
     blocks.length === 0
-      ? '<p>No content.</p>'
+      ? '<p class="first">No content.</p>'
       : blocks
-          .map((block) => `<p>${escapeXml(block).replace(/\n/g, '<br />')}</p>`)
+          .map((block) => {
+            const className = block.kind === 'body' ? '' : ` class="${block.kind}"`;
+            return `<p${className}>${escapeXml(block.text).replace(/\n/g, '<br />')}</p>`;
+          })
           .join('');
   return (
     '<?xml version="1.0" encoding="utf-8"?>' +
@@ -217,10 +310,22 @@ function buildSceneChapterXhtml(scene: WritingDocument, index: number): string {
   );
 }
 
-export function buildScenesEpub(params: {
-  projectName: string;
-  scenes: WritingDocument[];
-}): Uint8Array {
+/** The EPUB stylesheet; `p.first` and `p.scene-break` never take the indent. */
+export function buildEpubStylesheet(paragraphStyle: ExportParagraphStyle): string {
+  const paragraph =
+    paragraphStyle === 'indented'
+      ? 'p{margin:0;text-indent:1.5em;white-space:pre-wrap;}'
+      : 'p{margin:0 0 1em;text-indent:0;white-space:pre-wrap;}';
+  return (
+    'body{font-family:serif;line-height:1.5;margin:5%;}' +
+    'h1{font-size:1.5em;margin:0 0 1em;}' +
+    paragraph +
+    'p.first{text-indent:0;}' +
+    'p.scene-break{text-indent:0;text-align:center;margin:1em 0;}'
+  );
+}
+
+export function buildScenesEpub(params: SceneExportParams): Uint8Array {
   const encoder = new TextEncoder();
   const bookId = `urn:uuid:${crypto.randomUUID()}`;
   const modifiedIso = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -298,10 +403,7 @@ export function buildScenesEpub(params: {
     '</rootfiles>' +
     '</container>';
 
-  const stylesheet =
-    'body{font-family:serif;line-height:1.5;margin:5%;}' +
-    'h1{font-size:1.5em;margin:0 0 1em;}' +
-    'p{margin:0 0 1em;white-space:pre-wrap;}';
+  const stylesheet = buildEpubStylesheet(params.paragraphStyle ?? DEFAULT_EXPORT_PARAGRAPH_STYLE);
 
   return buildZip([
     {fileName: 'mimetype', fileData: encoder.encode('application/epub+zip')},
@@ -327,10 +429,7 @@ export function exportScenesAsMarkdown(params: {
   triggerBytesDownload(fileName, bytes, 'text/markdown;charset=utf-8');
 }
 
-export function exportScenesAsDocx(params: {
-  projectName: string;
-  scenes: WritingDocument[];
-}): void {
+export function exportScenesAsDocx(params: SceneExportParams): void {
   const bytes = buildScenesDocx(params);
   const stamp = new Date().toISOString().slice(0, 10);
   const fileName = `${sanitizeFileNamePart(params.projectName)}-scenes-${stamp}.docx`;
@@ -341,10 +440,7 @@ export function exportScenesAsDocx(params: {
   );
 }
 
-export function exportScenesAsEpub(params: {
-  projectName: string;
-  scenes: WritingDocument[];
-}): void {
+export function exportScenesAsEpub(params: SceneExportParams): void {
   const bytes = buildScenesEpub(params);
   const stamp = new Date().toISOString().slice(0, 10);
   const fileName = `${sanitizeFileNamePart(params.projectName)}-scenes-${stamp}.epub`;

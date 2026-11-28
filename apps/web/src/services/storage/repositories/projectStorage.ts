@@ -32,6 +32,7 @@ const PROJECT_LOCAL_STORAGE_PREFIXES = [
   'progressionContinuityReview',
   'backupReminderSnooze',
   'scheduledBackupFingerprint',
+  'exportParagraphStyle',
   // Pre-3.23c mechanics drafts not yet moved into project storage.
   'wbd:first-mechanics'
 ] as const;

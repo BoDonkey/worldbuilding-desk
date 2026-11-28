@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from 'react';
 import type {SceneSnapshot, WritingDocument} from '../../entityTypes';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {useDraftMilestones, type DraftExportFormat} from '../../hooks/useDraftMilestones';
+import {ExportParagraphStyleChoice} from './ExportParagraphStyleChoice';
 import {useEscapeToClose} from '../../hooks/useEscapeToClose';
 import {useFocusTrap} from '../../hooks/useFocusTrap';
 import type {DeletedScene, DraftMilestone} from '../../services/editor/draftMilestones';
@@ -168,6 +169,7 @@ export function WorkspaceDraftsModal(props: WorkspaceDraftsModalProps) {
           {shown && 'scenes' in shown && (
             <MilestoneView
               key={shown.id}
+              projectId={projectId}
               milestone={shown}
               currentHtmlOf={currentHtmlOf}
               onExport={(format) => drafts.exportMilestone(shown, format)}
@@ -206,7 +208,8 @@ export function WorkspaceDraftsModal(props: WorkspaceDraftsModalProps) {
   );
 }
 
-function MilestoneView({milestone, currentHtmlOf, onExport, onDelete, onOpenScene}: {
+function MilestoneView({projectId, milestone, currentHtmlOf, onExport, onDelete, onOpenScene}: {
+  projectId: string;
   milestone: DraftMilestone;
   currentHtmlOf: (sceneId: string) => string | null;
   onExport: (format: DraftExportFormat) => void;
@@ -233,6 +236,7 @@ function MilestoneView({milestone, currentHtmlOf, onExport, onDelete, onOpenScen
           <button type='button' className={styles.dangerButton} onClick={onDelete}>Delete milestone</button>
         </div>
       </div>
+      <ExportParagraphStyleChoice key={projectId} projectId={projectId} note='EPUB and DOCX only.' />
       <ul className={styles.sceneList} aria-label='Scenes in this milestone'>
         <li>
           <button type='button' className={styles.sceneChip} aria-pressed={sceneIndex === null} onClick={() => setSceneIndex(null)}>
