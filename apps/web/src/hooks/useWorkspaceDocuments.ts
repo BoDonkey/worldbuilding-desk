@@ -41,6 +41,7 @@ import {describeError} from '../services/errors';
 import {buildNewSceneDocument} from '../services/workspace/newSceneDocument';
 import {takeSnapshotBeforeSceneDeletion} from '../services/editor/sceneSnapshots';
 import {useStatusAnnouncement} from './useStatusAnnouncement';
+import {readExportParagraphStyle} from '../utils/exportParagraphStyle';
 export type SaveStatus = 'idle' | 'saving' | 'saved';
 type ImportMode = WorkspaceImportMode;
 
@@ -609,12 +610,13 @@ export const useWorkspaceDocuments = ({
       return;
     }
 
+    const paragraphStyle = readExportParagraphStyle(activeProject.id);
     if (exportFormat === 'markdown') {
       exportScenesAsMarkdown({projectName: activeProject.name, scenes: selectedScenes});
     } else if (exportFormat === 'docx') {
-      exportScenesAsDocx({projectName: activeProject.name, scenes: selectedScenes});
+      exportScenesAsDocx({projectName: activeProject.name, scenes: selectedScenes, paragraphStyle});
     } else {
-      exportScenesAsEpub({projectName: activeProject.name, scenes: selectedScenes});
+      exportScenesAsEpub({projectName: activeProject.name, scenes: selectedScenes, paragraphStyle});
     }
 
     closeStoreExportModal();

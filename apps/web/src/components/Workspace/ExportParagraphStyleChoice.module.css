@@ -1,0 +1,17 @@
+/* Paragraphs choice in the scene and draft export controls (4.98). */
+
+.choice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.hint {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}

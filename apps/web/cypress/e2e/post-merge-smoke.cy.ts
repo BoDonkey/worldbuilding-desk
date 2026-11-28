@@ -594,7 +594,9 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('[role="dialog"] h3', 'Export scenes as DOCX')
       .closest('[role="dialog"]')
       .within(() => {
-      cy.contains('button', 'Export').click();
+        // Paragraphs defaults to Indented (4.98).
+        cy.get('select').should('have.value', 'indented');
+        cy.contains('button', 'Export').click();
       });
 
     cy.contains('[role="status"]', 'Exported 3 scene(s) to DOCX.').should('be.visible');
@@ -609,6 +611,8 @@ describe('Post-merge smoke checklist', () => {
       expect(bytes[0]).to.equal(0x50);
       expect(bytes[1]).to.equal(0x4b);
       expect(zipText).to.contain('word/document.xml');
+      expect(zipText).to.contain('word/styles.xml');
+      expect(zipText).to.contain('<w:ind w:firstLine="360"/>');
     });
   });
 
@@ -629,6 +633,7 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('[role="dialog"] h3', 'Export scenes as EPUB')
       .closest('[role="dialog"]')
       .within(() => {
+        cy.get('select').select('Spaced');
         cy.contains('button', 'Export').click();
       });
 
@@ -653,7 +658,15 @@ describe('Post-merge smoke checklist', () => {
       expect(zipText).to.contain('1. Alpha Scene');
       expect(zipText).to.contain('2. Beta Scene');
       expect(zipText).to.contain('3. Gamma Scene');
+      expect(zipText).to.contain('p{margin:0 0 1em;text-indent:0;');
     });
+
+    // The Spaced choice is remembered for the next export of this project.
+    cy.contains('button', 'Export EPUB').click({force: true});
+    cy.contains('[role="dialog"] h3', 'Export scenes as EPUB')
+      .closest('[role="dialog"]')
+      .find('select')
+      .should('have.value', 'spaced');
   });
 
   it('keeps mode defaults isolated and applies them in the assistant', () => {

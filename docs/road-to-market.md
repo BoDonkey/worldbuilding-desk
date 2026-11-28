@@ -349,7 +349,7 @@ messages).
 | 4.95 | Scene snapshots: save, compare, restore | 4 | M | Done `0d19700` |
 | 4.96 | Draft milestones (snapshot the whole manuscript) | 4 | S | Done `7142b55` |
 | 4.97 | Rewrite beside the original | 4 | M | Done `a22653f` |
-| 4.98 | Settings hints that follow the choice; export paragraph style | 4 | S | — pre-beta; from 2026-11-28 dogfood |
+| 4.98 | Settings hints that follow the choice; export paragraph style | 4 | S | Done `8ba5547` — pre-beta; from 2026-11-28 dogfood; choice is per project per device (localStorage), not in backups; Typewriter and Focus hints left as feature descriptions |
 | 4.99 | Batch import: heading choices across drafts | 4 | S | Done `ec90e0f` — pre-beta; from 2026-11-28 dogfood |
 | 4.100 | Character images | 4 | M | — pre-beta (author decision, 2026-11-28); no size limit; card PNG portraits kept; from 2026-11-28 dogfood |
 | 4.101 | DOCX manuscript format | 4 | M | — pre-beta (author decision, 2026-11-28); after 4.98 |
@@ -1675,8 +1675,10 @@ Movement checks are review findings, never blocks.
 
 ### Phase 6 — Beta, RC, Launch
 
-- **6.1 Beta.** Signed, auto-updating build to a 10–30 author cohort
-  (fiction + LitRPG mix). Define what feedback is collected and where —
+- **6.1 Beta.** Unsigned build (5.2: signing waits for the paid launch;
+  release pages carry the first-launch steps) to a 10–30 author cohort
+  (fiction + LitRPG mix). Windows installs update in place; macOS gets an
+  update notice pointing to the release page (5.1). Define what feedback is collected and where —
   including two activation measures the research review asked for: time from
   first open to first accepted canon record, and time to the first review
   catch the author agrees with (self-reported, no telemetry); beta
