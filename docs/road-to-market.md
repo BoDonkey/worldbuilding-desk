@@ -349,6 +349,9 @@ messages).
 | 4.95 | Scene snapshots: save, compare, restore | 4 | M | Done `0d19700` |
 | 4.96 | Draft milestones (snapshot the whole manuscript) | 4 | S | Done `7142b55` |
 | 4.97 | Rewrite beside the original | 4 | M | Done `a22653f` |
+| 4.98 | Settings hints that follow the choice | 4 | XS | — from 2026-11-28 dogfood |
+| 4.99 | Batch import: heading choices across drafts | 4 | S | — from 2026-11-28 dogfood |
+| 4.100 | Character images | 4 | M | — proposed, needs author scope decision; from 2026-11-28 dogfood (parked "Images" backlog item) |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
 | 4.78 | Places: where-is-everyone view + movement checks | 4 | M | Done `3289507` |
@@ -1411,6 +1414,57 @@ Movement checks are review findings, never blocks.
   - **Verify.** Fast battery plus Workspace Cypress; e2e that rewrites a
     paragraph, keeps both, comes back, and uses the alternative; unit test
     for the stale-range refusal.
+
+- **4.98 Settings hints that follow the choice.** From the 2026-11-28
+  dogfood run. Settings → Reading & Editor → Highlight visibility shows the
+  same hint (about Hidden while typing) for every mode. Show one line per
+  mode: Visible (full highlights), Subtle (lighter underlines, still
+  clickable), Hidden while typing (back after a short pause). Do the same
+  for the Paragraphs hint, and reword it so it does not read as a
+  limitation: this is how the editor looks on this device; exports use their
+  own layout. Sweep the other Editor Appearance choices for static hints
+  that describe only one option.
+  - **Verify.** Fast battery; a component test that the hint changes with
+    the selection.
+  - **Open question (author).** Should exports offer a paragraph style
+    (Spaced or Indented) for EPUB and DOCX? Not in this slice.
+
+- **4.99 Batch import: heading choices across drafts.** From the 2026-11-28
+  dogfood run. When several documents are imported into one category, a
+  heading choice (send to a field, new field, skip) is saved on one draft
+  only; the other drafts pick up a new field only after the first one is
+  imported.
+  - **Apply to matching headings.** After a destination change, offer
+    **Apply to N other drafts with this heading** (same heading text, same
+    category, not yet imported, not changed by hand on that draft). One
+    click updates them; the per-draft choice stays editable.
+  - **Import without opening.** Add **Import** beside **Import and open**
+    on each card, so finishing one draft does not open the full record
+    editor. After either, keep the place in the list: scroll and focus move
+    to the next draft still to import, and imported cards collapse to their
+    one-line summary.
+  - **Rules.** Nothing is saved until a draft is imported (unchanged). A
+    planned new field is still created once, by whichever draft imports
+    first.
+  - **Verify.** Fast battery; hook unit tests for apply-to-matching
+    (skips hand-changed and imported drafts); Cypress batch import of three
+    documents sharing a heading.
+
+- **4.100 Character images.** From the 2026-11-28 dogfood run; this is
+  the parked "Images" backlog item (2026-10-06), now with dogfood evidence.
+  **Proposed, needs an author scope decision before it is scheduled.** One
+  or more images on a World Bible record (characters first, any category
+  allowed), with one chosen as the portrait shown on the record and in
+  pickers. Stored in the project the way map images are (4.80: data URL
+  with type, size, dimensions; size limit with a clear message), carried by
+  backup, restore, vaults, and character packages. Display only: AI surfaces
+  do not see images.
+  - **Open questions.** Per-image and per-project size limits (backup and
+    package size); whether a character card PNG import keeps its portrait
+    (today the dialog says it is not imported).
+  - **Verify.** Fast battery plus World Bible Cypress; backup round trip and
+    package export/import keep images; DB version bump rules if the schema
+    changes.
 
 ### Phase 5 — Release engineering
 
