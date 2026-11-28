@@ -957,7 +957,7 @@ function WorkspaceRoute() {
       />
 
       <WorkspaceExportModal
-        isOpen={isExportModalOpen}
+        isOpen={isExportModalOpen} projectId={activeProject.id}
         format={exportFormat} selection={exportSelection}
         onClose={closeExportModal} onMove={moveExportItem}
         onToggle={toggleExportItem} onToggleAll={toggleAllExportItems}

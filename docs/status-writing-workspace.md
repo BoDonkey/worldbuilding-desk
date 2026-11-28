@@ -72,7 +72,9 @@
   unless the scene is empty (author decision, 2026-11-22). Until 4.96 a
   deleted scene's snapshots are kept in the project and its backups but are
   not shown in the app.
-- Markdown, DOCX, and EPUB export flows.
+- Markdown, DOCX, and EPUB export flows. EPUB and DOCX take a Paragraphs
+  choice, Indented (default) or Spaced, remembered per project (slice 4.98);
+  scene breaks export as a centered `* * *` in both.
 - Import modes for scene ingestion: `strict`, `balanced`, `lenient`.
 - Deferred consistency review for imported scenes so writing is not blocked.
 - Imported scene text is persisted before post-import review runs.

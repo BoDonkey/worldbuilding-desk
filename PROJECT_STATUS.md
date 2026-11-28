@@ -85,6 +85,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 
 ### Writing Workspace
 - TipTap editor with scenes, autosave, Find, and Markdown/DOCX/EPUB export;
+  EPUB and DOCX export (scenes and draft milestones) take a **Paragraphs**
+  choice (slice 4.98): Indented (default; first-line indent, no gap, none on
+  a scene's first paragraph or after a scene break) or Spaced, remembered per
+  project on this device (`utils/exportParagraphStyle.ts`). DOCX carries a
+  styles part (Normal, First Paragraph, Scene Break, Title, Heading 1) so the
+  layout comes from Word styles; the editor's scene break exports as a
+  centered `* * *`. Markdown export is unchanged.
   scene import with deferred consistency review; inline review and lore
   highlights; the Review drawer; and editable item/state proposals in
   mechanics-enabled projects.
@@ -133,8 +140,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   (`services/editor/editorAppearance.ts`):
   - **Paragraphs**: Spaced (a gap between paragraphs) or Indented (a
     first-line indent and no gap; no indent after a heading, scene break, or
-    list). Manuscript and Source Notes visual editors only; exports are
-    unchanged.
+    list). Manuscript and Source Notes visual editors only; exports have
+    their own Paragraphs choice (below).
   - **Reading width**: Narrow (640px), Focused (760px), Wide (980px).
   - **Text style**: Book (a second serif) and Mono join Serif, Sans, and
     Dyslexic. **Custom** takes a typed name of an installed font, shows a

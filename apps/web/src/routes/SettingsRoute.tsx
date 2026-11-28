@@ -16,6 +16,7 @@ import {CharacterStyleList} from '../components/CharacterStyleList';
 import {AISettings} from '../components/Settings/AISettings';
 import {DiagnosticsPanel} from '../components/Settings/DiagnosticsPanel';
 import {UpdatesSettings} from '../components/Settings/UpdatesSettings';
+import {InlineHighlightsField} from '../components/Settings/InlineHighlightsField';
 import {BackupReminderSettings} from '../components/Settings/BackupReminderSettings';
 import {ScheduledBackupSettings} from '../components/Settings/ScheduledBackupSettings';
 import {FontSizeControl} from '../components/Settings/FontSizeControl';
@@ -333,26 +334,10 @@ function SettingsRoute() {
               manuscript editor.
             </div>
           </div>
-          <label className={styles.fieldLabel}>
-            Highlight visibility
-            <select
-              value={settings.editorFeedback?.inlineHighlightsMode ?? 'visible'}
-              onChange={(e) =>
-                void handleInlineHighlightsModeChange(
-                  e.target.value as InlineHighlightsMode
-                )
-              }
-              className={styles.styleInput}
-            >
-              <option value='visible'>Visible</option>
-              <option value='subtle'>Subtle</option>
-              <option value='hidden-while-typing'>Hidden while typing</option>
-            </select>
-          </label>
-          <p className={styles.helperText}>
-            Hidden while typing restores highlights automatically after a short idle
-            pause, so review stays available without crowding the draft.
-          </p>
+          <InlineHighlightsField
+            value={settings.editorFeedback?.inlineHighlightsMode ?? 'visible'}
+            onChange={(mode) => void handleInlineHighlightsModeChange(mode)}
+          />
         </SettingsSection>
 
         <SettingsSection title='AI Settings'>

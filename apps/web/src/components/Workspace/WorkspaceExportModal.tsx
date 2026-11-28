@@ -4,9 +4,11 @@ import {useFocusTrap} from '../../hooks/useFocusTrap';
 import type {WorkspaceExportFormat, WorkspaceExportItem} from '../../store/workspaceUiStore';
 import workspaceStyles from '../../styles/WorkspaceRoute.module.css';
 import styles from './WorkspaceExportModal.module.css';
+import {ExportParagraphStyleChoice} from './ExportParagraphStyleChoice';
 
 interface WorkspaceExportModalProps {
   isOpen: boolean;
+  projectId: string;
   format: WorkspaceExportFormat;
   selection: WorkspaceExportItem[];
   onClose: () => void;
@@ -17,7 +19,7 @@ interface WorkspaceExportModalProps {
 }
 
 export const WorkspaceExportModal = ({
-  isOpen, format, selection, onClose, onMove, onToggle,
+  isOpen, projectId, format, selection, onClose, onMove, onToggle,
   onToggleAll, onExport
 }: WorkspaceExportModalProps) => {
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -33,6 +35,7 @@ export const WorkspaceExportModal = ({
         <p className={workspaceStyles.modalDescription}>
           Choose which scenes to export and adjust their order for the final file.
         </p>
+        {format !== 'markdown' && <ExportParagraphStyleChoice key={projectId} projectId={projectId} />}
         <div className={styles.exportControlRow}>
           <button type='button' onClick={() => onToggleAll(true)}>Select all</button>
           <button type='button' onClick={() => onToggleAll(false)}>Clear all</button>

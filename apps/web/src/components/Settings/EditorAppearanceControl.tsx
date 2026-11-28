@@ -118,8 +118,11 @@ export const EditorAppearanceControl: React.FC = () => {
         ]}
       />
       <p className={styles.helper}>
-        Indented starts each paragraph with a first-line indent and no gap, like a printed
-        book. It changes the manuscript and Source Notes editors only, not exports.
+        {editorParagraphStyle === 'indented'
+          ? 'Each paragraph starts with a first-line indent and no gap, like a printed book.'
+          : 'A gap between paragraphs and no indent.'}{' '}
+        This is how the manuscript and Source Notes editors look on this computer. Exports
+        have their own Paragraphs choice.
       </p>
 
       <ChoiceGroup
