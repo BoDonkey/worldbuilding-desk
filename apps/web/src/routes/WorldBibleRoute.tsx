@@ -557,6 +557,9 @@ function WorldBibleRoute() {
               worldCanvas={worldCanvas}
               scrollRequest={importOpenRequest}
               onCancel={resetForm}
+              onRecordChange={(saved) =>
+                setEntities((prev) => prev.map((entity) => (entity.id === saved.id ? saved : entity)))
+              }
               onEdit={handleEdit}
               onOpenLab={setLabEntityId}
               navigate={navigate}

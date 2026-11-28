@@ -17,6 +17,7 @@ import {
   LORE_DOCUMENT_STORE_NAME,
   MAP_STORE_NAME,
   SCENE_SNAPSHOT_STORE_NAME,
+  ENTITY_IMAGE_STORE_NAME,
   MECHANICS_DRAFT_STORE_NAME,
   openDb,
   SETTINGS_STORE_NAME,
@@ -39,7 +40,7 @@ async function seedLinkedProject(name: string) {
   const ids = {
     category: uuid(), mira: uuid(), sera: uuid(), scene1: uuid(), scene2: uuid(), card: uuid(),
     character: uuid(), sheet: uuid(), lore: uuid(), loreLink: uuid(), fact: uuid(), event: uuid(),
-    settings: uuid(), stat: uuid(), region: uuid(), city: uuid(), snapshot: uuid(), settlement: `settlement:${projectId}:global`, ruleset: `ruleset:${projectId}`
+    settings: uuid(), stat: uuid(), region: uuid(), city: uuid(), snapshot: uuid(), image: uuid(), settlement: `settlement:${projectId}:global`, ruleset: `ruleset:${projectId}`
   };
   await saveProject({id: projectId, name, rulesetId: ids.ruleset, createdAt: 1, updatedAt: 1});
   await putRulesetRecord({
@@ -50,7 +51,7 @@ async function seedLinkedProject(name: string) {
   const records: Array<[string, Record<string, unknown>]> = [
     [SETTINGS_STORE_NAME, {id: ids.settings, projectId, characterStyles: [], activeSkills: [], featureToggles: {}, createdAt: 1, updatedAt: 1}],
     [CATEGORY_STORE_NAME, {id: ids.category, projectId, kind: 'character', name: 'Characters', slug: 'characters', fieldSchema: [], createdAt: 1}],
-    [ENTITY_STORE_NAME, {id: ids.mira, projectId, categoryId: ids.category, name: 'Mira', fields: {rival: ids.sera}, links: [ids.sera], createdAt: 1, updatedAt: 1}],
+    [ENTITY_STORE_NAME, {id: ids.mira, projectId, categoryId: ids.category, name: 'Mira', fields: {rival: ids.sera}, links: [ids.sera], portrait: {imageId: ids.image, thumbnailDataUrl: 'data:image/webp;base64,UklGRg=='}, createdAt: 1, updatedAt: 1}],
     [ENTITY_STORE_NAME, {id: ids.sera, projectId, categoryId: ids.category, name: 'Sera', fields: {}, links: [], systemNegativeSpace: {status: 'open', sceneIds: [ids.scene2]}, place: {parentId: ids.mira, connections: [{id: uuid(), toId: ids.mira, kind: 'road', distance: {words: 'two days'}}], placements: [{mapId: ids.city, x: 1, y: 2}]}, createdAt: 1, updatedAt: 1}],
     [WRITING_STORE_NAME, {id: ids.scene1, projectId, title: 'One', content: `<p>Mira (${ids.mira}) waits.</p>`, order: 1, createdAt: 1, updatedAt: 1}],
     [WRITING_STORE_NAME, {id: ids.scene2, projectId, title: 'Two', content: '<p>Rain.</p>', order: 2, createdAt: 1, updatedAt: 1}],
@@ -67,6 +68,7 @@ async function seedLinkedProject(name: string) {
     [MAP_STORE_NAME, {id: ids.region, projectId, name: 'Region', distanceUnit: 'miles', scale: 1, image: MAP_IMAGE, createdAt: 1, updatedAt: 1}],
     [MAP_STORE_NAME, {id: ids.city, projectId, name: 'City', distanceUnit: 'feet', scale: 1, parentPlacement: {mapId: ids.region, x: 6, y: 8}, createdAt: 1, updatedAt: 1}],
     [SCENE_SNAPSHOT_STORE_NAME, {id: ids.snapshot, projectId, sceneId: ids.scene1, content: '<p>Earlier.</p>', kind: 'manual', name: 'Draft 1', wordCount: 1, createdAt: 1}],
+    [ENTITY_IMAGE_STORE_NAME, {id: ids.image, projectId, entityId: ids.mira, dataUrl: 'data:image/png;base64,iVBORw0KGgo=', mimeType: 'image/png', width: 1, height: 1, byteLength: 8, fileName: 'mira.png', createdAt: 1}],
     [WORLD_CANVAS_STORE_NAME, {id: projectId, projectId, premise: 'Rain city', lenses: [{kind: 'people', linkedEntityIds: [ids.mira], linkedSourceNoteIds: [ids.lore]}], questions: [], createdAt: 1, updatedAt: 1}]
   ];
   const db = await openDb();
@@ -112,6 +114,9 @@ function expectIndependentCopy(copy: ProjectSnapshot, source: ProjectSnapshot) {
   expect(sera.place?.placements).toEqual([{mapId: city.id, x: 1, y: 2}]);
   expect(data.corkboardChapterCards[0].sceneIds?.every((id) => scenes.has(id))).toBe(true);
   expect(scenes.has(data.sceneSnapshots[0].sceneId)).toBe(true);
+  // Record images follow their record, and the portrait points at the copy (4.100).
+  expect(data.entityImages[0]).toMatchObject({entityId: mira.id, dataUrl: 'data:image/png;base64,iVBORw0KGgo=', fileName: 'mira.png'});
+  expect(mira.portrait).toEqual({imageId: data.entityImages[0].id, thumbnailDataUrl: 'data:image/webp;base64,UklGRg=='});
   expect(data.characters[0].entityId).toBe(mira.id);
   expect(data.characterSheets[0]).toMatchObject({characterEntityId: mira.id, characterId: data.characters[0].id});
   expect(data.loreDocumentLinks[0]).toMatchObject({loreDocumentId: data.loreDocuments[0].id, targetId: mira.id});
@@ -136,7 +141,7 @@ function expectIndependentCopy(copy: ProjectSnapshot, source: ProjectSnapshot) {
   // longer string: every field that refers to one was remapped. (Collections
   // whose ids import rebuilds from the target project are not at risk.)
   const sourceIds = collectImportRecordIds(source.data);
-  expect(sourceIds.length).toBe(18);
+  expect(sourceIds.length).toBe(19);
   const copyStrings = strings(data);
   for (const id of new Set(sourceIds)) {
     const where = (node: unknown, path: string): string[] =>

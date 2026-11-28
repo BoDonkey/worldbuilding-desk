@@ -39,7 +39,8 @@ export {
   PROJECT_REVIEW_RUN_STORE_NAME,
   MECHANICS_DRAFT_STORE_NAME,
   MAP_STORE_NAME,
-  SCENE_SNAPSHOT_STORE_NAME
+  SCENE_SNAPSHOT_STORE_NAME,
+  ENTITY_IMAGE_STORE_NAME
 } from './db';
 export * from './jsonTransfer';
 export * from './derivedRecordStore';
@@ -79,6 +80,7 @@ export * from './projectSnapshotMigrations';
 export * from './repositories/aliasStorage';
 export * from './repositories/mapStorage';
 export * from './repositories/sceneSnapshotStorage';
+export * from './repositories/entityImageStorage';
 export * from './repositories/canonDecisionStorage';
 export * from './repositories/canonDecisionSuppressionStorage';
 export * from './repositories/categoryStorage';

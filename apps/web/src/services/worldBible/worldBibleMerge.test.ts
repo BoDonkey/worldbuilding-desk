@@ -5,6 +5,8 @@ import {describe, expect, it} from 'vitest';
 import type {EntityCategory, StateMutationEvent, WorldEntity} from '../../entityTypes';
 import {
   getAliasesByProject,
+  getEntityImages,
+  saveEntityImages,
   getEntitiesByProject,
   getStateMutationEventsByProject,
   saveAlias,
@@ -62,4 +64,39 @@ describe('saveWorldBibleMerge', () => {
       ['The Old Gate', target.id]
     ]);
   });
+
+  it('moves the duplicate\'s images to the kept record and keeps its portrait if it has none (4.100)', async () => {
+    const projectId = newProjectId();
+    const category: EntityCategory = {
+      id: `chars-${projectId}`, projectId, kind: 'character', name: 'Characters', slug: 'characters',
+      fieldSchema: [], createdAt: 0
+    };
+    const portrait = {imageId: `${projectId}-img`, thumbnailDataUrl: 'data:image/webp;base64,AA=='};
+    const record = (id: string, extra: Partial<WorldEntity> = {}): WorldEntity => ({
+      id: `${projectId}-${id}`, projectId, categoryId: category.id, name: id, fields: {}, links: [],
+      createdAt: 1, updatedAt: 1, ...extra
+    });
+    const source = record('Mira H.', {portrait});
+    const target = record('Mira Holt');
+    await saveCategory(category);
+    for (const entity of [source, target]) await saveEntity(entity);
+    await saveEntityImages([{
+      id: portrait.imageId, projectId, entityId: source.id, dataUrl: 'data:image/png;base64,AA==',
+      mimeType: 'image/png', width: 1, height: 1, byteLength: 2, createdAt: 1
+    }]);
+
+    const result = await saveWorldBibleMerge({
+      source,
+      merged: target,
+      aliases: [],
+      categories: [category],
+      entities: [source, target],
+      indexing: {ragService: null, shodhService: null}
+    });
+
+    expect(result.entity.portrait).toEqual(portrait);
+    expect((await getEntityImages(projectId, target.id)).map((image) => image.id)).toEqual([portrait.imageId]);
+    expect(await getEntityImages(projectId, source.id)).toEqual([]);
+  });
 });
+

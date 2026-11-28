@@ -7,6 +7,18 @@
   margin-bottom: 1rem;
 }
 
+.portrait {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--surface-border-soft);
+}
+
+.formHeadingRow h2 {
+  flex: 1 1 auto;
+}
+
 .formHeadingRow button {
   flex: 0 0 auto;
 }

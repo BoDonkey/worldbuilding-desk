@@ -93,6 +93,10 @@ Procedure:
    beside the original and choose **Keep both**. In the copy, the scene's
    **Snapshots** lists it under **Passage alternatives**, and **Open beside
    original** opens it beside that paragraph.
+11a. Record images (slice 4.100). Before exporting, add two images to a
+   character and make the second the portrait. In the copy, the character
+   list shows that portrait, and the record's **Images** lists both at the
+   same sizes, with the second marked **Portrait**.
 
 12. Backup reminder (slice 4.93). After step 2 the project card says
     `Last backup: today`. In a project with writing and no backup for longer
@@ -114,7 +118,7 @@ Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated
 Scratchpad, Corkboard cards missing plot points, order, or scene links, changed/missing
 World Canvas content, any Canvas-only idea appearing as canon or indexed
-context, missing or changed scene snapshots, or an unfinished mechanics draft missing after reload or import, or
+context, missing or changed scene snapshots, missing record images or portraits, or an unfinished mechanics draft missing after reload or import, or
 returning after Cancel, or an encrypted backup that opens with a wrong
 passphrase, shows readable project text, or reads anything before unlocking.
 

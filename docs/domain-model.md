@@ -653,6 +653,24 @@ _Status: implemented (Slices 4.42–4.45, 2026-09-27)._
   first takes a `before-rewrite` snapshot of the whole scene. Alternatives
   are never pruned and never count as the scene's newest text.
 
+### Record images
+
+- A World Bible record can hold any number of images (slice 4.100,
+  `EntityImage` in `entityTypes.ts`): a data URL with type, pixel size, byte
+  size, and file name. There is no size limit (author decision, 2026-11-28);
+  the record's Images panel shows each size and the total.
+- Images are display only. No model prompt, review, retrieval index, memory,
+  or state replay reads them, and they are not canon or evidence.
+- They live in the `entity_images` store (DB_VERSION 34), read through the
+  `projectId` index and filtered by record (a locked vault record exposes only
+  `id` and `projectId`). Backups carry them (snapshot schema 16); a copy
+  remaps their ids and `entityId`. Deleting a record deletes its images;
+  merging moves them to the kept record.
+- The record's `portrait` names one image and holds a 160 px thumbnail, so
+  lists show it without loading full images. The first image added becomes
+  the portrait when there is none. The record form keeps the portrait when it
+  saves; a merge keeps the kept record's portrait, or takes the duplicate's.
+
 ### Prose-proximate item and state handoff
 
 _Status: accepted product/domain direction (2026-08-16); implementation is

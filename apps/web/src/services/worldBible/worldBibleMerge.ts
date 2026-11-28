@@ -3,6 +3,7 @@ import {
   deleteAliasesForEntity,
   deleteEntity,
   getStateMutationEventsByProject,
+  moveEntityImages,
   saveEntity,
   saveStateMutationEvents,
   type ConsistencyAlias
@@ -15,6 +16,8 @@ import {saveWorldBibleRecord, type WorldBibleIndexing} from './worldBibleRecordS
  * should save): the target and its aliases through `saveWorldBibleRecord`,
  * place references moved from the source to the target (`planPlaceMerge`),
  * then the source removed with its aliases, search entry, and memories.
+ * The source's images move to the target; the target keeps its own portrait,
+ * or takes the source's when it has none (4.100).
  * The place plan runs before any write, so a refused merge changes nothing.
  */
 export async function saveWorldBibleMerge(params: {
@@ -36,15 +39,17 @@ export async function saveWorldBibleMerge(params: {
     entities: params.entities,
     events: await getStateMutationEventsByProject(projectId)
   });
+  const target =
+    !plan.target.portrait && source.portrait ? {...plan.target, portrait: source.portrait} : plan.target;
   const repointedById = new Map(plan.entities.map((entity) => [entity.id, entity]));
   const entitiesAfter = params.entities
     .filter((entity) => entity.id !== source.id)
     .map((entity) =>
-      entity.id === plan.target.id ? plan.target : repointedById.get(entity.id) ?? entity
+      entity.id === target.id ? target : repointedById.get(entity.id) ?? entity
     );
 
   const saved = await saveWorldBibleRecord({
-    entity: plan.target,
+    entity: target,
     category,
     categories,
     entities: entitiesAfter,
@@ -54,6 +59,7 @@ export async function saveWorldBibleMerge(params: {
   // Place data is not part of a record's search content; no re-index needed.
   for (const entity of plan.entities) await saveEntity(entity);
   await saveStateMutationEvents(plan.events);
+  await moveEntityImages(projectId, source.id, target.id);
   await deleteAliasesForEntity(projectId, source.id);
   await deleteEntity(source.id);
   await indexing.ragService?.deleteDocument(source.id);

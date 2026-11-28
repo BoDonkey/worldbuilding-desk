@@ -96,6 +96,9 @@ export const WorldBibleEntityList = (props: WorldBibleEntityListProps) => {
                 return (
                 <li key={entity.id} className={styles.entityCard}>
                   <div className={styles.entityHeader}>
+                    {entity.portrait && (
+                      <img src={entity.portrait.thumbnailDataUrl} alt='' className={styles.entityPortrait} />
+                    )}
                     <div className={styles.entityName}>{entity.name}</div>
                     {entity.isNew && (
                       <span className={styles.newBadge}>New</span>

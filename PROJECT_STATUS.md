@@ -334,6 +334,15 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible category task cards reserve stable description height so switching between Characters, Locations, and Items does not shift the list below.
 - World Bible AI assistance is being reshaped away from top-level AI draft cards and toward an explicit helper model. The current helper is an interim floating chat with selected-text apply to editable fields; the target model is open brainstorming plus confirmable model-proposed actions for names, aliases, fields, and new sections.
 - Character records and character sheets.
+- World Bible records hold images (slice 4.100a): **Images** on an open
+  record adds one or more (PNG, JPEG, WebP, GIF; no size limit), shows each
+  size and the total, views one full size, removes one, and chooses the
+  **Portrait**. The first image added becomes the portrait. The portrait's
+  thumbnail shows at the top of the record and on its card in the list.
+  Images live in the `entity_images` store (DB_VERSION 34), are carried by
+  backups (snapshot schema 16) and vaults, follow a merge, and are deleted
+  with their record. AI features never see them. Character card PNG portraits
+  and character packages come in 4.100b.
 - The World Bible AI helper now uses a shared read-only proposal preview and
   confirmation hook. Confirmation disables repeat clicks while the app-owned
   action is pending; failed actions retain the preview with inline feedback.
