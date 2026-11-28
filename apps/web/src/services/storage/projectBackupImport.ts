@@ -55,6 +55,7 @@ import {
   MECHANICS_DRAFT_STORE_NAME,
   MAP_STORE_NAME,
   SCENE_SNAPSHOT_STORE_NAME,
+  ENTITY_IMAGE_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
   WRITING_STORE_NAME,
@@ -155,6 +156,8 @@ export function normalizeProjectSnapshot(value: unknown): ProjectSnapshot {
   snapshot.counts.maps ??= snapshot.data.maps.length;
   snapshot.data.sceneSnapshots ??= [];
   snapshot.counts.sceneSnapshots ??= snapshot.data.sceneSnapshots.length;
+  snapshot.data.entityImages ??= [];
+  snapshot.counts.entityImages ??= snapshot.data.entityImages.length;
   snapshot.counts.stateMutationEvents ??= snapshot.data.stateMutationEvents.length;
   snapshot.data.consistencyAliases ??= [];
   snapshot.counts.consistencyAliases ??= snapshot.data.consistencyAliases.length;
@@ -453,6 +456,10 @@ async function saveProjectScopedRecords(params: {
   await putMany(
     SCENE_SNAPSHOT_STORE_NAME,
     rewriteProjectScoped(params.data.sceneSnapshots ?? [], params.projectId)
+  );
+  await putMany(
+    ENTITY_IMAGE_STORE_NAME,
+    rewriteProjectScoped(params.data.entityImages ?? [], params.projectId)
   );
 
   await new Promise<void>((resolve, reject) => {

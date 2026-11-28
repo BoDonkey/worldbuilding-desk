@@ -14,6 +14,7 @@ import {
 } from './WorldBibleCharacterRecord';
 import {WorldBibleGeneralRecord} from './WorldBibleGeneralRecord';
 import {WorldBibleCanonSummary} from './WorldBibleCanonSummary';
+import {RecordImagesPanel} from './RecordImagesPanel';
 
 type WorldCanvasLinks = Pick<
   ReturnType<typeof useWorldCanvas>,
@@ -29,6 +30,8 @@ interface WorldBibleRecordEditorProps extends WorldBibleCharacterRecordProps {
   /** Bumps when an imported record opens, to bring the form into view. */
   scrollRequest: number;
   onCancel: () => void;
+  /** A record saved outside the form, such as a new portrait (4.100). */
+  onRecordChange: (entity: WorldEntity) => void;
 }
 
 /**
@@ -53,7 +56,8 @@ export function WorldBibleRecordEditor(props: WorldBibleRecordEditorProps) {
     worldCanvas,
     scrollRequest,
     setFeedback,
-    onCancel
+    onCancel,
+    onRecordChange
   } = props;
   const {editingId, recordAuthoringMode, characterDetailSection, areItemDetailsExpanded} = draft;
   const {selectedEntity, linkedLoreDocumentByEntityId, linkingLoreEntityId} = selection;
@@ -93,6 +97,13 @@ export function WorldBibleRecordEditor(props: WorldBibleRecordEditorProps) {
     <div className={shared.formSection}>
       <form ref={recordFormRef} onSubmit={handleSubmit} className={shared.form}>
         <div className={styles.formHeadingRow}>
+          {editingId && selectedEntity?.portrait && (
+            <img
+              src={selectedEntity.portrait.thumbnailDataUrl}
+              alt={`Portrait of ${selectedEntity.name}`}
+              className={styles.portrait}
+            />
+          )}
           <h2>
             {isCharacterLike
               ? editingId
@@ -205,6 +216,9 @@ export function WorldBibleRecordEditor(props: WorldBibleRecordEditorProps) {
           )}
         </div>
       </form>
+      {editingId && selectedEntity && (
+        <RecordImagesPanel entity={selectedEntity} onEntityChange={onRecordChange} />
+      )}
       {editingId &&
         (!isCharacterLike || characterDetailSection === 'notes') && (
         <WorldBibleCanonSummary

@@ -36,6 +36,15 @@
   margin-bottom: 0.5rem;
 }
 
+/* The record's portrait thumbnail (4.100). */
+.entityPortrait {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--surface-border-soft);
+}
+
 .entityName {
   font-weight: bold;
   font-size: 1.1rem;

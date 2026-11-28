@@ -103,6 +103,14 @@ describe('planEntityDraft', () => {
     expect(typeof created.fields.bio).toBe('string');
   });
 
+  it('keeps the portrait the Images panel set when the form saves (4.100)', () => {
+    const portrait = {imageId: 'img-1', thumbnailDataUrl: 'data:image/webp;base64,AA=='};
+    const existing = planEntityDraft(base()).entity;
+    const {entity: saved} = planEntityDraft(base({existing: {...existing, portrait}, now: 2000}));
+    expect(saved.portrait).toEqual(portrait);
+    expect('portrait' in planEntityDraft(base({existing})).entity).toBe(false);
+  });
+
   it('suggests no alias outside character categories, and drops the alternative-names field when empty', () => {
     const {entity: created, aliases} = planEntityDraft(base({category: places, name: 'Salt Door', fieldValues: {[KEY]: ''}}));
     expect(aliases).toEqual([]);

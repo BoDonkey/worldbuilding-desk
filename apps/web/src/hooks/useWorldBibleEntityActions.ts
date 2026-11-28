@@ -4,6 +4,7 @@ import {
   saveEntity,
   deleteEntity,
   deleteAliasesForEntity,
+  deleteEntityImagesForEntity,
   type ConsistencyAlias
 } from '../services/storage';
 import type {
@@ -285,7 +286,7 @@ export const useWorldBibleEntityActions = ({
     (id: string) => {
       requestConfirm({
         title: 'Delete this entity?',
-        message: 'This removes the World Bible record and its aliases.',
+        message: 'This removes the World Bible record, its aliases, and its images.',
         confirmLabel: 'Delete',
         variant: 'danger',
         onConfirm: async () => {
@@ -294,6 +295,7 @@ export const useWorldBibleEntityActions = ({
           try {
             if (activeProject) {
               await deleteAliasesForEntity(activeProject.id, id);
+              await deleteEntityImagesForEntity(activeProject.id, id);
             }
             await deleteEntity(id);
             if (ragService) {

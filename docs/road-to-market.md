@@ -351,7 +351,8 @@ messages).
 | 4.97 | Rewrite beside the original | 4 | M | Done `a22653f` |
 | 4.98 | Settings hints that follow the choice; export paragraph style | 4 | S | Done `8ba5547` — pre-beta; from 2026-11-28 dogfood; choice is per project per device (localStorage), not in backups; Typewriter and Focus hints left as feature descriptions |
 | 4.99 | Batch import: heading choices across drafts | 4 | S | — pre-beta; from 2026-11-28 dogfood |
-| 4.100 | Character images | 4 | M | — pre-beta (author decision, 2026-11-28); no size limit; card PNG portraits kept; from 2026-11-28 dogfood |
+| 4.100a | Character images: storage, backups, record Images panel | 4 | M | WIP — pre-beta (author decision, 2026-11-28); no size limit; from 2026-11-28 dogfood |
+| 4.100b | Character images: card PNG portraits, character packages | 4 | S | — pre-beta; after 4.100a; card PNG portraits kept (author decision, 2026-11-28) |
 | 4.101 | DOCX manuscript format | 4 | M | — pre-beta (author decision, 2026-11-28); after 4.98 |
 | 4.76 | Places: containment and connections | 4 | M | Done `f6ae85d` |
 | 4.77 | Places: positions refer to place records | 4 | M | Done `8e74bc3` |
@@ -1462,7 +1463,10 @@ Movement checks are review findings, never blocks.
 
 - **4.100 Character images.** From the 2026-11-28 dogfood run; this is
   the parked "Images" backlog item (2026-10-06), now with dogfood evidence.
-  **Pre-beta** (author decision, 2026-11-28). One
+  **Pre-beta** (author decision, 2026-11-28). Split while building (it
+  was larger than M): **4.100a** is storage, backups, vaults, merge and
+  delete, and the record's Images panel with list portraits; **4.100b** is
+  character card PNG import and export and character packages. One
   or more images on a World Bible record (characters first, any category
   allowed), with one chosen as the portrait shown on the record and in
   pickers. Stored in the project the way map images are (4.80: data URL

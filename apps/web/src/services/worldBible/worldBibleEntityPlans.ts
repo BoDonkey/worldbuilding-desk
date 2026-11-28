@@ -128,6 +128,8 @@ export const planEntityDraft = (input: EntityDraftInput): {entity: WorldEntity; 
     fields: nextFields,
     systemNegativeSpace: input.systemNegativeSpace,
     ...(input.place ? {place: input.place} : {}),
+    // The portrait is set from the Images panel, not the form (4.100).
+    ...(existing?.portrait ? {portrait: existing.portrait} : {}),
     isNew: false,
     needsCompletion: false,
     aliasesReviewedAt:

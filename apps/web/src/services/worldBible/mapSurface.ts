@@ -1,4 +1,5 @@
 import type {MapImage, WorldEntity, WorldMap} from '../../entityTypes';
+import {decodeImageSize, readFileAsDataUrl} from '../../utils/imageFiles';
 import {normalizePlacements, placeAncestors, type PlacesById} from './places';
 import type {CharacterPosition, PathStop} from './placeMovement';
 
@@ -38,18 +39,8 @@ export const mapImageSizeProblem = (width: number, height: number): string | nul
 export const readMapImageFile = async (file: File): Promise<{image: MapImage} | {error: string}> => {
   const fileProblem = mapImageFileProblem(file);
   if (fileProblem) return {error: fileProblem};
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error('Unable to read the image.'));
-    reader.readAsDataURL(file);
-  });
-  const size = await new Promise<{width: number; height: number}>((resolve) => {
-    const image = new Image();
-    image.onload = () => resolve({width: image.naturalWidth, height: image.naturalHeight});
-    image.onerror = () => resolve({width: 0, height: 0});
-    image.src = dataUrl;
-  });
+  const dataUrl = await readFileAsDataUrl(file);
+  const size = await decodeImageSize(dataUrl);
   const sizeProblem = mapImageSizeProblem(size.width, size.height);
   if (sizeProblem) return {error: sizeProblem};
   return {

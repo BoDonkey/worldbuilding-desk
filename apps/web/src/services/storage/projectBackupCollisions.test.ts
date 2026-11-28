@@ -139,7 +139,7 @@ describe('backup import collision guard', () => {
       compendiumMilestones: 'kept', compendiumRecipes: 'kept', compendiumProgressRecords: 'kept',
       compendiumActionLogs: 'kept', zoneAffinityProfiles: 'kept', zoneAffinityProgressRecords: 'kept',
       settlementModules: 'kept', settlementStateRecords: 'kept', stateMutationEvents: 'kept', maps: 'kept',
-      sceneSnapshots: 'kept'
+      sceneSnapshots: 'kept', entityImages: 'kept'
     };
     // settings and ruleset are checked separately; the rest build ids from the target project.
     const kept = Object.entries(importIds).filter(([, kind]) => kind === 'kept').map(([key]) => key);

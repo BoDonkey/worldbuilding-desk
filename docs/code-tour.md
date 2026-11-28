@@ -85,6 +85,7 @@ feature or support code you can usually ignore until you work on it.
 | `services/` | Domain logic, storage, AI, retrieval (see below) | core |
 | `components/` | UI, one folder per screen or feature; shared pieces in `components/common/` | core |
 | `entityTypes.ts` | The record types every layer shares | core |
+| `placeTypes.ts` | Place and map types, re-exported from `entityTypes.ts` | core |
 | `store/` | Zustand stores: app shell and active project (`store/appStore.ts`), Workspace layout, notifications | core |
 | `styles/` | Route CSS modules and the theme tokens (`styles/theme.css`) | core |
 | `extensions/` | TipTap editor extensions: AI text mark, stat-block tokens | peripheral |
